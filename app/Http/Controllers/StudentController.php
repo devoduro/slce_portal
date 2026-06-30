@@ -259,9 +259,14 @@ class StudentController extends Controller
                 ->withInput();
         }
         
+        if (!class_exists('ZipArchive')) {
+            return redirect()->route('students.import.form')
+                ->with('error', 'The PHP zip extension is not loaded. Please restart the PHP server and try again. If the problem persists, enable extension=zip in C:\xampp\php\php.ini and restart.');
+        }
+
         try {
             Excel::import(new StudentsImport, $request->file('excel_file'));
-            
+
             return redirect()->route('students.index')
                 ->with('success', 'Students imported successfully.');
         } catch (\Exception $e) {

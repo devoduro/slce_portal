@@ -28,6 +28,18 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'mnotify' => [
+        'api_key'   => env('MNOTIFY_API_KEY'),
+        'sender_id' => env('MNOTIFY_SENDER_ID', 'PCG - PMCB'),
+    ],
+
+    'pastech_sms' => [
+        'api_key'         => env('PASTECH_SMS_API_KEY'),
+        'sender_id'       => env('PASTECH_SMS_SENDER_ID', 'SLCECoE'),
+        'endpoint'        => env('PASTECH_SMS_ENDPOINT', 'https://sms.pastechsolutions.com/smsapi'),
+        'balance_endpoint'=> env('PASTECH_SMS_BALANCE_ENDPOINT', 'https://sms.pastechsolutions.com/api/smsapibalance'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

@@ -116,8 +116,12 @@
                                 <button type="submit" class="btn btn-primary btn-lg">Sign In</button>
                             </div>
                         </form>
-                        
-                         
+
+                        <div class="text-center mt-3">
+                            <a href="{{ route('student.password.request') }}" class="text-decoration-none small" style="color: #088404;">
+                                <i class="fas fa-key me-1"></i>Forgot your password?
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -26,6 +26,12 @@ Route::middleware('guest')->group(function () {
     // Student Login
     Route::get('student/login', [\App\Http\Controllers\Auth\StudentAuthController::class, 'showLoginForm'])->name('student.login');
     Route::post('student/login', [\App\Http\Controllers\Auth\StudentAuthController::class, 'login']);
+
+    // Student Password Reset (via SMS)
+    Route::get('student/forgot-password', [\App\Http\Controllers\Auth\StudentPasswordResetController::class, 'showRequestForm'])->name('student.password.request');
+    Route::post('student/forgot-password', [\App\Http\Controllers\Auth\StudentPasswordResetController::class, 'sendResetLink'])->name('student.password.email');
+    Route::get('student/reset-password/{token}', [\App\Http\Controllers\Auth\StudentPasswordResetController::class, 'showResetForm'])->name('student.password.reset');
+    Route::post('student/reset-password', [\App\Http\Controllers\Auth\StudentPasswordResetController::class, 'reset'])->name('student.password.update');
     
     // Password Reset
     Route::get('password/reset', [\App\Http\Controllers\Auth\ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
@@ -101,7 +107,17 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/students/export/excel', [StudentController::class, 'exportExcel'])->name('students.export.excel');
     Route::get('/students/export/pdf', [StudentController::class, 'exportPdf'])->name('students.export.pdf');
     Route::get('/students-import-template', [StudentController::class, 'downloadTemplate'])->name('students.import.template');
-    
+
+    // Bulk SMS
+    Route::get('/sms', [\App\Http\Controllers\SmsController::class, 'index'])->name('sms.index');
+    Route::post('/sms/send', [\App\Http\Controllers\SmsController::class, 'send'])->name('sms.send');
+    Route::get('/sms/history', [\App\Http\Controllers\SmsController::class, 'history'])->name('sms.history');
+    Route::get('/sms/history/{campaign}', [\App\Http\Controllers\SmsController::class, 'showCampaign'])->name('sms.history.show');
+    Route::get('/sms/templates', [\App\Http\Controllers\SmsController::class, 'templates'])->name('sms.templates.index');
+    Route::post('/sms/templates', [\App\Http\Controllers\SmsController::class, 'storeTemplate'])->name('sms.templates.store');
+    Route::put('/sms/templates/{template}', [\App\Http\Controllers\SmsController::class, 'updateTemplate'])->name('sms.templates.update');
+    Route::delete('/sms/templates/{template}', [\App\Http\Controllers\SmsController::class, 'destroyTemplate'])->name('sms.templates.destroy');
+
     // Courses
     Route::resource('courses', CourseController::class);
     Route::get('/courses/search', [CourseController::class, 'search'])->name('courses.search');
