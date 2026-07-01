@@ -92,7 +92,21 @@
                                     />
                                 </div>
 
-                               
+                                <!-- Required Payment Percentage -->
+                                <div>
+                                    <x-input
+                                        id="required_payment_percentage"
+                                        name="required_payment_percentage"
+                                        type="number"
+                                        label="Required Fee Payment % (for course registration)"
+                                        :value="old('required_payment_percentage', $semester->required_payment_percentage)"
+                                        min="0"
+                                        max="100"
+                                        step="0.01"
+                                        placeholder="e.g. 50"
+                                        helper="Minimum percentage of the annual fee a student must have paid before they can register courses this semester. Leave blank for no fee gate."
+                                    />
+                                </div>
                             </div>
                         </div>
 

@@ -86,6 +86,7 @@ class StudentController extends Controller
             'date_of_birth' => 'required|date',
             'gender' => 'required|in:Male,Female,Other',
             'programme_id' => 'required|exists:programmes,id',
+            'level' => 'nullable|integer|min:100|max:800',
             'profile_photo' => 'nullable|image|max:2048',
             'emergency_contact_name' => 'nullable|string|max:255',
             'emergency_contact_phone' => 'nullable|string|max:20',
@@ -101,7 +102,11 @@ class StudentController extends Controller
         }
 
         $data = $request->all();
-        
+
+        if (($data['level'] ?? '') === '') {
+            $data['level'] = null;
+        }
+
         // Handle profile photo upload
         if ($request->hasFile('profile_photo')) {
             $path = $request->file('profile_photo')->store('profile_photos', 'public');
@@ -185,6 +190,7 @@ class StudentController extends Controller
             'date_of_birth' => 'required|date',
             'gender' => 'required|in:Male,Female,Other',
             'programme_id' => 'required|exists:programmes,id',
+            'level' => 'nullable|integer|min:100|max:800',
             'profile_photo' => 'nullable|image|max:2048',
             'emergency_contact_name' => 'nullable|string|max:255',
             'emergency_contact_phone' => 'nullable|string|max:20',
@@ -200,14 +206,18 @@ class StudentController extends Controller
         }
 
         $data = $request->except(['profile_photo']);
-        
+
+        if (($data['level'] ?? '') === '') {
+            $data['level'] = null;
+        }
+
         // Handle profile photo upload
         if ($request->hasFile('profile_photo')) {
             // Delete old photo if exists
             if ($student->profile_photo) {
                 Storage::disk('public')->delete($student->profile_photo);
             }
-            
+
             $path = $request->file('profile_photo')->store('profile_photos', 'public');
             $data['profile_photo'] = $path;
         }

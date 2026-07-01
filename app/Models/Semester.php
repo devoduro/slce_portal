@@ -23,8 +23,11 @@ class Semester extends Model
         'start_date',
         'end_date',
         'is_current',
+        'required_payment_percentage',
+        'registration_open',
+        'biometric_window_open',
     ];
-    
+
     /**
      * The attributes that should be cast.
      *
@@ -34,6 +37,9 @@ class Semester extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'is_current' => 'boolean',
+        'required_payment_percentage' => 'decimal:2',
+        'registration_open' => 'boolean',
+        'biometric_window_open' => 'boolean',
     ];
     
     /**
@@ -58,5 +64,21 @@ class Semester extends Model
     public function results(): HasMany
     {
         return $this->hasMany(Result::class);
+    }
+
+    /**
+     * Get the course registrations for the semester.
+     */
+    public function registrations(): HasMany
+    {
+        return $this->hasMany(Registration::class);
+    }
+
+    /**
+     * Get the biometric registrations recorded for the semester.
+     */
+    public function biometricRegistrations(): HasMany
+    {
+        return $this->hasMany(BiometricRegistration::class);
     }
 }

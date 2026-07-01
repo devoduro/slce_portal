@@ -24,6 +24,7 @@ class Course extends Model
         'credit_hours',
         'semester_id',
         'is_core',
+        'lecturer_id',
     ];
     
     /**
@@ -58,6 +59,14 @@ class Course extends Model
     public function results(): HasMany
     {
         return $this->hasMany(Result::class);
+    }
+
+    /**
+     * Get the lecturer assigned to teach this course.
+     */
+    public function lecturer(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'lecturer_id');
     }
     
     /**

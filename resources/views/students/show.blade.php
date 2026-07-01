@@ -108,6 +108,10 @@
                                         <p class="font-medium">{{ $student->gender ?? 'Not Specified' }}</p>
                                     </div>
                                     <div class="bg-gray-50 p-4 rounded-lg">
+                                        <p class="text-sm text-gray-500">Level</p>
+                                        <p class="font-medium">{{ $student->level ?? 'Not Specified' }}</p>
+                                    </div>
+                                    <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-500">CGPA</p>
                                         <p class="font-medium">{{ number_format($student->calculateCGPA() ?? 0, 2) }}</p>
                                     </div>

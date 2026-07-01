@@ -6,21 +6,39 @@ use App\Models\Course;
 use App\Models\Programme;
 use App\Models\Result;
 use App\Models\Semester;
+use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class CourseController extends Controller
 {
     /**
+     * Scope a course query to only the authenticated lecturer's assigned courses,
+     * unless the user has broader course access.
+     */
+    protected function scopeToLecturer(Builder $query): Builder
+    {
+        $user = Auth::user();
+
+        if ($user && $user->hasRole('Lecturer') && !$user->hasRole('Super Admin') && !$user->hasRole('Exams Officer')) {
+            $query->where('lecturer_id', $user->id);
+        }
+
+        return $query;
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $courses = Course::with(['programmes', 'semester'])
-            ->orderBy('code')
-            ->paginate(20);
-            
+        $courses = $this->scopeToLecturer(
+            Course::with(['programmes', 'semester', 'lecturer'])->orderBy('code')
+        )->paginate(20);
+
         return view('courses.index', compact('courses'));
     }
 
@@ -31,8 +49,9 @@ class CourseController extends Controller
     {
         $programmes = Programme::all();
         $semesters = Semester::all();
-        
-        return view('courses.create', compact('programmes', 'semesters'));
+        $lecturers = User::role('Lecturer')->orderBy('name')->get();
+
+        return view('courses.create', compact('programmes', 'semesters', 'lecturers'));
     }
 
     /**
@@ -49,6 +68,7 @@ class CourseController extends Controller
             'programme_ids.*' => 'exists:programmes,id',
             'semester_id' => 'required|exists:semesters,id',
             'is_core' => 'boolean',
+            'lecturer_id' => 'nullable|exists:users,id',
         ]);
 
         if ($validator->fails()) {
@@ -56,7 +76,7 @@ class CourseController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-        
+
         // Create the course without the programme_ids
         $course = Course::create([
             'code' => $request->code,
@@ -65,8 +85,9 @@ class CourseController extends Controller
             'credit_hours' => $request->credit_hours,
             'semester_id' => $request->semester_id,
             'is_core' => $request->is_core ?? false,
+            'lecturer_id' => $request->lecturer_id ?: null,
         ]);
-        
+
         // Attach the selected programmes to the course
         $course->programmes()->attach($request->programme_ids);
         
@@ -119,8 +140,9 @@ class CourseController extends Controller
         $programmes = Programme::all();
         $semesters = Semester::all();
         $prerequisites = Course::where('id', '!=', $id)->get();
-        
-        return view('courses.edit', compact('course', 'programmes', 'semesters', 'prerequisites'));
+        $lecturers = User::role('Lecturer')->orderBy('name')->get();
+
+        return view('courses.edit', compact('course', 'programmes', 'semesters', 'prerequisites', 'lecturers'));
     }
 
     /**
@@ -129,7 +151,7 @@ class CourseController extends Controller
     public function update(Request $request, string $id)
     {
         $course = Course::findOrFail($id);
-        
+
         $validator = Validator::make($request->all(), [
             'code' => 'required|string|max:20|unique:courses,code,' . $id,
             'title' => 'required|string|max:255',
@@ -139,6 +161,7 @@ class CourseController extends Controller
             'programme_ids.*' => 'exists:programmes,id',
             'semester_id' => 'required|exists:semesters,id',
             'is_core' => 'boolean',
+            'lecturer_id' => 'nullable|exists:users,id',
         ]);
 
         if ($validator->fails()) {
@@ -146,9 +169,7 @@ class CourseController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-        
 
-        
         // Update the course without the programme_ids
         $course->update([
             'code' => $request->code,
@@ -157,6 +178,7 @@ class CourseController extends Controller
             'credit_hours' => $request->credit_hours,
             'semester_id' => $request->semester_id,
             'is_core' => $request->is_core ?? false,
+            'lecturer_id' => $request->lecturer_id ?: null,
         ]);
         
         // Sync the selected programmes to the course

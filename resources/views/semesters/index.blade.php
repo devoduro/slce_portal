@@ -34,6 +34,8 @@
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Academic Year</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registration</th>
+                                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Biometric Window</th>
                                         <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Courses</th>
                                         <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
@@ -69,6 +71,47 @@
                                                         {{ $semester->end_date->isPast() ? 'Past' : 'Upcoming' }}
                                                     </span>
                                                 @endif
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                @if($semester->registration_open)
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                        Open
+                                                    </span>
+                                                @else
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                        Closed
+                                                    </span>
+                                                @endif
+                                                @if($semester->required_payment_percentage !== null)
+                                                    <div class="text-xs text-gray-500 mt-1">
+                                                        Requires {{ rtrim(rtrim(number_format($semester->required_payment_percentage, 2), '0'), '.') }}% paid
+                                                    </div>
+                                                @endif
+                                                <form action="{{ route('semesters.toggle-registration', $semester) }}" method="POST" class="inline-block mt-1">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <button type="submit" class="text-xs text-primary-600 hover:text-primary-900 underline">
+                                                        {{ $semester->registration_open ? 'Close registration' : 'Open registration' }}
+                                                    </button>
+                                                </form>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                @if($semester->biometric_window_open)
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                        Open
+                                                    </span>
+                                                @else
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
+                                                        Closed
+                                                    </span>
+                                                @endif
+                                                <form action="{{ route('semesters.toggle-biometric-window', $semester) }}" method="POST" class="inline-block mt-1">
+                                                    @csrf
+                                                    @method('PUT')
+                                                    <button type="submit" class="text-xs text-primary-600 hover:text-primary-900 underline">
+                                                        {{ $semester->biometric_window_open ? 'Close window' : 'Open window' }}
+                                                    </button>
+                                                </form>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {{ $semester->courses_count ?? $semester->courses()->count() }} courses

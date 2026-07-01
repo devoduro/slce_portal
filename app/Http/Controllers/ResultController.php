@@ -10,18 +10,41 @@ use App\Models\Result;
 use App\Models\Semester;
 use App\Models\Student;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
 class ResultController extends Controller
 {
     /**
+     * Determine whether the authenticated user is restricted to their own assigned courses.
+     */
+    protected function isScopedLecturer(): bool
+    {
+        $user = Auth::user();
+
+        return $user && $user->hasRole('Lecturer') && !$user->hasRole('Super Admin') && !$user->hasRole('Exams Officer');
+    }
+
+    /**
+     * Get the course IDs the authenticated lecturer is allowed to manage.
+     */
+    protected function lecturerCourseIds(): array
+    {
+        return Course::where('lecturer_id', Auth::id())->pluck('id')->toArray();
+    }
+
+    /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         $query = Result::with(['student', 'course', 'academicYear', 'semester']);
-        
+
+        if ($this->isScopedLecturer()) {
+            $query->whereIn('course_id', $this->lecturerCourseIds());
+        }
+
         // Search by student name or index number
         if ($request->has('search') && $request->search) {
             $searchTerm = $request->search;
@@ -86,7 +109,11 @@ class ResultController extends Controller
     public function create()
     {
         $students = Student::orderBy('full_name')->get();
-        $courses = Course::orderBy('code')->get();
+        $coursesQuery = Course::orderBy('code');
+        if ($this->isScopedLecturer()) {
+            $coursesQuery->where('lecturer_id', Auth::id());
+        }
+        $courses = $coursesQuery->get();
         $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
         $semesters = Semester::all();
         $gradeSchemes = GradeScheme::all();
@@ -120,7 +147,13 @@ class ResultController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-        
+
+        if ($this->isScopedLecturer() && !in_array((int) $request->input('course_id'), $this->lecturerCourseIds())) {
+            return redirect()->route('results.create')
+                ->withErrors(['course_id' => 'You can only enter results for courses assigned to you.'])
+                ->withInput();
+        }
+
         // Check if result already exists
         $existingResult = Result::where([
             'student_id' => $request->input('student_id'),
@@ -359,7 +392,11 @@ class ResultController extends Controller
      */
     public function bulkCreate()
     {
-        $courses = Course::orderBy('code')->get();
+        $coursesQuery = Course::orderBy('code');
+        if ($this->isScopedLecturer()) {
+            $coursesQuery->where('lecturer_id', Auth::id());
+        }
+        $courses = $coursesQuery->get();
         $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
         $semesters = Semester::all();
         
@@ -524,11 +561,17 @@ class ResultController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-        
+
+        if ($this->isScopedLecturer() && !in_array((int) $request->input('course_id'), $this->lecturerCourseIds())) {
+            return redirect()->back()
+                ->withErrors(['course_id' => 'You can only enter results for courses assigned to you.'])
+                ->withInput();
+        }
+
         $courseId = $request->input('course_id');
         $academicYearId = $request->input('academic_year_id');
         $semesterId = $request->input('semester_id');
-        
+
         // Begin transaction
         DB::beginTransaction();
         

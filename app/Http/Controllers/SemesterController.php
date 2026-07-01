@@ -47,6 +47,7 @@ class SemesterController extends Controller
             'semester_number' => 'required|integer|min:1',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
+            'required_payment_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -54,19 +55,24 @@ class SemesterController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-        
+
         // Check if semester with same semester_number already exists for this academic year
         $existingSemester = Semester::where('academic_year_id', $request->input('academic_year_id'))
             ->where('semester_number', $request->input('semester_number'))
             ->first();
-            
+
         if ($existingSemester) {
             return redirect()->route('semesters.create')
                 ->withErrors(['semester_number' => 'A semester with this number already exists for the selected academic year.'])
                 ->withInput();
         }
-        
-        Semester::create($request->all());
+
+        $data = $request->all();
+        if (($data['required_payment_percentage'] ?? '') === '') {
+            $data['required_payment_percentage'] = null;
+        }
+
+        Semester::create($data);
         
         return redirect()->route('semesters.index')
             ->with('success', 'Semester created successfully.');
@@ -148,6 +154,7 @@ class SemesterController extends Controller
             'semester_number' => 'required|integer|min:1',
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
+            'required_payment_percentage' => 'nullable|numeric|min:0|max:100',
         ]);
 
         if ($validator->fails()) {
@@ -155,20 +162,25 @@ class SemesterController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-        
+
         // Check if semester with same semester_number already exists for this academic year (excluding this one)
         $existingSemester = Semester::where('academic_year_id', $request->input('academic_year_id'))
             ->where('semester_number', $request->input('semester_number'))
             ->where('id', '!=', $id)
             ->first();
-            
+
         if ($existingSemester) {
             return redirect()->route('semesters.edit', $id)
                 ->withErrors(['semester_number' => 'A semester with this number already exists for the selected academic year.'])
                 ->withInput();
         }
-        
-        $semester->update($request->all());
+
+        $data = $request->all();
+        if (($data['required_payment_percentage'] ?? '') === '') {
+            $data['required_payment_percentage'] = null;
+        }
+
+        $semester->update($data);
         
         return redirect()->route('semesters.index')
             ->with('success', 'Semester updated successfully.');
@@ -249,6 +261,32 @@ class SemesterController extends Controller
         }
     }
     
+    /**
+     * Toggle course registration open/closed for a semester.
+     */
+    public function toggleRegistration(Semester $semester)
+    {
+        $semester->update(['registration_open' => !$semester->registration_open]);
+
+        $status = $semester->registration_open ? 'opened' : 'closed';
+
+        return redirect()->route('semesters.index')
+            ->with('success', "Course registration {$status} for {$semester->name}.");
+    }
+
+    /**
+     * Toggle the biometric check-in window open/closed for a semester.
+     */
+    public function toggleBiometricWindow(Semester $semester)
+    {
+        $semester->update(['biometric_window_open' => !$semester->biometric_window_open]);
+
+        $status = $semester->biometric_window_open ? 'opened' : 'closed';
+
+        return redirect()->route('semesters.index')
+            ->with('success', "Biometric check-in window {$status} for {$semester->name}.");
+    }
+
     /**
      * List courses for a semester.
      */

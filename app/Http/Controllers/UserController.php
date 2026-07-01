@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Spatie\Permission\Models\Role;
 
 class UserController extends Controller
 {
@@ -112,7 +113,7 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::query()->orderBy('name');
+        $query = User::query()->with('roles')->orderBy('name');
         
         // Apply search filter
         if ($request->has('search') && !empty($request->search)) {
@@ -138,7 +139,8 @@ class UserController extends Controller
      */
     public function create()
     {
-        return view('users.create');
+        $roles = Role::orderBy('name')->get();
+        return view('users.create', compact('roles'));
     }
 
     /**
@@ -150,7 +152,8 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'required|in:admin,staff',
+            'role' => 'required|in:admin,student',
+            'system_role' => 'nullable|string|exists:roles,name',
             'profile_photo' => 'nullable|image|max:2048',
         ]);
 
@@ -159,7 +162,7 @@ class UserController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-        
+
         $userData = [
             'name' => $request->input('name'),
             'email' => $request->input('email'),
@@ -173,6 +176,10 @@ class UserController extends Controller
         }
 
         $user = User::create($userData);
+
+        if ($request->filled('system_role')) {
+            $user->syncRoles([$request->input('system_role')]);
+        }
 
         return redirect()->route('users.index')
             ->with('success', 'User created successfully.');
@@ -191,7 +198,8 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
-        return view('users.edit', compact('user'));
+        $roles = Role::orderBy('name')->get();
+        return view('users.edit', compact('user', 'roles'));
     }
 
     /**
@@ -218,7 +226,8 @@ class UserController extends Controller
 
         // Only admin can change roles
         if (Auth::user()->role === 'admin') {
-            $rules['role'] = 'required|in:admin,staff,student';
+            $rules['role'] = 'required|in:admin,student';
+            $rules['system_role'] = 'nullable|string|exists:roles,name';
         }
 
         $validator = Validator::make($request->all(), $rules);
@@ -248,6 +257,10 @@ class UserController extends Controller
         }
 
         $user->update($userData);
+
+        if (Auth::user()->role === 'admin') {
+            $user->syncRoles($request->filled('system_role') ? [$request->input('system_role')] : []);
+        }
 
         return redirect()->route('users.show', $user->id)
             ->with('success', 'User updated successfully.');

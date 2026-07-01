@@ -104,7 +104,23 @@
                                         <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                     @enderror
                                 </div>
-                                
+
+                                <!-- Lecturer -->
+                                <div>
+                                    <label for="lecturer_id" class="block text-sm font-medium text-gray-700">Lecturer</label>
+                                    <select id="lecturer_id" name="lecturer_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+                                        <option value="">Not assigned</option>
+                                        @foreach($lecturers as $lecturer)
+                                            <option value="{{ $lecturer->id }}" {{ old('lecturer_id', $course->lecturer_id ?? '') == $lecturer->id ? 'selected' : '' }}>
+                                                {{ $lecturer->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('lecturer_id')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
                                 <!-- Course Type -->
                                 <div>
                                     <label for="is_core" class="block text-sm font-medium text-gray-700">Course Type</label>

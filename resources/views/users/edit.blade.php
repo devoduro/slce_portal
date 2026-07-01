@@ -36,17 +36,29 @@
                         </div>
                         
                         <div class="mb-4">
-                            <label for="role" class="block text-sm font-medium text-gray-700">Role</label>
+                            <label for="role" class="block text-sm font-medium text-gray-700">Account Type</label>
                             <select name="role" id="role" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                <option value="admin" {{ old('role', $user->role) === 'admin' ? 'selected' : '' }}>Admin</option>
-                                <option value="staff" {{ old('role', $user->role) === 'staff' ? 'selected' : '' }}>Staff</option>
+                                <option value="admin" {{ old('role', $user->role) === 'admin' ? 'selected' : '' }}>Admin / Staff</option>
                                 <option value="student" {{ old('role', $user->role) === 'student' ? 'selected' : '' }}>Student</option>
                             </select>
                             @error('role')
                                 <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                             @enderror
                         </div>
-                        
+
+                        <div class="mb-4">
+                            <label for="system_role" class="block text-sm font-medium text-gray-700">System Role (Admin/Staff only)</label>
+                            <select name="system_role" id="system_role" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                <option value="">No specific role</option>
+                                @foreach($roles as $role)
+                                    <option value="{{ $role->name }}" {{ old('system_role', $user->roles->first()->name ?? '') === $role->name ? 'selected' : '' }}>{{ $role->name }}</option>
+                                @endforeach
+                            </select>
+                            @error('system_role')
+                                <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         <div class="mb-4">
                             <label for="password" class="block text-sm font-medium text-gray-700">New Password (leave blank to keep current)</label>
                             <input type="password" name="password" id="password" class="mt-1 focus:ring-blue-500 focus:border-blue-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">

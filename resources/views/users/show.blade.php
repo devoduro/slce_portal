@@ -30,10 +30,15 @@
                             </div>
                             
                             <div>
-                                <p class="text-sm font-medium text-gray-500">Role</p>
-                                <p class="mt-1 text-sm text-gray-900">{{ $user->role }}</p>
+                                <p class="text-sm font-medium text-gray-500">Account Type</p>
+                                <p class="mt-1 text-sm text-gray-900">{{ $user->role === 'admin' ? 'Admin / Staff' : 'Student' }}</p>
                             </div>
-                            
+
+                            <div>
+                                <p class="text-sm font-medium text-gray-500">System Role</p>
+                                <p class="mt-1 text-sm text-gray-900">{{ $user->roles->pluck('name')->implode(', ') ?: 'None assigned' }}</p>
+                            </div>
+
                             <div>
                                 <p class="text-sm font-medium text-gray-500">Created At</p>
                                 <p class="mt-1 text-sm text-gray-900">{{ $user->created_at->format('F j, Y, g:i a') }}</p>

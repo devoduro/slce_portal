@@ -90,41 +90,96 @@
                     <span>Dashboard</span>
                 </a>
                 
+                @can('manage-students')
                 <a href="{{ route('students.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('students.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-user-graduate w-5"></i>
                     <span>Students</span>
                 </a>
-                
+                @endcan
+
+                @can('manage-programmes')
                 <a href="{{ route('programmes.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('programmes.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-graduation-cap w-5"></i>
                     <span>Programmes</span>
                 </a>
-                
+                @endcan
+
+                @can('manage-semesters')
                 <a href="{{ route('semesters.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('semesters.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-calendar-alt w-5"></i>
                     <span>Semesters</span>
                 </a>
-                
+                @endcan
+
+                @can('manage-courses')
                 <a href="{{ route('courses.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('courses.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-book w-5"></i>
                     <span>Courses</span>
                 </a>
-                
+                @endcan
+
+                @can('manage-results')
                 <a href="{{ route('results.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('results.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-chart-bar w-5"></i>
                     <span>Results</span>
                 </a>
-                
+                @endcan
+
+                @can('manage-transcripts')
                 <a href="{{ route('transcripts.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('transcripts.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-file-alt w-5"></i>
                     <span>Transcripts</span>
                 </a>
-                
+                @endcan
+
+                @can('view-reports')
                 <a href="{{ route('reports.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('reports.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-chart-pie w-5"></i>
                     <span>Reports</span>
                 </a>
+                @endcan
 
+                @can('manage-fees')
+                <div x-data="{ open: {{ request()->routeIs('fees.*') || request()->routeIs('fee-structures.*') ? 'true' : 'false' }} }">
+                    <button @click="open = !open" class="w-full flex items-center justify-between gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.*') || request()->routeIs('fee-structures.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                        <span class="flex items-center gap-3">
+                            <i class="fas fa-money-bill-wave w-5"></i>
+                            <span>Fees</span>
+                        </span>
+                        <i class="fas fa-chevron-down text-xs transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="open" x-transition class="pl-8 space-y-1">
+                        <a href="{{ route('fee-structures.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fee-structures.*') ? 'text-primary-600 font-medium' : '' }}">
+                            Fee Structures
+                        </a>
+                        <a href="{{ route('fees.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.*') ? 'text-primary-600 font-medium' : '' }}">
+                            Payments
+                        </a>
+                    </div>
+                </div>
+                @endcan
+
+                @can('manage-biometric')
+                <div x-data="{ open: {{ request()->routeIs('biometric-*') ? 'true' : 'false' }} }">
+                    <button @click="open = !open" class="w-full flex items-center justify-between gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('biometric-*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                        <span class="flex items-center gap-3">
+                            <i class="fas fa-fingerprint w-5"></i>
+                            <span>Biometric</span>
+                        </span>
+                        <i class="fas fa-chevron-down text-xs transition-transform" :class="open ? 'rotate-180' : ''"></i>
+                    </button>
+                    <div x-show="open" x-transition class="pl-8 space-y-1">
+                        <a href="{{ route('biometric-devices.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('biometric-devices.*') ? 'text-primary-600 font-medium' : '' }}">
+                            Devices
+                        </a>
+                        <a href="{{ route('biometric-verifications.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('biometric-verifications.*') ? 'text-primary-600 font-medium' : '' }}">
+                            Verifications
+                        </a>
+                    </div>
+                </div>
+                @endcan
+
+                @can('send-sms')
                 <div x-data="{ open: {{ request()->routeIs('sms.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full flex items-center justify-between gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('sms.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                         <span class="flex items-center gap-3">
@@ -145,27 +200,42 @@
                         </a>
                     </div>
                 </div>
-                <a href="{{ route('gpa-distribution.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                @endcan
+
+                @can('view-reports')
+                <a href="{{ route('gpa-distribution.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('gpa-distribution.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-chart-line w-5"></i>
                     <span>CGPA Distribution</span>
                 </a>
-                
+                @endcan
+
+                @can('manage-settings')
                 <a href="{{ route('settings.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('settings.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-cog w-5"></i>
                     <span>Settings</span>
                 </a>
-                
-                @if (auth()->user()->role === 'admin')
+                @endcan
+
+                @can('view-activity-logs')
                 <a href="{{ route('activity-logs.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('activity-logs.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-history w-5"></i>
                     <span>Activity Logs</span>
                 </a>
+                @endcan
 
+                @can('manage-users')
                 <a href="{{ route('users.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('users.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-users-cog w-5"></i>
                     <span>User Management</span>
                 </a>
-                @endif
+                @endcan
+
+                @can('manage-roles')
+                <a href="{{ route('roles.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('roles.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-user-shield w-5"></i>
+                    <span>Roles & Permissions</span>
+                </a>
+                @endcan
             </nav>
         </aside>
 

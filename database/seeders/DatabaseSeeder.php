@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
         // Call the AdminUserSeeder to create an admin user
         $this->call([
             AdminUserSeeder::class,
+            RolesAndPermissionsSeeder::class,
             ProgrammeSeeder::class,
             AcademicYearSeeder::class,
             SemesterSeeder::class,
@@ -27,12 +28,12 @@ class DatabaseSeeder extends Seeder
             ResultSeeder::class,
             SettingsTableSeeder::class,
         ]);
-        
+
         // Create a test user
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',
-            'role' => 'staff',
+            'role' => 'admin',
         ]);
     }
 }

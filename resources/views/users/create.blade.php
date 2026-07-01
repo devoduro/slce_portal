@@ -54,13 +54,27 @@
                                 <x-input id="password_confirmation" class="block mt-1 w-full" type="password" name="password_confirmation" required />
                             </div>
 
-                            <!-- Role -->
+                            <!-- Account Type -->
                             <div>
-                                <x-label for="role" :value="__('Role')" />
+                                <x-label for="role" :value="__('Account Type')" />
                                 <select id="role" name="role" class="block mt-1 w-full rounded-md shadow-sm border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
-                                    <option value="admin">Admin</option>
-                                    <option value="staff">Staff</option>
+                                    <option value="admin">Admin / Staff</option>
+                                    <option value="student">Student</option>
                                 </select>
+                            </div>
+
+                            <!-- System Role -->
+                            <div>
+                                <x-label for="system_role" :value="__('System Role (Admin/Staff only)')" />
+                                <select id="system_role" name="system_role" class="block mt-1 w-full rounded-md shadow-sm border-gray-300 focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                                    <option value="">No specific role</option>
+                                    @foreach($roles as $role)
+                                        <option value="{{ $role->name }}" {{ old('system_role') === $role->name ? 'selected' : '' }}>{{ $role->name }}</option>
+                                    @endforeach
+                                </select>
+                                @error('system_role')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Profile Photo -->

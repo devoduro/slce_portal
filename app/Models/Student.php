@@ -22,6 +22,7 @@ class Student extends Model
         'date_of_birth',
         'gender',
         'programme_id',
+        'level',
         'profile_photo',
         'emergency_contact_name',
         'emergency_contact_phone',
@@ -73,7 +74,105 @@ class Student extends Model
     {
         return $this->hasMany(Registration::class);
     }
-    
+
+    /**
+     * Get the fee payments made by the student.
+     */
+    public function payments(): HasMany
+    {
+        return $this->hasMany(StudentPayment::class);
+    }
+
+    /**
+     * Get the biometric registrations (semester check-ins) for the student.
+     */
+    public function biometricRegistrations(): HasMany
+    {
+        return $this->hasMany(BiometricRegistration::class);
+    }
+
+    /**
+     * Determine whether the student has completed biometric registration for a given semester.
+     */
+    public function hasBiometricVerification(Semester $semester): bool
+    {
+        return $this->biometricRegistrations()
+            ->where('semester_id', $semester->id)
+            ->exists();
+    }
+
+    /**
+     * Get the fee structure that applies to this student for a given academic year.
+     * Matches on programme + level first, falling back to a programme-wide (null level) entry.
+     */
+    public function applicableFeeStructure(AcademicYear $academicYear): ?FeeStructure
+    {
+        $query = FeeStructure::where('academic_year_id', $academicYear->id)
+            ->where('programme_id', $this->programme_id);
+
+        if ($this->level !== null) {
+            $structure = (clone $query)->where('level', $this->level)->first();
+            if ($structure) {
+                return $structure;
+            }
+        }
+
+        return $query->whereNull('level')->first();
+    }
+
+    /**
+     * Get the total amount the student has paid for a given academic year.
+     */
+    public function totalPaid(AcademicYear $academicYear): float
+    {
+        return (float) $this->payments()
+            ->where('academic_year_id', $academicYear->id)
+            ->sum('amount');
+    }
+
+    /**
+     * Get the student's outstanding fee balance for a given academic year.
+     */
+    public function feeBalance(AcademicYear $academicYear): float
+    {
+        $structure = $this->applicableFeeStructure($academicYear);
+
+        if (!$structure) {
+            return 0.0;
+        }
+
+        return max(0, (float) $structure->amount - $this->totalPaid($academicYear));
+    }
+
+    /**
+     * Get the percentage of the applicable fee the student has paid for a given academic year.
+     */
+    public function paymentPercentage(AcademicYear $academicYear): float
+    {
+        $structure = $this->applicableFeeStructure($academicYear);
+
+        if (!$structure || (float) $structure->amount <= 0) {
+            return 0.0;
+        }
+
+        return round(($this->totalPaid($academicYear) / (float) $structure->amount) * 100, 2);
+    }
+
+    /**
+     * Determine whether the student has paid enough of their fees to register courses
+     * for the given semester.
+     */
+    public function meetsRegistrationThreshold(Semester $semester): bool
+    {
+        $required = (float) ($semester->required_payment_percentage ?? 0);
+
+        if ($required <= 0) {
+            return true;
+        }
+
+        return $this->paymentPercentage($semester->academicYear) >= $required;
+    }
+
     /**
      * Calculate the student's CGPA.
      *

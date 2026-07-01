@@ -101,6 +101,22 @@
                                     @enderror
                                 </div>
 
+                                <!-- Level -->
+                                <div>
+                                    <label for="level" class="block text-sm font-medium text-gray-700">Level</label>
+                                    <select id="level" name="level" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+                                        <option value="">Select Level</option>
+                                        @foreach([100, 200, 300, 400] as $levelOption)
+                                            <option value="{{ $levelOption }}" {{ old('level', $student->level ?? '') == $levelOption ? 'selected' : '' }}>
+                                                {{ $levelOption }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('level')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
                                 <!-- Gender -->
                                 <div>
                                     <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>

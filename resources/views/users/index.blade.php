@@ -21,11 +21,10 @@
                 </div>
             </div>
             <div class="w-full md:w-1/4">
-                <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Filter by Role</label>
+                <label for="role" class="block text-sm font-medium text-gray-700 mb-1">Filter by Account Type</label>
                 <select name="role" id="role" class="w-full rounded-lg border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50">
-                    <option value="">All Roles</option>
-                    <option value="admin" {{ request('role') === 'admin' ? 'selected' : '' }}>Admin</option>
-                    <option value="staff" {{ request('role') === 'staff' ? 'selected' : '' }}>Staff</option>
+                    <option value="">All Types</option>
+                    <option value="admin" {{ request('role') === 'admin' ? 'selected' : '' }}>Admin / Staff</option>
                     <option value="student" {{ request('role') === 'student' ? 'selected' : '' }}>Student</option>
                 </select>
             </div>
@@ -74,10 +73,14 @@
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                                {{ $user->role === 'admin' ? 'bg-red-100 text-red-800' : 
-                                   ($user->role === 'staff' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800') }}">
-                                {{ ucfirst($user->role) }}
+                                {{ $user->role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800' }}">
+                                {{ $user->role === 'admin' ? 'Admin / Staff' : 'Student' }}
                             </span>
+                            @if($user->roles->isNotEmpty())
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-purple-100 text-purple-800">
+                                    {{ $user->roles->pluck('name')->implode(', ') }}
+                                </span>
+                            @endif
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {{ $user->created_at->format('M d, Y') }}
