@@ -23,6 +23,7 @@ class Student extends Model
         'gender',
         'programme_id',
         'level',
+        'class_group_id',
         'profile_photo',
         'emergency_contact_name',
         'emergency_contact_phone',
@@ -50,7 +51,15 @@ class Student extends Model
     {
         return $this->belongsTo(Programme::class);
     }
-    
+
+    /**
+     * Get the class group the student is assigned to.
+     */
+    public function classGroup(): BelongsTo
+    {
+        return $this->belongsTo(ClassGroup::class);
+    }
+
     /**
      * Get the results for the student.
      */

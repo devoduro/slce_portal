@@ -7,7 +7,7 @@ use App\Models\Programme;
 use App\Models\Result;
 use App\Models\Semester;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
+use App\Traits\ScopesToLecturer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -15,20 +15,7 @@ use Illuminate\Support\Facades\Validator;
 
 class CourseController extends Controller
 {
-    /**
-     * Scope a course query to only the authenticated lecturer's assigned courses,
-     * unless the user has broader course access.
-     */
-    protected function scopeToLecturer(Builder $query): Builder
-    {
-        $user = Auth::user();
-
-        if ($user && $user->hasRole('Lecturer') && !$user->hasRole('Super Admin') && !$user->hasRole('Exams Officer')) {
-            $query->where('lecturer_id', $user->id);
-        }
-
-        return $query;
-    }
+    use ScopesToLecturer;
 
     /**
      * Display a listing of the resource.

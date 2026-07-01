@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\CaScoreSetting;
+use App\Models\ContinuousAssessment;
+use App\Models\Registration;
 use App\Models\Student;
 use App\Models\User;
 use App\Models\AcademicYear;
+use App\Services\AttendanceScoreCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -372,6 +376,50 @@ class StudentAuthController extends Controller
         }
         
         return view('student.transcript', compact('student', 'groupedResults', 'cgpa', 'classification', 'settings'));
+    }
+
+    /**
+     * Show the student's Continuous Assessment breakdown for their registered courses.
+     */
+    public function continuousAssessment()
+    {
+        $student = Auth::user()->student;
+
+        $registrations = Registration::where('student_id', $student->id)
+            ->where('status', 'registered')
+            ->with(['course.semester.academicYear'])
+            ->get()
+            ->filter(fn ($registration) => $registration->course !== null);
+
+        $rows = $registrations->map(function ($registration) use ($student) {
+            $course = $registration->course;
+            $semester = $course->semester;
+
+            $ca = ContinuousAssessment::where('student_id', $student->id)
+                ->where('course_id', $course->id)
+                ->where('semester_id', $semester?->id)
+                ->where('academic_year_id', $registration->academic_year_id)
+                ->first();
+
+            $setting = CaScoreSetting::where('level', $student->level)->first();
+            $attendanceScore = $semester ? AttendanceScoreCalculator::score($student, $course, $semester) : 0;
+
+            $total = $attendanceScore
+                + (float) ($ca->project_score ?? 0)
+                + (float) ($ca->assignment_score ?? 0)
+                + (float) ($ca->mid_semester_score ?? 0);
+
+            return [
+                'course' => $course,
+                'semester' => $semester,
+                'ca' => $ca,
+                'setting' => $setting,
+                'attendance_score' => $attendanceScore,
+                'total' => $total,
+            ];
+        });
+
+        return view('student.continuous-assessment', compact('student', 'rows'));
     }
 
     /**

@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class BiometricLog extends Model
+class LessonAttendance extends Model
 {
     use HasFactory;
 
@@ -16,13 +16,10 @@ class BiometricLog extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'biometric_device_id',
-        'device_user_id',
-        'punched_at',
-        'verify_mode',
-        'raw_payload',
-        'student_id',
         'timetable_entry_id',
+        'student_id',
+        'attendance_date',
+        'biometric_log_id',
     ];
 
     /**
@@ -31,19 +28,19 @@ class BiometricLog extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'punched_at' => 'datetime',
+        'attendance_date' => 'date',
     ];
 
     /**
-     * Get the device that produced this log.
+     * Get the timetable entry (lesson) this attendance record is for.
      */
-    public function device(): BelongsTo
+    public function timetableEntry(): BelongsTo
     {
-        return $this->belongsTo(BiometricDevice::class, 'biometric_device_id');
+        return $this->belongsTo(TimetableEntry::class);
     }
 
     /**
-     * Get the student this log was matched to, if any.
+     * Get the student who attended.
      */
     public function student(): BelongsTo
     {
@@ -51,10 +48,10 @@ class BiometricLog extends Model
     }
 
     /**
-     * Get the lesson (timetable entry) this punch was matched to, if any.
+     * Get the biometric log that triggered this attendance record.
      */
-    public function timetableEntry(): BelongsTo
+    public function biometricLog(): BelongsTo
     {
-        return $this->belongsTo(TimetableEntry::class);
+        return $this->belongsTo(BiometricLog::class);
     }
 }

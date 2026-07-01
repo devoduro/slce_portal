@@ -179,6 +179,27 @@
                 </div>
                 @endcan
 
+                @can('manage-classes')
+                <a href="{{ route('class-groups.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('class-groups.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-users w-5"></i>
+                    <span>Classes</span>
+                </a>
+                @endcan
+
+                @can('manage-timetable')
+                <a href="{{ route('timetable.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('timetable.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-calendar-week w-5"></i>
+                    <span>Timetable</span>
+                </a>
+                @endcan
+
+                @can('manage-continuous-assessment')
+                <a href="{{ route('continuous-assessment.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('continuous-assessment.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-tasks w-5"></i>
+                    <span>Continuous Assessment</span>
+                </a>
+                @endcan
+
                 @can('send-sms')
                 <div x-data="{ open: {{ request()->routeIs('sms.*') ? 'true' : 'false' }} }">
                     <button @click="open = !open" class="w-full flex items-center justify-between gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('sms.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">

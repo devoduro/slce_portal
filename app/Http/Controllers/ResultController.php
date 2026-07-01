@@ -9,6 +9,7 @@ use App\Models\Programme;
 use App\Models\Result;
 use App\Models\Semester;
 use App\Models\Student;
+use App\Traits\ScopesToLecturer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -16,23 +17,7 @@ use Illuminate\Support\Facades\Validator;
 
 class ResultController extends Controller
 {
-    /**
-     * Determine whether the authenticated user is restricted to their own assigned courses.
-     */
-    protected function isScopedLecturer(): bool
-    {
-        $user = Auth::user();
-
-        return $user && $user->hasRole('Lecturer') && !$user->hasRole('Super Admin') && !$user->hasRole('Exams Officer');
-    }
-
-    /**
-     * Get the course IDs the authenticated lecturer is allowed to manage.
-     */
-    protected function lecturerCourseIds(): array
-    {
-        return Course::where('lecturer_id', Auth::id())->pluck('id')->toArray();
-    }
+    use ScopesToLecturer;
 
     /**
      * Display a listing of the resource.

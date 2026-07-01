@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\BiometricDevice;
 use App\Models\BiometricLog;
 use App\Models\BiometricRegistration;
+use App\Models\LessonAttendance;
 use App\Models\Semester;
 use App\Models\Student;
+use App\Models\TimetableEntry;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -145,8 +148,54 @@ class BiometricAdmsController extends Controller
                     ]
                 );
             }
+
+            $this->matchLessonAttendance($student, $log, $device);
         }
 
         return 1;
+    }
+
+    /**
+     * If this punch falls within a scheduled lesson's day/time window at the
+     * punching device's venue, record it as attendance for that lesson.
+     */
+    protected function matchLessonAttendance(Student $student, BiometricLog $log, ?BiometricDevice $device): void
+    {
+        if (!$device || !$device->location) {
+            return;
+        }
+
+        $punchedAt = Carbon::parse($log->punched_at);
+        $dayOfWeek = $punchedAt->dayOfWeek;
+        $time = $punchedAt->format('H:i:s');
+        $date = $punchedAt->toDateString();
+        $venue = strtolower(trim($device->location));
+
+        $entry = TimetableEntry::where('day_of_week', $dayOfWeek)
+            ->whereTime('start_time', '<=', $time)
+            ->whereTime('end_time', '>=', $time)
+            ->whereHas('semester', function ($query) use ($date) {
+                $query->whereDate('start_date', '<=', $date)
+                    ->whereDate('end_date', '>=', $date);
+            })
+            ->get()
+            ->first(fn ($candidate) => strtolower(trim($candidate->venue)) === $venue);
+
+        if (!$entry) {
+            return;
+        }
+
+        LessonAttendance::firstOrCreate(
+            [
+                'timetable_entry_id' => $entry->id,
+                'student_id' => $student->id,
+                'attendance_date' => $date,
+            ],
+            [
+                'biometric_log_id' => $log->id,
+            ]
+        );
+
+        $log->update(['timetable_entry_id' => $entry->id]);
     }
 }

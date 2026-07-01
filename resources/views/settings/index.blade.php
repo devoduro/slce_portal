@@ -59,6 +59,22 @@
                     </div>
                 </div>
                 
+                <!-- CA Score Settings -->
+                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="p-6 border-b border-gray-200">
+                        <div class="flex items-center mb-4">
+                            <div class="rounded-full p-3 bg-teal-100 mr-4">
+                                <i class="fas fa-tasks text-teal-600 text-xl"></i>
+                            </div>
+                            <h3 class="text-lg font-medium text-gray-900">CA Score Settings</h3>
+                        </div>
+                        <p class="text-gray-600 mb-4">Set Continuous Assessment max marks (Attendance, Project, Assignment, Mid-Semester) per level.</p>
+                        <a href="{{ route('ca-score-settings.index') }}" class="inline-flex items-center px-4 py-2 bg-primary-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-primary-700 active:bg-primary-800 focus:outline-none focus:border-primary-800 focus:ring ring-primary-300 disabled:opacity-25 transition ease-in-out duration-150">
+                            Manage
+                        </a>
+                    </div>
+                </div>
+
                 <!-- Database Backup -->
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 border-b border-gray-200">

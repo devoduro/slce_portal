@@ -30,6 +30,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'view-activity-logs',
         'manage-import-export',
         'manage-biometric',
+        'manage-classes',
+        'manage-timetable',
+        'manage-continuous-assessment',
     ];
 
     /**
@@ -42,8 +45,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'Super Admin' => [],
         'Accountant' => ['manage-fees', 'view-reports'],
         'Principal' => ['view-reports'],
-        'Exams Officer' => ['manage-results', 'manage-courses', 'manage-transcripts'],
-        'Lecturer' => ['manage-results'],
+        'Exams Officer' => ['manage-results', 'manage-courses', 'manage-transcripts', 'manage-classes', 'manage-timetable', 'manage-continuous-assessment'],
+        'Lecturer' => ['manage-results', 'manage-continuous-assessment'],
     ];
 
     /**

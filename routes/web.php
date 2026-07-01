@@ -199,6 +199,25 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/biometric-verifications/entry/{registration}', [\App\Http\Controllers\BiometricRegistrationController::class, 'destroy'])->name('biometric-verifications.destroy');
     });
 
+    // Classes
+    Route::middleware('permission:manage-classes')->group(function () {
+        Route::get('/class-groups/{classGroup}/assign-students', [\App\Http\Controllers\ClassGroupController::class, 'assignStudentsForm'])->name('class-groups.assign-students');
+        Route::post('/class-groups/{classGroup}/assign-students', [\App\Http\Controllers\ClassGroupController::class, 'assignStudents'])->name('class-groups.assign-students.store');
+        Route::resource('class-groups', \App\Http\Controllers\ClassGroupController::class)->except(['show']);
+    });
+
+    // Timetable
+    Route::middleware('permission:manage-timetable')->group(function () {
+        Route::resource('timetable', \App\Http\Controllers\TimetableController::class)->except(['show']);
+    });
+
+    // Continuous Assessment
+    Route::middleware('permission:manage-continuous-assessment')->group(function () {
+        Route::get('/continuous-assessment', [\App\Http\Controllers\ContinuousAssessmentController::class, 'index'])->name('continuous-assessment.index');
+        Route::get('/continuous-assessment/{course}', [\App\Http\Controllers\ContinuousAssessmentController::class, 'show'])->name('continuous-assessment.show');
+        Route::post('/continuous-assessment/{course}', [\App\Http\Controllers\ContinuousAssessmentController::class, 'store'])->name('continuous-assessment.store');
+    });
+
     // Transcripts
     Route::middleware('permission:manage-transcripts')->group(function () {
         Route::get('/transcripts', [TranscriptController::class, 'index'])->name('transcripts.index');
@@ -261,6 +280,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/registration/create', [RegistrationController::class, 'create'])->name('registration.create');
             Route::post('/registration', [RegistrationController::class, 'store'])->name('registration.store');
             Route::delete('/registration/{registration}', [RegistrationController::class, 'destroy'])->name('registration.destroy');
+
+            Route::get('/continuous-assessment', [\App\Http\Controllers\Auth\StudentAuthController::class, 'continuousAssessment'])->name('continuous-assessment');
 
             Route::get('/profile/edit', [\App\Http\Controllers\Auth\StudentAuthController::class, 'editProfile'])->name('profile.edit');
             Route::post('/profile/update', [\App\Http\Controllers\Auth\StudentAuthController::class, 'updateProfile'])->name('profile.update');
@@ -340,6 +361,9 @@ Route::middleware(['auth'])->group(function () {
             // Institution Settings
             Route::get('/settings/institution', [SettingController::class, 'institution'])->name('settings.institution');
             Route::put('/settings/institution', [SettingController::class, 'updateInstitution'])->name('settings.institution.update');
+
+            // CA Score Settings
+            Route::resource('ca-score-settings', \App\Http\Controllers\CaScoreSettingController::class)->except(['show']);
         });
 
         // Bulk Results Upload

@@ -68,7 +68,15 @@ class Course extends Model
     {
         return $this->belongsTo(User::class, 'lecturer_id');
     }
-    
+
+    /**
+     * Get the timetable entries (scheduled lesson slots) for this course.
+     */
+    public function timetableEntries(): HasMany
+    {
+        return $this->hasMany(TimetableEntry::class);
+    }
+
     /**
      * Get the prerequisite course for this course.
      */
