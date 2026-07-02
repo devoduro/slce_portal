@@ -32,7 +32,7 @@ class ContinuousAssessmentController extends Controller
      */
     public function show(Course $course)
     {
-        if ($this->isScopedLecturer() && $course->lecturer_id !== auth()->id()) {
+        if ($this->isScopedLecturer() && $course->lecturer_id !== $this->authLecturerId()) {
             abort(403);
         }
 
@@ -78,7 +78,7 @@ class ContinuousAssessmentController extends Controller
      */
     public function store(Request $request, Course $course)
     {
-        if ($this->isScopedLecturer() && $course->lecturer_id !== auth()->id()) {
+        if ($this->isScopedLecturer() && $course->lecturer_id !== $this->authLecturerId()) {
             abort(403);
         }
 

@@ -48,6 +48,7 @@ class User extends Authenticatable
         'password',
         'role',
         'student_id',
+        'lecturer_id',
         'first_login',
         'index_number',
     ];
@@ -81,5 +82,13 @@ class User extends Authenticatable
     public function student()
     {
         return $this->belongsTo(Student::class);
+    }
+
+    /**
+     * Get the lecturer profile associated with the user.
+     */
+    public function lecturer()
+    {
+        return $this->belongsTo(Lecturer::class);
     }
 }

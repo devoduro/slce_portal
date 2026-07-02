@@ -19,11 +19,12 @@ class TimetableEntry extends Model
     protected $fillable = [
         'class_group_id',
         'course_id',
+        'lecturer_id',
+        'venue_id',
         'semester_id',
         'day_of_week',
         'start_time',
         'end_time',
-        'venue',
     ];
 
     /**
@@ -40,6 +41,22 @@ class TimetableEntry extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    /**
+     * Get the lecturer assigned to this specific lesson slot.
+     */
+    public function lecturer(): BelongsTo
+    {
+        return $this->belongsTo(Lecturer::class);
+    }
+
+    /**
+     * Get the venue this lesson slot is held in.
+     */
+    public function venue(): BelongsTo
+    {
+        return $this->belongsTo(Venue::class);
     }
 
     /**

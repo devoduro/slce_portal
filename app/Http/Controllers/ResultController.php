@@ -11,7 +11,6 @@ use App\Models\Semester;
 use App\Models\Student;
 use App\Traits\ScopesToLecturer;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 
@@ -94,11 +93,7 @@ class ResultController extends Controller
     public function create()
     {
         $students = Student::orderBy('full_name')->get();
-        $coursesQuery = Course::orderBy('code');
-        if ($this->isScopedLecturer()) {
-            $coursesQuery->where('lecturer_id', Auth::id());
-        }
-        $courses = $coursesQuery->get();
+        $courses = $this->scopeToLecturer(Course::orderBy('code'))->get();
         $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
         $semesters = Semester::all();
         $gradeSchemes = GradeScheme::all();
@@ -377,14 +372,10 @@ class ResultController extends Controller
      */
     public function bulkCreate()
     {
-        $coursesQuery = Course::orderBy('code');
-        if ($this->isScopedLecturer()) {
-            $coursesQuery->where('lecturer_id', Auth::id());
-        }
-        $courses = $coursesQuery->get();
+        $courses = $this->scopeToLecturer(Course::orderBy('code'))->get();
         $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
         $semesters = Semester::all();
-        
+
         return view('results.bulk_create', compact('courses', 'academicYears', 'semesters'));
     }
     

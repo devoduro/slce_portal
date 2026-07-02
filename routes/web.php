@@ -145,6 +145,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/courses/{course}/students/add', [CourseController::class, 'addStudents'])->name('courses.students.store');
         Route::get('/courses/{course}/results', [CourseController::class, 'results'])->name('courses.results');
         Route::get('/courses/{course}/export', [CourseController::class, 'export'])->name('courses.export');
+
+        // Lecturers
+        Route::post('/lecturers/{lecturer}/create-account', [\App\Http\Controllers\LecturerController::class, 'createUserAccount'])->name('lecturers.create-account');
+        Route::resource('lecturers', \App\Http\Controllers\LecturerController::class);
+
+        // Departments
+        Route::resource('departments', \App\Http\Controllers\DepartmentController::class)->except(['show']);
     });
 
     // Results Management
@@ -217,7 +224,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Timetable
     Route::middleware('permission:manage-timetable')->group(function () {
+        Route::get('/timetable/print', [\App\Http\Controllers\TimetableController::class, 'print'])->name('timetable.print');
         Route::resource('timetable', \App\Http\Controllers\TimetableController::class)->except(['show']);
+        Route::resource('venues', \App\Http\Controllers\VenueController::class)->except(['show']);
     });
 
     // Continuous Assessment

@@ -116,6 +116,16 @@
                     <i class="fas fa-book w-5"></i>
                     <span>Courses</span>
                 </a>
+
+                <a href="{{ route('lecturers.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('lecturers.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-chalkboard-teacher w-5"></i>
+                    <span>Lecturers</span>
+                </a>
+
+                <a href="{{ route('departments.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('departments.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-building w-5"></i>
+                    <span>Departments</span>
+                </a>
                 @endcan
 
                 @can('manage-results')
@@ -193,6 +203,11 @@
                 <a href="{{ route('timetable.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('timetable.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-calendar-week w-5"></i>
                     <span>Timetable</span>
+                </a>
+
+                <a href="{{ route('venues.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('venues.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-map-marker-alt w-5"></i>
+                    <span>Venues</span>
                 </a>
                 @endcan
 

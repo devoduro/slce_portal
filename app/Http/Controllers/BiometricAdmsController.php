@@ -171,7 +171,8 @@ class BiometricAdmsController extends Controller
         $date = $punchedAt->toDateString();
         $venue = strtolower(trim($device->location));
 
-        $entry = TimetableEntry::where('day_of_week', $dayOfWeek)
+        $entry = TimetableEntry::with('venue')
+            ->where('day_of_week', $dayOfWeek)
             ->whereTime('start_time', '<=', $time)
             ->whereTime('end_time', '>=', $time)
             ->whereHas('semester', function ($query) use ($date) {
@@ -179,7 +180,7 @@ class BiometricAdmsController extends Controller
                     ->whereDate('end_date', '>=', $date);
             })
             ->get()
-            ->first(fn ($candidate) => strtolower(trim($candidate->venue)) === $venue);
+            ->first(fn ($candidate) => $candidate->venue && strtolower(trim($candidate->venue->name)) === $venue);
 
         if (!$entry) {
             return;

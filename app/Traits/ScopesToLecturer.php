@@ -19,11 +19,25 @@ trait ScopesToLecturer
     }
 
     /**
+     * Get the lecturer profile ID linked to the authenticated user, if any.
+     */
+    protected function authLecturerId(): ?int
+    {
+        return Auth::user()?->lecturer_id;
+    }
+
+    /**
      * Get the course IDs the authenticated lecturer is allowed to manage.
      */
     protected function lecturerCourseIds(): array
     {
-        return Course::where('lecturer_id', Auth::id())->pluck('id')->toArray();
+        $lecturerId = $this->authLecturerId();
+
+        if (!$lecturerId) {
+            return [];
+        }
+
+        return Course::where('lecturer_id', $lecturerId)->pluck('id')->toArray();
     }
 
     /**
@@ -33,7 +47,8 @@ trait ScopesToLecturer
     protected function scopeToLecturer(Builder $query): Builder
     {
         if ($this->isScopedLecturer()) {
-            $query->where('lecturer_id', Auth::id());
+            // No linked lecturer profile yet -> show nothing rather than everything.
+            $query->where('lecturer_id', $this->authLecturerId() ?? 0);
         }
 
         return $query;

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\Lecturer;
 use App\Models\Programme;
 use App\Models\Result;
 use App\Models\Semester;
-use App\Models\User;
 use App\Traits\ScopesToLecturer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,7 +36,7 @@ class CourseController extends Controller
     {
         $programmes = Programme::all();
         $semesters = Semester::all();
-        $lecturers = User::role('Lecturer')->orderBy('name')->get();
+        $lecturers = Lecturer::orderBy('name')->get();
 
         return view('courses.create', compact('programmes', 'semesters', 'lecturers'));
     }
@@ -55,7 +55,7 @@ class CourseController extends Controller
             'programme_ids.*' => 'exists:programmes,id',
             'semester_id' => 'required|exists:semesters,id',
             'is_core' => 'boolean',
-            'lecturer_id' => 'nullable|exists:users,id',
+            'lecturer_id' => 'nullable|exists:lecturers,id',
         ]);
 
         if ($validator->fails()) {
@@ -127,7 +127,7 @@ class CourseController extends Controller
         $programmes = Programme::all();
         $semesters = Semester::all();
         $prerequisites = Course::where('id', '!=', $id)->get();
-        $lecturers = User::role('Lecturer')->orderBy('name')->get();
+        $lecturers = Lecturer::orderBy('name')->get();
 
         return view('courses.edit', compact('course', 'programmes', 'semesters', 'prerequisites', 'lecturers'));
     }
@@ -148,7 +148,7 @@ class CourseController extends Controller
             'programme_ids.*' => 'exists:programmes,id',
             'semester_id' => 'required|exists:semesters,id',
             'is_core' => 'boolean',
-            'lecturer_id' => 'nullable|exists:users,id',
+            'lecturer_id' => 'nullable|exists:lecturers,id',
         ]);
 
         if ($validator->fails()) {
