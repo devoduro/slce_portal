@@ -143,7 +143,7 @@ class SettingsTableSeeder extends Seeder
             ],
         ];
         
-        // Insert all settings
-        DB::table('settings')->insert(array_merge($systemSettings, $institutionSettings));
+        // Insert all settings, leaving any already-customized values untouched.
+        DB::table('settings')->insertOrIgnore(array_merge($systemSettings, $institutionSettings));
     }
 }

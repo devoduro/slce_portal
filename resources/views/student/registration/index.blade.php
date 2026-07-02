@@ -16,6 +16,18 @@
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
 
+    @if($totalArrears > 0)
+        <div class="bg-white rounded-2xl shadow-sm border border-red-100 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Previous Balance</h3>
+            <p class="text-sm text-gray-600">
+                You have an outstanding balance of
+                <span class="font-semibold text-red-600">{{ number_format($totalArrears, 2) }}</span>
+                from previous academic year(s). Please contact the accounts office to settle this.
+            </p>
+            <p class="text-xs text-gray-400 mt-2">This does not affect your ability to register courses this semester.</p>
+        </div>
+    @endif
+
     @if(!$currentSemester)
         <div class="p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700 rounded">
             There is no current semester set up yet. Please check back once the school opens a semester.

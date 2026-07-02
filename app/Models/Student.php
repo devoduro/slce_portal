@@ -101,6 +101,23 @@ class Student extends Model
     }
 
     /**
+     * Get the arrears (debt carried forward from previous years) for the student.
+     */
+    public function arrears(): HasMany
+    {
+        return $this->hasMany(StudentArrear::class);
+    }
+
+    /**
+     * Get the total outstanding arrears across all previous years.
+     * This is informational only and does not affect the course-registration fee gate.
+     */
+    public function totalArrears(): float
+    {
+        return (float) $this->arrears()->sum('amount');
+    }
+
+    /**
      * Determine whether the student has completed biometric registration for a given semester.
      */
     public function hasBiometricVerification(Semester $semester): bool

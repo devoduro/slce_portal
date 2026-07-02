@@ -152,8 +152,11 @@
                         <a href="{{ route('fee-structures.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fee-structures.*') ? 'text-primary-600 font-medium' : '' }}">
                             Fee Structures
                         </a>
-                        <a href="{{ route('fees.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.*') ? 'text-primary-600 font-medium' : '' }}">
+                        <a href="{{ route('fees.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.*') && !request()->routeIs('fees.arrears.*') ? 'text-primary-600 font-medium' : '' }}">
                             Payments
+                        </a>
+                        <a href="{{ route('fees.arrears.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.arrears.*') ? 'text-primary-600 font-medium' : '' }}">
+                            Arrears / Debtors
                         </a>
                     </div>
                 </div>
@@ -393,7 +396,19 @@
                         </button>
                     </div>
                 @endif
-                
+
+                @if (session('warning'))
+                    <div x-data="{ show: true }" x-show="show" class="p-3 bg-yellow-50 border-l-4 border-yellow-500 text-yellow-700 flex justify-between items-center">
+                        <div>
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            {{ session('warning') }}
+                        </div>
+                        <button @click="show = false" class="text-yellow-700 hover:text-yellow-900">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                @endif
+
                 <!-- Page Header -->
                 @if (isset($header))
                     <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mt-2">

@@ -66,6 +66,9 @@ class StudentPaymentController extends Controller
             ? $student->payments()->where('academic_year_id', $academicYear->id)->orderByDesc('payment_date')->get()
             : collect();
 
+        $arrears = $student->arrears()->with('academicYear')->orderByDesc('academic_year_id')->get();
+        $totalArrears = $student->totalArrears();
+
         return view('fees.payments.show', compact(
             'student',
             'academicYear',
@@ -74,7 +77,9 @@ class StudentPaymentController extends Controller
             'totalPaid',
             'balance',
             'percentage',
-            'payments'
+            'payments',
+            'arrears',
+            'totalArrears'
         ));
     }
 

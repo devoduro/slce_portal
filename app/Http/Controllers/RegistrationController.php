@@ -24,6 +24,7 @@ class RegistrationController extends Controller
         $balance = 0;
         $feeStructure = null;
         $isBiometricVerified = false;
+        $totalArrears = $student->totalArrears();
 
         if ($currentSemester) {
             $registrations = $student->registrations()
@@ -48,7 +49,8 @@ class RegistrationController extends Controller
             'percentage',
             'balance',
             'feeStructure',
-            'isBiometricVerified'
+            'isBiometricVerified',
+            'totalArrears'
         ));
     }
 

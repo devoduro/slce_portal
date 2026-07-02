@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AcademicYearController;
+use App\Http\Controllers\ArrearsController;
 use App\Http\Controllers\BiometricAdmsController;
 use App\Http\Controllers\BulkResultController;
 use App\Http\Controllers\CourseController;
@@ -185,6 +186,14 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('permission:manage-fees')->group(function () {
         Route::resource('fee-structures', FeeStructureController::class)->except(['show']);
         Route::get('/fees', [StudentPaymentController::class, 'index'])->name('fees.index');
+
+        // Arrears (debtors list) routes must be registered before the /fees/{student} wildcard below.
+        Route::get('/fees/arrears', [ArrearsController::class, 'index'])->name('fees.arrears.index');
+        Route::get('/fees/arrears/upload', [ArrearsController::class, 'uploadForm'])->name('fees.arrears.upload');
+        Route::post('/fees/arrears/import', [ArrearsController::class, 'import'])->name('fees.arrears.import');
+        Route::get('/fees/arrears/template', [ArrearsController::class, 'downloadTemplate'])->name('fees.arrears.template');
+        Route::delete('/fees/arrears/{arrear}', [ArrearsController::class, 'destroy'])->name('fees.arrears.destroy');
+
         Route::get('/fees/{student}', [StudentPaymentController::class, 'show'])->name('fees.show');
         Route::post('/fees/{student}/payments', [StudentPaymentController::class, 'store'])->name('fees.payments.store');
         Route::delete('/fees/payments/{payment}', [StudentPaymentController::class, 'destroy'])->name('fees.payments.destroy');

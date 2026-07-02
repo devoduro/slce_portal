@@ -27,7 +27,7 @@ class UserSeeder extends Seeder
                 'name' => 'Ama Ata Aidoo',
                 'email' => 'aaidoo@example.com',
                 'password' => Hash::make('password'),
-                'role' => 'staff',
+                'role' => 'admin',
             ],
         ];
 
@@ -45,17 +45,23 @@ class UserSeeder extends Seeder
         // Create student user accounts
         $students = \App\Models\Student::all();
         foreach ($students as $student) {
-            User::firstOrCreate(
-                ['student_id' => $student->id],
-                [
-                    'name' => $student->full_name,
-                    'email' => $student->email,
-                    'password' => Hash::make('password'),
-                    'role' => 'student',
-                    'first_login' => true,
-                    'index_number' => $student->index_number,
-                ]
-            );
+            try {
+                User::firstOrCreate(
+                    ['student_id' => $student->id],
+                    [
+                        'name' => $student->full_name,
+                        'email' => $student->email,
+                        'password' => Hash::make('password'),
+                        'role' => 'student',
+                        'first_login' => true,
+                        'index_number' => $student->index_number,
+                    ]
+                );
+            } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+                // A student's email/index_number sometimes collides with an existing account
+                // (data-entry duplicate). Skip that one student rather than aborting the whole seed.
+                \Illuminate\Support\Facades\Log::warning("Skipped creating user account for student {$student->id} ({$student->index_number}): {$e->getMessage()}");
+            }
         }
     }
 }

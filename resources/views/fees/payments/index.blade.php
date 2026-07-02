@@ -54,6 +54,7 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Arrears</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
@@ -64,6 +65,7 @@
                                         $paid = $academicYear ? $student->totalPaid($academicYear) : 0;
                                         $balance = $academicYear ? $student->feeBalance($academicYear) : 0;
                                         $percentage = $academicYear ? $student->paymentPercentage($academicYear) : 0;
+                                        $totalArrears = $student->totalArrears();
                                     @endphp
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap">
@@ -80,6 +82,15 @@
                                                 {{ number_format($percentage, 1) }}%
                                             </span>
                                         </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                            @if($totalArrears > 0)
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                                    {{ number_format($totalArrears, 2) }}
+                                                </span>
+                                            @else
+                                                <span class="text-gray-400">-</span>
+                                            @endif
+                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <a href="{{ route('fees.show', ['student' => $student->id, 'academic_year_id' => $academicYear?->id]) }}" class="text-primary-600 hover:text-primary-900">
                                                 <i class="fas fa-eye"></i> View
@@ -88,7 +99,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="px-6 py-8 text-center text-gray-400">No students found.</td>
+                                        <td colspan="9" class="px-6 py-8 text-center text-gray-400">No students found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

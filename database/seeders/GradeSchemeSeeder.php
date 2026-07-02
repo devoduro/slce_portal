@@ -14,11 +14,13 @@ class GradeSchemeSeeder extends Seeder
     public function run(): void
     {
         // Create default grade scheme
-        $gradeScheme = GradeScheme::create([
-            'name' => 'Ghanaian University Grading System',
-            'description' => 'Standard grading system used in Ghanaian universities',
-            'is_default' => true,
-        ]);
+        $gradeScheme = GradeScheme::firstOrCreate(
+            ['name' => 'Ghanaian University Grading System'],
+            [
+                'description' => 'Standard grading system used in Ghanaian universities',
+                'is_default' => true,
+            ]
+        );
 
         // Create grades for the scheme
         $grades = [
@@ -71,12 +73,16 @@ class GradeSchemeSeeder extends Seeder
 
         // Add grades to the scheme
         foreach ($grades as $grade) {
-            Grade::create([
-                'grade_scheme_id' => $gradeScheme->id,
-                'grade' => $grade['grade'],
-                'min_score' => $grade['min_score'],
-                'gpa_value' => $grade['gpa_value'],
-            ]);
+            Grade::firstOrCreate(
+                [
+                    'grade_scheme_id' => $gradeScheme->id,
+                    'grade' => $grade['grade'],
+                ],
+                [
+                    'min_score' => $grade['min_score'],
+                    'gpa_value' => $grade['gpa_value'],
+                ]
+            );
         }
     }
 }
