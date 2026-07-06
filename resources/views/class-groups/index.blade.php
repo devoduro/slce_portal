@@ -4,9 +4,14 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('Classes') }}
             </h2>
-            <x-button href="{{ route('class-groups.create') }}" icon="fas fa-plus">
-                {{ __('Add Class') }}
-            </x-button>
+            <div class="flex gap-2">
+                <x-button href="{{ route('class-groups.import.form') }}" variant="secondary" icon="fas fa-file-import">
+                    {{ __('Import Class List') }}
+                </x-button>
+                <x-button href="{{ route('class-groups.create') }}" icon="fas fa-plus">
+                    {{ __('Add Class') }}
+                </x-button>
+            </div>
         </div>
     </x-slot>
 
@@ -46,6 +51,20 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $classGroup->students_count }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div class="flex justify-end space-x-2">
+                                                    <a href="{{ route('class-groups.print', $classGroup) }}" target="_blank" class="text-gray-600 hover:text-gray-900" title="Print Class List">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
+                                                    @can('manage-timetable')
+                                                        @if($currentSemesterId)
+                                                            <a href="{{ route('timetable.print', ['class_group_id' => $classGroup->id, 'semester_id' => $currentSemesterId]) }}" target="_blank" class="text-gray-600 hover:text-gray-900" title="Print Timetable">
+                                                                <i class="fas fa-calendar-alt"></i>
+                                                            </a>
+                                                        @else
+                                                            <span class="text-gray-300 cursor-not-allowed" title="Set a current semester first">
+                                                                <i class="fas fa-calendar-alt"></i>
+                                                            </span>
+                                                        @endif
+                                                    @endcan
                                                     <a href="{{ route('class-groups.assign-students', $classGroup) }}" class="text-primary-600 hover:text-primary-900" title="Assign Students">
                                                         <i class="fas fa-user-plus"></i>
                                                     </a>

@@ -55,6 +55,65 @@
         </div>
     </div>
  -->
+    <!-- Today's Classes -->
+    <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
+        <div class="p-6 border-b border-gray-100">
+            <div class="flex justify-between items-center">
+                <h3 class="text-xl font-bold text-gray-800">Today's Classes</h3>
+                <a href="{{ route('student.timetable') }}"
+                   class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors duration-200">
+                    View Full Timetable
+                </a>
+            </div>
+        </div>
+        @if(!$student->class_group_id)
+            <div class="p-12 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4">
+                    <i class="fas fa-users-slash text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Not Yet Assigned to a Class</h3>
+                <p class="text-gray-500">Once you're assigned to a class, your timetable will appear here.</p>
+            </div>
+        @elseif($todayEntries->isEmpty())
+            <div class="p-12 text-center">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-100 text-blue-600 mb-4">
+                    <i class="fas fa-mug-hot text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No Classes Today</h3>
+                <p class="text-gray-500">You have no lessons scheduled for today ({{ now()->format('l') }}).</p>
+            </div>
+        @else
+            <div class="divide-y divide-gray-100">
+                @foreach($todayEntries as $entry)
+                    <div class="p-6 hover:bg-gray-50 transition-colors duration-200">
+                        <div class="flex items-center justify-between">
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-3">
+                                    <div class="p-2 bg-blue-100 rounded-lg">
+                                        <i class="fas fa-calendar-day text-blue-600"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-lg font-semibold text-gray-800">{{ $entry->course->code ?? 'N/A' }}</h4>
+                                        <p class="text-sm text-gray-500">{{ $entry->course->title ?? '' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="ml-6 text-right">
+                                <div class="text-sm font-semibold text-gray-800">{{ substr($entry->start_time, 0, 5) }} - {{ substr($entry->end_time, 0, 5) }}</div>
+                                <div class="text-sm text-gray-500 mt-1">
+                                    {{ $entry->venue->name ?? 'N/A' }}
+                                    @if($entry->lecturer)
+                                        &bull; {{ $entry->lecturer->name }}
+                                    @endif
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        @endif
+    </div>
+
     <!-- Recent Results -->
     <div class="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-100">
         <div class="p-6 border-b border-gray-100">

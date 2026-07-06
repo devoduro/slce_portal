@@ -104,7 +104,13 @@ Route::middleware(['auth'])->group(function () {
     // User Profile
     Route::get('/profile', [UserController::class, 'profile'])->name('profile');
     Route::put('/profile', [UserController::class, 'updateProfile'])->name('profile.update');
-    
+
+    // Lecturer self-service (not permission-gated - any account linked to a lecturer profile)
+    Route::get('/my-profile', [\App\Http\Controllers\LecturerPortalController::class, 'profile'])->name('lecturer.profile.edit');
+    Route::put('/my-profile', [\App\Http\Controllers\LecturerPortalController::class, 'updateProfile'])->name('lecturer.profile.update');
+    Route::get('/my-timetable', [\App\Http\Controllers\LecturerPortalController::class, 'timetable'])->name('lecturer.timetable');
+    Route::get('/my-timetable/print', [\App\Http\Controllers\LecturerPortalController::class, 'printTimetable'])->name('lecturer.timetable.print');
+
     // Students
     Route::middleware('permission:manage-students')->group(function () {
         Route::get('/students/{id}/create-account', [StudentController::class, 'createUserAccount'])->name('students.create-account');
@@ -147,6 +153,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/courses/{course}/export', [CourseController::class, 'export'])->name('courses.export');
 
         // Lecturers
+        Route::get('/lecturers/import', [\App\Http\Controllers\LecturerController::class, 'importForm'])->name('lecturers.import.form');
+        Route::post('/lecturers/import', [\App\Http\Controllers\LecturerController::class, 'import'])->name('lecturers.import.store');
+        Route::get('/lecturers/import/template', [\App\Http\Controllers\LecturerController::class, 'downloadTemplate'])->name('lecturers.import.template');
         Route::post('/lecturers/{lecturer}/create-account', [\App\Http\Controllers\LecturerController::class, 'createUserAccount'])->name('lecturers.create-account');
         Route::resource('lecturers', \App\Http\Controllers\LecturerController::class);
 
@@ -217,9 +226,18 @@ Route::middleware(['auth'])->group(function () {
 
     // Classes
     Route::middleware('permission:manage-classes')->group(function () {
+        Route::get('/class-groups/import', [\App\Http\Controllers\ClassGroupController::class, 'importForm'])->name('class-groups.import.form');
+        Route::post('/class-groups/import', [\App\Http\Controllers\ClassGroupController::class, 'import'])->name('class-groups.import.store');
+        Route::get('/class-groups/import/template', [\App\Http\Controllers\ClassGroupController::class, 'downloadTemplate'])->name('class-groups.import.template');
+        Route::get('/class-groups/{classGroup}/print', [\App\Http\Controllers\ClassGroupController::class, 'print'])->name('class-groups.print');
         Route::get('/class-groups/{classGroup}/assign-students', [\App\Http\Controllers\ClassGroupController::class, 'assignStudentsForm'])->name('class-groups.assign-students');
         Route::post('/class-groups/{classGroup}/assign-students', [\App\Http\Controllers\ClassGroupController::class, 'assignStudents'])->name('class-groups.assign-students.store');
         Route::resource('class-groups', \App\Http\Controllers\ClassGroupController::class)->except(['show']);
+
+        // Student level promotion (new academic year workflow)
+        Route::get('/promotions', [\App\Http\Controllers\PromotionController::class, 'index'])->name('promotions.index');
+        Route::post('/promotions/preview', [\App\Http\Controllers\PromotionController::class, 'preview'])->name('promotions.preview');
+        Route::post('/promotions', [\App\Http\Controllers\PromotionController::class, 'store'])->name('promotions.store');
     });
 
     // Timetable
@@ -300,6 +318,9 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/registration/{registration}', [RegistrationController::class, 'destroy'])->name('registration.destroy');
 
             Route::get('/continuous-assessment', [\App\Http\Controllers\Auth\StudentAuthController::class, 'continuousAssessment'])->name('continuous-assessment');
+
+            Route::get('/timetable', [\App\Http\Controllers\Auth\StudentAuthController::class, 'timetable'])->name('timetable');
+            Route::get('/timetable/print', [\App\Http\Controllers\Auth\StudentAuthController::class, 'printTimetable'])->name('timetable.print');
 
             Route::get('/profile/edit', [\App\Http\Controllers\Auth\StudentAuthController::class, 'editProfile'])->name('profile.edit');
             Route::post('/profile/update', [\App\Http\Controllers\Auth\StudentAuthController::class, 'updateProfile'])->name('profile.update');

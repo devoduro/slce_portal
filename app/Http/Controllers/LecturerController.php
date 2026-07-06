@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\LecturerTemplateExport;
+use App\Imports\LecturerImport;
 use App\Models\Department;
 use App\Models\Lecturer;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Maatwebsite\Excel\Facades\Excel;
 
 class LecturerController extends Controller
 {
@@ -57,7 +61,13 @@ class LecturerController extends Controller
                 ->withInput();
         }
 
-        Lecturer::create($request->only(['name', 'email', 'phone', 'staff_id', 'department_id']));
+        $data = $request->only(['name', 'email', 'phone', 'staff_id', 'department_id']);
+
+        if ($request->hasFile('profile_photo')) {
+            $data['profile_photo'] = $request->file('profile_photo')->store('lecturer-photos', 'public');
+        }
+
+        Lecturer::create($data);
 
         return redirect()->route('lecturers.index')
             ->with('success', 'Lecturer added successfully.');
@@ -68,9 +78,11 @@ class LecturerController extends Controller
      */
     public function show(Lecturer $lecturer)
     {
-        $lecturer->load(['department', 'courses.semester', 'timetableEntries.classGroup', 'timetableEntries.venue', 'user']);
+        $lecturer->load(['department', 'courses.semester', 'timetableEntries.classGroup', 'timetableEntries.venue', 'timetableEntries.semester', 'user']);
 
-        return view('lecturers.show', compact('lecturer'));
+        $workloadBySemester = TimetableController::workloadBySemesterForLecturer($lecturer->id);
+
+        return view('lecturers.show', compact('lecturer', 'workloadBySemester'));
     }
 
     /**
@@ -96,7 +108,16 @@ class LecturerController extends Controller
                 ->withInput();
         }
 
-        $lecturer->update($request->only(['name', 'email', 'phone', 'staff_id', 'department_id']));
+        $data = $request->only(['name', 'email', 'phone', 'staff_id', 'department_id']);
+
+        if ($request->hasFile('profile_photo')) {
+            if ($lecturer->profile_photo) {
+                Storage::disk('public')->delete($lecturer->profile_photo);
+            }
+            $data['profile_photo'] = $request->file('profile_photo')->store('lecturer-photos', 'public');
+        }
+
+        $lecturer->update($data);
 
         return redirect()->route('lecturers.index')
             ->with('success', 'Lecturer updated successfully.');
@@ -159,6 +180,60 @@ class LecturerController extends Controller
     }
 
     /**
+     * Show the bulk lecturer import form.
+     */
+    public function importForm()
+    {
+        return view('lecturers.import');
+    }
+
+    /**
+     * Handle the bulk import of lecturers from Excel/CSV.
+     */
+    public function import(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('lecturers.import.form')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $import = new LecturerImport();
+            Excel::import($import, $request->file('excel_file'));
+
+            $stats = $import->getStats();
+            $message = "Processed {$stats['processed']} record(s), skipped {$stats['skipped']}.";
+
+            if (!empty($stats['errors'])) {
+                $message .= ' Issues: ' . implode(' | ', array_slice($stats['errors'], 0, 5));
+                if (count($stats['errors']) > 5) {
+                    $message .= ' (+' . (count($stats['errors']) - 5) . ' more)';
+                }
+
+                return redirect()->route('lecturers.index')->with('warning', $message);
+            }
+
+            return redirect()->route('lecturers.index')->with('success', $message);
+        } catch (\Exception $e) {
+            return redirect()->route('lecturers.import.form')
+                ->with('error', 'Error importing lecturers: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download the lecturer import template.
+     */
+    public function downloadTemplate()
+    {
+        return Excel::download(new LecturerTemplateExport, 'lecturers_template.xlsx');
+    }
+
+    /**
      * Shared validation rules for store/update.
      */
     protected function rules(?int $ignoreId = null): array
@@ -169,6 +244,7 @@ class LecturerController extends Controller
             'phone' => 'nullable|string|max:20',
             'staff_id' => ['nullable', 'string', 'max:50', Rule::unique('lecturers', 'staff_id')->ignore($ignoreId)],
             'department_id' => 'nullable|exists:departments,id',
+            'profile_photo' => 'nullable|image|max:2048',
         ];
     }
 }

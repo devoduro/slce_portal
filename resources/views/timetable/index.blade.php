@@ -60,6 +60,16 @@
                     </form>
 
                     @if($showGrid)
+                        @if($workload)
+                            <div class="mb-4 flex flex-wrap gap-3">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-primary-50 text-primary-700">
+                                    <i class="fas fa-chalkboard-teacher"></i> {{ $workload['classes'] }} class{{ $workload['classes'] === 1 ? '' : 'es' }}
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-50 text-amber-700">
+                                    <i class="fas fa-weight-hanging"></i> Workload: {{ rtrim(rtrim(number_format($workload['workload'], 2), '0'), '.') }}
+                                </span>
+                            </div>
+                        @endif
                         @include('timetable._grid', ['entries' => $entries, 'slotLabels' => $slotLabels, 'showActions' => true])
                     @else
                         <div class="p-4 mb-4 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm rounded">
@@ -93,7 +103,13 @@
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $entry->classGroup->name ?? 'N/A' }}</td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $entry->course->code ?? 'N/A' }}</td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $entry->lecturer->name ?? 'Unassigned' }}</td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $entry->venue->name ?? 'N/A' }}</td>
+                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                    @if($entry->is_virtual)
+                                                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><i class="fas fa-laptop"></i> Online</span>
+                                                    @else
+                                                        {{ $entry->venue->name ?? 'N/A' }}
+                                                    @endif
+                                                </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $entry->semester->name ?? 'N/A' }}</td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                     <div class="flex justify-end space-x-2">

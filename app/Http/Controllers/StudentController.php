@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ClassGroup;
 use App\Models\Programme;
 use App\Models\Student;
 use App\Models\User;
@@ -72,7 +73,20 @@ class StudentController extends Controller
     public function create()
     {
         $programmes = Programme::all();
-        return view('students.create', compact('programmes'));
+        $classGroups = $this->classGroupOptions();
+        return view('students.create', compact('programmes', 'classGroups'));
+    }
+
+    /**
+     * Class groups labelled with programme + level for the manual assignment dropdown.
+     */
+    protected function classGroupOptions()
+    {
+        return ClassGroup::with('programme')
+            ->orderBy('programme_id')
+            ->orderBy('level')
+            ->orderBy('name')
+            ->get();
     }
 
     /**
@@ -87,6 +101,7 @@ class StudentController extends Controller
             'gender' => 'required|in:Male,Female,Other',
             'programme_id' => 'required|exists:programmes,id',
             'level' => 'nullable|integer|min:100|max:800',
+            'class_group_id' => 'nullable|exists:class_groups,id',
             'profile_photo' => 'nullable|image|max:2048',
             'emergency_contact_name' => 'nullable|string|max:255',
             'emergency_contact_phone' => 'nullable|string|max:20',
@@ -107,6 +122,10 @@ class StudentController extends Controller
             $data['level'] = null;
         }
 
+        if (($data['class_group_id'] ?? '') === '') {
+            $data['class_group_id'] = null;
+        }
+
         // Handle profile photo upload
         if ($request->hasFile('profile_photo')) {
             $path = $request->file('profile_photo')->store('profile_photos', 'public');
@@ -124,7 +143,7 @@ class StudentController extends Controller
      */
     public function show(string $id)
     {
-        $student = Student::with(['programme', 'results' => function($query) {
+        $student = Student::with(['programme', 'classGroup', 'results' => function($query) {
             $query->with(['course', 'semester', 'academicYear'])
                   ->orderBy('academic_year_id')
                   ->orderBy('semester_id');
@@ -174,7 +193,8 @@ class StudentController extends Controller
     {
         $student = Student::with('programme')->findOrFail($id);
         $programmes = Programme::all();
-        return view('students.edit', compact('student', 'programmes'));
+        $classGroups = $this->classGroupOptions();
+        return view('students.edit', compact('student', 'programmes', 'classGroups'));
     }
 
     /**
@@ -191,6 +211,7 @@ class StudentController extends Controller
             'gender' => 'required|in:Male,Female,Other',
             'programme_id' => 'required|exists:programmes,id',
             'level' => 'nullable|integer|min:100|max:800',
+            'class_group_id' => 'nullable|exists:class_groups,id',
             'profile_photo' => 'nullable|image|max:2048',
             'emergency_contact_name' => 'nullable|string|max:255',
             'emergency_contact_phone' => 'nullable|string|max:20',
@@ -209,6 +230,10 @@ class StudentController extends Controller
 
         if (($data['level'] ?? '') === '') {
             $data['level'] = null;
+        }
+
+        if (($data['class_group_id'] ?? '') === '') {
+            $data['class_group_id'] = null;
         }
 
         // Handle profile photo upload

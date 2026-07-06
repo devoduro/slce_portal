@@ -117,6 +117,22 @@
                                     @enderror
                                 </div>
 
+                                <!-- Class -->
+                                <div>
+                                    <label for="class_group_id" class="block text-sm font-medium text-gray-700">Class</label>
+                                    <select id="class_group_id" name="class_group_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
+                                        <option value="">Select Class (optional)</option>
+                                        @foreach($classGroups as $classGroup)
+                                            <option value="{{ $classGroup->id }}" {{ old('class_group_id', $student->class_group_id ?? '') == $classGroup->id ? 'selected' : '' }}>
+                                                {{ $classGroup->name }} &mdash; {{ $classGroup->programme->name ?? '' }}, Level {{ $classGroup->level }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('class_group_id')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
                                 <!-- Gender -->
                                 <div>
                                     <label for="gender" class="block text-sm font-medium text-gray-700">Gender</label>

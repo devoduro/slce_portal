@@ -14,11 +14,28 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <form method="POST" action="{{ route('lecturers.update', $lecturer) }}" class="space-y-6">
+                    <form method="POST" action="{{ route('lecturers.update', $lecturer) }}" class="space-y-6" enctype="multipart/form-data">
                         @csrf
                         @method('PUT')
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="md:col-span-2 flex items-center gap-4">
+                                @if($lecturer->profile_photo)
+                                    <img src="{{ asset('storage/' . $lecturer->profile_photo) }}" alt="{{ $lecturer->name }}" class="w-16 h-16 rounded-full object-cover">
+                                @else
+                                    <div class="w-16 h-16 rounded-full bg-gray-200 flex items-center justify-center text-gray-400">
+                                        <i class="fas fa-user text-2xl"></i>
+                                    </div>
+                                @endif
+                                <div class="flex-1">
+                                    <label for="profile_photo" class="block text-sm font-medium text-gray-700">Photo</label>
+                                    <input id="profile_photo" name="profile_photo" type="file" accept="image/*" class="mt-1 block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-50 file:text-primary-700 hover:file:bg-primary-100">
+                                    @error('profile_photo')
+                                        <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                    @enderror
+                                </div>
+                            </div>
+
                             <div class="md:col-span-2">
                                 <x-input id="name" name="name" type="text" label="Full Name" :value="old('name', $lecturer->name)" required autofocus />
                             </div>

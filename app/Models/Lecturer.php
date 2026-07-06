@@ -23,6 +23,7 @@ class Lecturer extends Model
         'phone',
         'staff_id',
         'department_id',
+        'profile_photo',
     ];
 
     /**

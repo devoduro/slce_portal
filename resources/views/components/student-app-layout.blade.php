@@ -134,6 +134,11 @@
                     <span>Continuous Assessment</span>
                 </a>
 
+                <a href="{{ route('student.timetable') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('student.timetable') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-calendar-week w-5"></i>
+                    <span>Timetable</span>
+                </a>
+
                 <a href="{{ route('student.profile.edit') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('student.profile.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-user w-5"></i>
                     <span>Edit Profile</span>
@@ -279,6 +284,8 @@
                             {{ $header }}
                         </div>
                     </div>
+                @elseif (trim($__env->yieldContent('header')) !== '')
+                    @yield('header')
                 @else
                     <div class="py-2 mt-1">
                         <h1 class="text-2xl font-bold text-gray-800">@yield('title', 'Dashboard')</h1>

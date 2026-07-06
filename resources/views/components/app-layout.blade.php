@@ -89,7 +89,19 @@
                     <i class="fas fa-tachometer-alt w-5"></i>
                     <span>Dashboard</span>
                 </a>
-                
+
+                @if(auth()->user()->lecturer_id)
+                <a href="{{ route('lecturer.timetable') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('lecturer.timetable') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-calendar-week w-5"></i>
+                    <span>My Timetable</span>
+                </a>
+
+                <a href="{{ route('lecturer.profile.edit') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('lecturer.profile.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-id-badge w-5"></i>
+                    <span>My Profile</span>
+                </a>
+                @endif
+
                 @can('manage-students')
                 <a href="{{ route('students.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('students.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-user-graduate w-5"></i>
@@ -196,6 +208,10 @@
                 <a href="{{ route('class-groups.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('class-groups.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-users w-5"></i>
                     <span>Classes</span>
+                </a>
+                <a href="{{ route('promotions.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('promotions.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-level-up-alt w-5"></i>
+                    <span>Promote Students</span>
                 </a>
                 @endcan
 

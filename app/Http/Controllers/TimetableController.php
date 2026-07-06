@@ -38,6 +38,12 @@ class TimetableController extends Controller
     public const GRID_SLOT_MINUTES = 30;
 
     /**
+     * Virtual/online lessons are only allowed on weekends or from this hour onward
+     * (i.e. in the evening), so they don't collide with the normal daytime timetable.
+     */
+    public const EVENING_START_HOUR = 17;
+
+    /**
      * Colours cycled through per course so each course is easy to tell apart at a glance.
      * Each entry pairs a solid background (grid cards) with a matching light background + text
      * (legend chips).
@@ -87,18 +93,23 @@ class TimetableController extends Controller
         $entries = collect();
         $paginatedEntries = null;
         $slotLabels = [];
+        $workload = null;
 
         if ($showGrid) {
-            $entries = $this->fetchEntries($filters);
-            $this->applyGridPositions($entries);
-            $slotLabels = $this->gridSlotLabels();
+            $entries = self::fetchEntries($filters);
+            self::applyGridPositions($entries);
+            $slotLabels = self::gridSlotLabels();
+
+            if (!empty($filters['lecturer_id'])) {
+                $workload = self::calculateWorkload((int) $filters['lecturer_id'], (int) $filters['semester_id']);
+            }
         } else {
-            $paginatedEntries = $this->fetchEntriesQuery($filters)
+            $paginatedEntries = self::fetchEntriesQuery($filters)
                 ->paginate(20)->withQueryString();
         }
 
         return view('timetable.index', compact(
-            'entries', 'paginatedEntries', 'classGroups', 'lecturers', 'departments', 'semesters', 'showGrid', 'slotLabels'
+            'entries', 'paginatedEntries', 'classGroups', 'lecturers', 'departments', 'semesters', 'showGrid', 'slotLabels', 'workload'
         ));
     }
 
@@ -121,18 +132,30 @@ class TimetableController extends Controller
                 ->with('error', 'Select a class, lecturer or department, and a semester, before printing.');
         }
 
-        $semester = Semester::with('academicYear')->findOrFail($request->semester_id);
-        $classGroup = $request->filled('class_group_id') ? ClassGroup::find($request->class_group_id) : null;
-        $lecturer = $request->filled('lecturer_id') ? Lecturer::find($request->lecturer_id) : null;
-        $department = $request->filled('department_id') ? Department::find($request->department_id) : null;
+        return self::buildPrintView($request->only(['class_group_id', 'lecturer_id', 'department_id', 'semester_id']));
+    }
 
-        $entries = $this->fetchEntries($request->only(['class_group_id', 'lecturer_id', 'department_id', 'semester_id']));
-        $this->applyGridPositions($entries);
-        $slotLabels = $this->gridSlotLabels();
+    /**
+     * Build the print-friendly timetable view for a given filter set. Public/static so the
+     * lecturer and student self-service portals can print their own timetable without needing
+     * the admin-only manage-timetable permission.
+     */
+    public static function buildPrintView(array $filters)
+    {
+        $semester = Semester::with('academicYear')->findOrFail($filters['semester_id']);
+        $classGroup = !empty($filters['class_group_id']) ? ClassGroup::find($filters['class_group_id']) : null;
+        $lecturer = !empty($filters['lecturer_id']) ? Lecturer::find($filters['lecturer_id']) : null;
+        $department = !empty($filters['department_id']) ? Department::find($filters['department_id']) : null;
+
+        $entries = self::fetchEntries($filters);
+        self::applyGridPositions($entries);
+        $slotLabels = self::gridSlotLabels();
+
+        $workload = $lecturer ? self::calculateWorkload($lecturer->id, (int) $filters['semester_id']) : null;
 
         $settings = DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
 
-        return view('timetable.print', compact('entries', 'slotLabels', 'semester', 'classGroup', 'lecturer', 'department', 'settings'));
+        return view('timetable.print', compact('entries', 'slotLabels', 'semester', 'classGroup', 'lecturer', 'department', 'settings', 'workload'));
     }
 
     /**
@@ -155,6 +178,7 @@ class TimetableController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), $this->rules());
+        $this->applyVirtualScheduleCheck($validator, $request);
 
         if ($validator->fails()) {
             return redirect()->route('timetable.create')
@@ -169,9 +193,12 @@ class TimetableController extends Controller
                 ->withInput();
         }
 
-        TimetableEntry::create($request->only([
+        $data = $request->only([
             'class_group_id', 'course_id', 'lecturer_id', 'venue_id', 'semester_id', 'day_of_week', 'start_time', 'end_time',
-        ]));
+        ]);
+        $data['is_virtual'] = $request->boolean('is_virtual');
+
+        TimetableEntry::create($data);
 
         return redirect()->route('timetable.index')
             ->with('success', 'Timetable entry created successfully.');
@@ -204,6 +231,7 @@ class TimetableController extends Controller
     public function update(Request $request, TimetableEntry $timetable)
     {
         $validator = Validator::make($request->all(), $this->rules());
+        $this->applyVirtualScheduleCheck($validator, $request);
 
         if ($validator->fails()) {
             return redirect()->route('timetable.edit', $timetable)
@@ -218,9 +246,12 @@ class TimetableController extends Controller
                 ->withInput();
         }
 
-        $timetable->update($request->only([
+        $data = $request->only([
             'class_group_id', 'course_id', 'lecturer_id', 'venue_id', 'semester_id', 'day_of_week', 'start_time', 'end_time',
-        ]));
+        ]);
+        $data['is_virtual'] = $request->boolean('is_virtual');
+
+        $timetable->update($data);
 
         return redirect()->route('timetable.index')
             ->with('success', 'Timetable entry updated successfully.');
@@ -246,12 +277,46 @@ class TimetableController extends Controller
             'class_group_id' => 'required|exists:class_groups,id',
             'course_id' => 'required|exists:courses,id',
             'lecturer_id' => 'nullable|exists:lecturers,id',
-            'venue_id' => 'required|exists:venues,id',
+            'venue_id' => 'nullable|required_unless:is_virtual,1|exists:venues,id',
             'semester_id' => 'required|exists:semesters,id',
             'day_of_week' => 'required|integer|min:0|max:6',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
+            'is_virtual' => 'nullable|boolean',
         ];
+    }
+
+    /**
+     * Virtual/online lessons must sit outside the normal daytime schedule: weekends
+     * are fine any time, weekdays only from EVENING_START_HOUR onward.
+     */
+    protected function applyVirtualScheduleCheck($validator, Request $request): void
+    {
+        $validator->after(function ($validator) use ($request) {
+            if (!$request->boolean('is_virtual') || !$request->filled('day_of_week') || !$request->filled('start_time')) {
+                return;
+            }
+
+            if (!self::isEveningOrWeekend((int) $request->day_of_week, (string) $request->start_time)) {
+                $validator->errors()->add(
+                    'is_virtual',
+                    'Virtual/online classes must be scheduled on a weekend (Saturday or Sunday) or in the evening (5:00 PM or later).'
+                );
+            }
+        });
+    }
+
+    /**
+     * True if the given day/start-time falls on a weekend, or on a weekday at/after
+     * EVENING_START_HOUR.
+     */
+    public static function isEveningOrWeekend(int $dayOfWeek, string $startTime): bool
+    {
+        if (in_array($dayOfWeek, [0, 6], true)) {
+            return true;
+        }
+
+        return self::minutesSinceMidnight($startTime) >= self::EVENING_START_HOUR * 60;
     }
 
     /**
@@ -281,13 +346,16 @@ class TimetableController extends Controller
         }
 
         // A venue may legitimately host up to 2 simultaneous classes (e.g. a shared
-        // or split hall) — only reject once a 3rd booking would collide.
-        $venueBookingCount = TimetableEntry::where('venue_id', $request->venue_id)
-            ->where($overlap)
-            ->count();
+        // or split hall) — only reject once a 3rd booking would collide. Virtual/online
+        // lessons with no physical venue skip this check entirely.
+        if ($request->filled('venue_id')) {
+            $venueBookingCount = TimetableEntry::where('venue_id', $request->venue_id)
+                ->where($overlap)
+                ->count();
 
-        if ($venueBookingCount >= 2) {
-            return 'This venue already has 2 classes booked at an overlapping time on this day.';
+            if ($venueBookingCount >= 2) {
+                return 'This venue already has 2 classes booked at an overlapping time on this day.';
+            }
         }
 
         return null;
@@ -297,8 +365,11 @@ class TimetableController extends Controller
      * Build the filtered timetable entries query shared by the grid, flat-list and
      * print views, filtered by any combination of class group, lecturer, department
      * (via the lecturer's department) and semester.
+     *
+     * Public/static so the lecturer and student self-service portals can reuse the
+     * exact same grid-building logic without duplicating it.
      */
-    protected function fetchEntriesQuery(array $filters)
+    public static function fetchEntriesQuery(array $filters)
     {
         return TimetableEntry::with(['classGroup', 'course', 'lecturer.department', 'venue', 'semester'])
             ->when(!empty($filters['class_group_id']), fn ($q) => $q->where('class_group_id', $filters['class_group_id']))
@@ -311,24 +382,24 @@ class TimetableController extends Controller
     /**
      * Fetch timetable entries for the grid/print views (no pagination).
      */
-    protected function fetchEntries(array $filters)
+    public static function fetchEntries(array $filters)
     {
-        return $this->fetchEntriesQuery($filters)->get();
+        return self::fetchEntriesQuery($filters)->get();
     }
 
     /**
      * Compute and attach CSS grid coordinates for each entry so the weekly grid
      * view can position them with plain CSS (no JS charting library).
      */
-    protected function applyGridPositions($entries): void
+    public static function applyGridPositions($entries): void
     {
         $windowStart = self::GRID_START_HOUR * 60;
         $windowEnd = self::GRID_END_HOUR * 60;
         $slot = self::GRID_SLOT_MINUTES;
 
         foreach ($entries as $entry) {
-            $startMinutes = $this->minutesSinceMidnight($entry->start_time);
-            $endMinutes = $this->minutesSinceMidnight($entry->end_time);
+            $startMinutes = self::minutesSinceMidnight($entry->start_time);
+            $endMinutes = self::minutesSinceMidnight($entry->end_time);
 
             $clampedStart = max($windowStart, min($startMinutes, $windowEnd));
             $clampedEnd = max($windowStart, min($endMinutes, $windowEnd));
@@ -348,7 +419,7 @@ class TimetableController extends Controller
     /**
      * Hour labels shown down the left edge of the grid.
      */
-    protected function gridSlotLabels(): array
+    public static function gridSlotLabels(): array
     {
         $labels = [];
         for ($minutes = self::GRID_START_HOUR * 60; $minutes < self::GRID_END_HOUR * 60; $minutes += self::GRID_SLOT_MINUTES) {
@@ -361,10 +432,44 @@ class TimetableController extends Controller
     /**
      * Convert a "H:i" or "H:i:s" time string to minutes since midnight.
      */
-    protected function minutesSinceMidnight(string $time): int
+    public static function minutesSinceMidnight(string $time): int
     {
         [$hours, $minutes] = array_map('intval', explode(':', $time));
 
         return ($hours * 60) + $minutes;
+    }
+
+    /**
+     * A lecturer's workload for a semester: each timetable slot they teach contributes
+     * its course's credit hours (e.g. a 3-credit-hour course taught to 5 different
+     * classes contributes 3 x 5 = 15 to the total), optionally scoped to one semester.
+     *
+     * @return array{classes: int, workload: float}
+     */
+    public static function calculateWorkload(int $lecturerId, ?int $semesterId = null): array
+    {
+        $query = TimetableEntry::where('timetable_entries.lecturer_id', $lecturerId)
+            ->join('courses', 'courses.id', '=', 'timetable_entries.course_id')
+            ->when($semesterId, fn ($q) => $q->where('timetable_entries.semester_id', $semesterId));
+
+        return [
+            'classes' => (clone $query)->count(),
+            'workload' => (float) (clone $query)->sum('courses.credit_hours'),
+        ];
+    }
+
+    /**
+     * A lecturer's workload broken down per semester, for the admin lecturer profile page.
+     */
+    public static function workloadBySemesterForLecturer(int $lecturerId)
+    {
+        return TimetableEntry::where('timetable_entries.lecturer_id', $lecturerId)
+            ->join('courses', 'courses.id', '=', 'timetable_entries.course_id')
+            ->join('semesters', 'semesters.id', '=', 'timetable_entries.semester_id')
+            ->join('academic_years', 'academic_years.id', '=', 'semesters.academic_year_id')
+            ->selectRaw('semesters.id as semester_id, semesters.name as semester_name, academic_years.name as academic_year_name, COUNT(*) as classes, SUM(courses.credit_hours) as workload')
+            ->groupBy('semesters.id', 'semesters.name', 'academic_years.name')
+            ->orderByDesc('semesters.id')
+            ->get();
     }
 }

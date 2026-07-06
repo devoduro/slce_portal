@@ -24,6 +24,7 @@ class Student extends Model
         'programme_id',
         'level',
         'class_group_id',
+        'status',
         'profile_photo',
         'emergency_contact_name',
         'emergency_contact_phone',

@@ -4,9 +4,14 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('Lecturers') }}
             </h2>
-            <x-button href="{{ route('lecturers.create') }}" icon="fas fa-plus">
-                {{ __('Add Lecturer') }}
-            </x-button>
+            <div class="flex gap-2">
+                <x-button href="{{ route('lecturers.import.form') }}" variant="secondary" icon="fas fa-file-import">
+                    {{ __('Import Lecturers') }}
+                </x-button>
+                <x-button href="{{ route('lecturers.create') }}" icon="fas fa-plus">
+                    {{ __('Add Lecturer') }}
+                </x-button>
+            </div>
         </div>
     </x-slot>
 
@@ -48,8 +53,19 @@
                                     @foreach($lecturers as $lecturer)
                                         <tr>
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                <div class="text-sm font-medium text-gray-900">{{ $lecturer->name }}</div>
-                                                <div class="text-sm text-gray-500">{{ $lecturer->staff_id ?? '-' }}</div>
+                                                <div class="flex items-center gap-3">
+                                                    @if($lecturer->profile_photo)
+                                                        <img src="{{ asset('storage/' . $lecturer->profile_photo) }}" alt="{{ $lecturer->name }}" class="w-9 h-9 rounded-full object-cover">
+                                                    @else
+                                                        <div class="w-9 h-9 rounded-full bg-gray-200 flex items-center justify-center text-gray-400 text-xs">
+                                                            <i class="fas fa-user"></i>
+                                                        </div>
+                                                    @endif
+                                                    <div>
+                                                        <div class="text-sm font-medium text-gray-900">{{ $lecturer->name }}</div>
+                                                        <div class="text-sm text-gray-500">{{ $lecturer->staff_id ?? '-' }}</div>
+                                                    </div>
+                                                </div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 <div>{{ $lecturer->email ?? '-' }}</div>

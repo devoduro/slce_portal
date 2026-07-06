@@ -40,4 +40,13 @@ class Programme extends Model
     {
         return $this->belongsToMany(Course::class);
     }
+
+    /**
+     * The final level a student on this programme reaches before graduating
+     * (e.g. a 4-year programme's terminal level is 400).
+     */
+    public function terminalLevel(): int
+    {
+        return 100 + (max(1, $this->duration_years) - 1) * 100;
+    }
 }

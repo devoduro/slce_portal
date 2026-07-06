@@ -88,14 +88,22 @@
                             </div>
 
                             <div class="md:col-span-2">
-                                <label for="venue_id" class="block text-sm font-medium text-gray-700">Venue <span class="text-red-500">*</span></label>
-                                <select id="venue_id" name="venue_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md" required>
+                                <label for="venue_id" class="block text-sm font-medium text-gray-700">Venue <span id="venue-required-star" class="text-red-500">*</span></label>
+                                <select id="venue_id" name="venue_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md">
                                     <option value="">Select Venue</option>
                                     @foreach($venues as $venue)
                                         <option value="{{ $venue->id }}" {{ old('venue_id') == $venue->id ? 'selected' : '' }}>{{ $venue->name }}{{ $venue->location ? ' — ' . $venue->location : '' }}</option>
                                     @endforeach
                                 </select>
                                 <p class="mt-1 text-xs text-gray-500">A venue can be shared by up to 2 overlapping classes. No venue you need? <a href="{{ route('venues.create') }}" target="_blank" class="text-primary-600 underline">Add one</a>.</p>
+                            </div>
+
+                            <div class="md:col-span-2 flex items-start gap-2 bg-gray-50 rounded-md p-3">
+                                <input type="checkbox" id="is_virtual" name="is_virtual" value="1" class="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500" {{ old('is_virtual') ? 'checked' : '' }}>
+                                <label for="is_virtual" class="text-sm text-gray-700">
+                                    <span class="font-medium">Virtual / Online Class</span>
+                                    <p class="text-xs text-gray-500 mt-0.5">Venue becomes optional. Must be scheduled on a weekend (Saturday/Sunday) or in the evening (5:00 PM or later).</p>
+                                </label>
                             </div>
                         </div>
 
@@ -121,6 +129,10 @@
             if (lecturerId) {
                 lecturerSelect.value = lecturerId;
             }
+        });
+
+        document.getElementById('is_virtual').addEventListener('change', function () {
+            document.getElementById('venue-required-star').style.display = this.checked ? 'none' : 'inline';
         });
     </script>
     @endpush

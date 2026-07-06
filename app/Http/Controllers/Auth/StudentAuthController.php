@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\TimetableController;
 use App\Models\CaScoreSetting;
 use App\Models\ContinuousAssessment;
 use App\Models\Registration;
+use App\Models\Semester;
 use App\Models\Student;
 use App\Models\User;
 use App\Models\AcademicYear;
@@ -158,6 +160,15 @@ class StudentAuthController extends Controller
         // Get classification and other data
         $classification = $student->getClassification();
 
+        // Today's classes for the dashboard timetable widget, based on the student's class group
+        $todayEntries = collect();
+        if ($currentSemester && $student->class_group_id) {
+            $todayEntries = TimetableController::fetchEntries([
+                'class_group_id' => $student->class_group_id,
+                'semester_id' => $currentSemester->id,
+            ])->where('day_of_week', now()->dayOfWeek)->sortBy('start_time')->values();
+        }
+
         return view('student.dashboard', compact(
             'student',
             'results',
@@ -167,7 +178,8 @@ class StudentAuthController extends Controller
             'totalCredits',
             'remainingCredits',
             'currentCourses',
-            'currentSemester'
+            'currentSemester',
+            'todayEntries'
         ));
     }
 
@@ -420,6 +432,48 @@ class StudentAuthController extends Controller
         });
 
         return view('student.continuous-assessment', compact('student', 'rows'));
+    }
+
+    /**
+     * Show the student's own weekly timetable for their class group.
+     */
+    public function timetable(Request $request)
+    {
+        $student = Auth::user()->student;
+
+        $semesters = Semester::orderBy('academic_year_id', 'desc')->orderBy('semester_number')->get();
+        $semester = $request->filled('semester_id')
+            ? $semesters->firstWhere('id', (int) $request->semester_id)
+            : $semesters->firstWhere('is_current', true);
+
+        $entries = collect();
+        $slotLabels = [];
+
+        if ($semester && $student->class_group_id) {
+            $entries = TimetableController::fetchEntries(['class_group_id' => $student->class_group_id, 'semester_id' => $semester->id]);
+            TimetableController::applyGridPositions($entries);
+            $slotLabels = TimetableController::gridSlotLabels();
+        }
+
+        return view('student.timetable', compact('student', 'semesters', 'semester', 'entries', 'slotLabels'));
+    }
+
+    /**
+     * Print the student's own timetable for their class group.
+     */
+    public function printTimetable(Request $request)
+    {
+        $student = Auth::user()->student;
+
+        abort_unless($student->class_group_id, 404, 'You have not been assigned to a class yet.');
+
+        $semesterId = $request->filled('semester_id')
+            ? (int) $request->semester_id
+            : optional(Semester::where('is_current', true)->first())->id;
+
+        abort_unless($semesterId, 404, 'No semester is available to print.');
+
+        return TimetableController::buildPrintView(['class_group_id' => $student->class_group_id, 'semester_id' => $semesterId]);
     }
 
     /**
