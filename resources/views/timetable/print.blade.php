@@ -55,6 +55,22 @@
                 line-height: 1.15 !important;
             }
 
+            .tt-lecturer-photo {
+                margin-top: 1px !important;
+                gap: 1px !important;
+            }
+
+            .tt-lecturer-avatar {
+                width: 18px !important;
+                height: 18px !important;
+            }
+
+            .tt-lecturer-name,
+            .tt-lecturer-phone {
+                font-size: 6px !important;
+                line-height: 1.1 !important;
+            }
+
             .tt-legend {
                 font-size: 6.5px !important;
                 gap: 3px !important;

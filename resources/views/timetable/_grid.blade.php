@@ -61,6 +61,21 @@
                             <span class="inline-flex items-center justify-center rounded-full bg-white/25 px-1.5 py-0 text-[10px] font-semibold">{{ $entry->lecturer->initials }}</span>
                         @endif
                     </p>
+                    @if($entry->lecturer)
+                        <div class="tt-lecturer-photo mt-1 flex flex-col items-center gap-0.5 text-center">
+                            @if($entry->lecturer->profile_photo)
+                                <img src="{{ asset('storage/' . $entry->lecturer->profile_photo) }}" alt="{{ $entry->lecturer->name }}" class="tt-lecturer-avatar w-12 h-12 rounded-full object-cover ring-1 ring-white/60 flex-shrink-0">
+                            @else
+                                <span class="tt-lecturer-avatar w-12 h-12 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-user text-base"></i>
+                                </span>
+                            @endif
+                            <span class="tt-lecturer-name truncate opacity-90 text-[10px] leading-tight">{{ $entry->lecturer->name }}</span>
+                            @if($entry->lecturer->phone)
+                                <span class="tt-lecturer-phone truncate opacity-80 text-[9px] leading-tight">{{ $entry->lecturer->phone }}</span>
+                            @endif
+                        </div>
+                    @endif
                 </div>
             @endforeach
         </div>
