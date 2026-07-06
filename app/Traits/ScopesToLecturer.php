@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\Course;
+use App\Models\Registration;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
@@ -52,5 +53,24 @@ trait ScopesToLecturer
         }
 
         return $query;
+    }
+
+    /**
+     * Get the distinct IDs of students registered in the authenticated lecturer's
+     * courses (i.e. "the students they teach"), for scoping student pickers/filters.
+     */
+    protected function lecturerStudentIds(): array
+    {
+        $courseIds = $this->lecturerCourseIds();
+
+        if (empty($courseIds)) {
+            return [];
+        }
+
+        return Registration::whereIn('course_id', $courseIds)
+            ->where('status', 'registered')
+            ->distinct()
+            ->pluck('student_id')
+            ->toArray();
     }
 }

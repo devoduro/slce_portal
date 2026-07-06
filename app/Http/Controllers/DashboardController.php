@@ -8,12 +8,16 @@ use App\Models\Student;
 use App\Models\Course;
 use App\Models\Semester;
 use App\Models\Programme;
+use App\Models\TimetableEntry;
+use App\Traits\ScopesToLecturer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
+    use ScopesToLecturer;
+
     /**
      * Create a new controller instance.
      *
@@ -31,6 +35,12 @@ class DashboardController extends Controller
      */
     public function index(Request $request)
     {
+        // Lecturers get a scoped dashboard showing only their own courses/classes/students -
+        // no school-wide GPA/CGPA or other students' data.
+        if ($this->isScopedLecturer()) {
+            return $this->lecturerDashboard();
+        }
+
         // Get filter parameters
         $timeRange = $request->input('time_range', 'all');
         $programmeId = $request->input('programme_id');
@@ -485,5 +495,46 @@ class DashboardController extends Controller
             'timeRange' => $timeRange,
             'programmeId' => $programmeId
         ]);
+    }
+
+    /**
+     * Dashboard for a lecturer-linked account: only their own courses, classes, students
+     * and workload. Deliberately excludes GPA/CGPA and any other student's data.
+     */
+    protected function lecturerDashboard()
+    {
+        $lecturerId = $this->authLecturerId();
+        $currentSemester = Semester::where('is_current', true)->first();
+
+        $courses = Course::where('lecturer_id', $lecturerId)
+            ->with('semester')
+            ->orderBy('code')
+            ->get();
+
+        $classGroups = TimetableEntry::where('lecturer_id', $lecturerId)
+            ->with('classGroup')
+            ->get()
+            ->pluck('classGroup')
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        $studentCount = count($this->lecturerStudentIds());
+
+        $workload = $currentSemester
+            ? TimetableController::calculateWorkload($lecturerId, $currentSemester->id)
+            : ['classes' => 0, 'workload' => 0.0];
+
+        $todayEntries = collect();
+        if ($currentSemester) {
+            $todayEntries = TimetableController::fetchEntries([
+                'lecturer_id' => $lecturerId,
+                'semester_id' => $currentSemester->id,
+            ])->where('day_of_week', now()->dayOfWeek)->sortBy('start_time')->values();
+        }
+
+        return view('dashboard-lecturer', compact(
+            'currentSemester', 'courses', 'classGroups', 'studentCount', 'workload', 'todayEntries'
+        ));
     }
 }

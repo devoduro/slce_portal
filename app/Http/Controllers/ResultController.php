@@ -76,13 +76,13 @@ class ResultController extends Controller
         $academicYears = AcademicYear::all();
         $semesters = Semester::all();
         $programmes = Programme::all();
-        $courses = Course::all();
-        
+        $courses = $this->scopeToLecturer(Course::query())->get();
+
         return view('results.index', compact(
-            'results', 
-            'academicYears', 
-            'semesters', 
-            'programmes', 
+            'results',
+            'academicYears',
+            'semesters',
+            'programmes',
             'courses'
         ));
     }
@@ -92,19 +92,42 @@ class ResultController extends Controller
      */
     public function create()
     {
-        $students = Student::orderBy('full_name')->get();
+        $students = $this->scopedStudents()->orderBy('full_name')->get();
         $courses = $this->scopeToLecturer(Course::orderBy('code'))->get();
         $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
         $semesters = Semester::all();
         $gradeSchemes = GradeScheme::all();
-        
+
         return view('results.create', compact(
-            'students', 
-            'courses', 
-            'academicYears', 
+            'students',
+            'courses',
+            'academicYears',
             'semesters',
             'gradeSchemes'
         ));
+    }
+
+    /**
+     * Students a lecturer may enter results for (those registered in their own
+     * courses), or all students for staff with broader access.
+     */
+    protected function scopedStudents()
+    {
+        if ($this->isScopedLecturer()) {
+            return Student::whereIn('id', $this->lecturerStudentIds());
+        }
+
+        return Student::query();
+    }
+
+    /**
+     * Abort if a scoped lecturer is trying to access a result outside their own courses.
+     */
+    protected function denyIfNotOwnCourse(Result $result): void
+    {
+        if ($this->isScopedLecturer() && !in_array($result->course_id, $this->lecturerCourseIds())) {
+            abort(403, 'You can only manage results for courses assigned to you.');
+        }
     }
 
     /**
@@ -175,6 +198,8 @@ class ResultController extends Controller
      */
     public function show(Result $result)
     {
+        $this->denyIfNotOwnCourse($result);
+
         return view('results.show', compact('result'));
     }
 
@@ -184,16 +209,18 @@ class ResultController extends Controller
     public function edit(string $id)
     {
         $result = Result::findOrFail($id);
-        $students = Student::orderBy('full_name')->get();
-        $courses = Course::orderBy('code')->get();
+        $this->denyIfNotOwnCourse($result);
+
+        $students = $this->scopedStudents()->orderBy('full_name')->get();
+        $courses = $this->scopeToLecturer(Course::orderBy('code'))->get();
         $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
         $semesters = Semester::all();
         $gradeSchemes = GradeScheme::all();
-        
+
         return view('results.edit', compact(
             'result',
-            'students', 
-            'courses', 
+            'students',
+            'courses',
             'academicYears', 
             'semesters',
             'gradeSchemes'
@@ -206,7 +233,8 @@ class ResultController extends Controller
     public function update(Request $request, string $id)
     {
         $result = Result::findOrFail($id);
-        
+        $this->denyIfNotOwnCourse($result);
+
         $validator = Validator::make($request->all(), [
             'student_id' => 'required|exists:students,id',
             'course_id' => 'required|exists:courses,id',
@@ -222,7 +250,13 @@ class ResultController extends Controller
                 ->withErrors($validator)
                 ->withInput();
         }
-        
+
+        if ($this->isScopedLecturer() && !in_array((int) $request->input('course_id'), $this->lecturerCourseIds())) {
+            return redirect()->route('results.edit', $id)
+                ->withErrors(['course_id' => 'You can only assign results to courses assigned to you.'])
+                ->withInput();
+        }
+
         // Check if result already exists (excluding this one)
         $existingResult = Result::where([
             'student_id' => $request->input('student_id'),
@@ -269,8 +303,10 @@ class ResultController extends Controller
     public function destroy(string $id)
     {
         $result = Result::findOrFail($id);
+        $this->denyIfNotOwnCourse($result);
+
         $result->delete();
-        
+
         return redirect()->route('results.index')
             ->with('success', 'Result deleted successfully.');
     }
@@ -304,49 +340,56 @@ class ResultController extends Controller
     public function filterByAcademicYear(Request $request)
     {
         $academicYearId = $request->input('academic_year_id');
-        
+
         $results = Result::with(['student', 'course', 'academicYear', 'semester'])
             ->where('academic_year_id', $academicYearId)
+            ->when($this->isScopedLecturer(), fn ($q) => $q->whereIn('course_id', $this->lecturerCourseIds()))
             ->orderBy('created_at', 'desc')
             ->paginate(20);
-            
+
         $academicYear = AcademicYear::findOrFail($academicYearId);
-            
+
         return view('results.index', compact('results', 'academicYear'));
     }
-    
+
     /**
      * Filter results by semester.
      */
     public function filterBySemester(Request $request)
     {
         $semesterId = $request->input('semester_id');
-        
+
         $results = Result::with(['student', 'course', 'academicYear', 'semester'])
             ->where('semester_id', $semesterId)
+            ->when($this->isScopedLecturer(), fn ($q) => $q->whereIn('course_id', $this->lecturerCourseIds()))
             ->orderBy('created_at', 'desc')
             ->paginate(20);
-            
+
         $semester = Semester::findOrFail($semesterId);
-            
+
         return view('results.index', compact('results', 'semester'));
     }
-    
+
     /**
      * Filter results by student.
      */
     public function filterByStudent(Request $request)
     {
         $studentId = $request->input('student_id');
-        
+
+        if ($this->isScopedLecturer() && !in_array((int) $studentId, $this->lecturerStudentIds())) {
+            abort(403, 'You can only view results for students in your own courses.');
+        }
+
         $results = Result::with(['student', 'course', 'academicYear', 'semester'])
             ->where('student_id', $studentId)
+            ->when($this->isScopedLecturer(), fn ($q) => $q->whereIn('course_id', $this->lecturerCourseIds()))
             ->orderBy('academic_year_id', 'desc')
             ->orderBy('semester_id', 'asc')
             ->paginate(20);
-            
+
         $student = Student::findOrFail($studentId);
-            
+
         return view('results.index', compact('results', 'student'));
     }
     
@@ -356,14 +399,18 @@ class ResultController extends Controller
     public function filterByCourse(Request $request)
     {
         $courseId = $request->input('course_id');
-        
+
+        if ($this->isScopedLecturer() && !in_array((int) $courseId, $this->lecturerCourseIds())) {
+            abort(403, 'You can only view results for courses assigned to you.');
+        }
+
         $results = Result::with(['student', 'course', 'academicYear', 'semester'])
             ->where('course_id', $courseId)
             ->orderBy('score', 'desc')
             ->paginate(20);
-            
+
         $course = Course::findOrFail($courseId);
-            
+
         return view('results.index', compact('results', 'course'));
     }
     

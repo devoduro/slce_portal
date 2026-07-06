@@ -9,13 +9,14 @@
     </div>
 @else
     <div class="timetable-grid-wrapper overflow-x-auto pb-4">
-        <div class="timetable-grid grid gap-px bg-gray-200 border border-gray-300 rounded-lg overflow-hidden text-[11px] shadow-sm"
+        <div class="timetable-grid grid gap-px bg-gray-200 border border-gray-300 rounded-lg overflow-hidden text-[9px] sm:text-[11px] shadow-sm [--tt-time-col:40px] [--tt-day-col:84px] [--tt-header-h:38px] sm:[--tt-time-col:64px] sm:[--tt-day-col:160px] sm:[--tt-header-h:48px]"
              style="grid-template-columns: var(--tt-time-col, 64px) repeat(7, minmax(var(--tt-day-col, 160px), 1fr)); grid-template-rows: var(--tt-header-h, 48px) repeat({{ count($slotLabels) }}, var(--tt-slot-h, 34px));">
 
             <div class="bg-gradient-to-br from-primary-600 to-primary-700"></div>
             @foreach(\App\Http\Controllers\TimetableController::GRID_DAY_ORDER as $day)
-                <div class="bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center font-bold text-white uppercase tracking-wide text-xs" style="grid-column: {{ $loop->index + 2 }}; grid-row: 1;">
-                    {{ \App\Http\Controllers\TimetableController::DAYS[$day] }}
+                <div class="bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center font-bold text-white uppercase tracking-wide text-[10px] sm:text-xs" style="grid-column: {{ $loop->index + 2 }}; grid-row: 1;">
+                    <span class="sm:hidden">{{ substr(\App\Http\Controllers\TimetableController::DAYS[$day], 0, 3) }}</span>
+                    <span class="hidden sm:inline">{{ \App\Http\Controllers\TimetableController::DAYS[$day] }}</span>
                 </div>
             @endforeach
 
@@ -31,7 +32,7 @@
 
             @foreach($entries as $entry)
                 @php $color = \App\Http\Controllers\TimetableController::colorForCourse($entry->course_id); @endphp
-                <div class="tt-card relative {{ $color['bg'] }} text-white rounded-lg m-0.5 px-2 py-1.5 shadow-md overflow-hidden group ring-1 ring-black/10"
+                <div class="tt-card relative {{ $color['bg'] }} text-white rounded-lg m-0.5 px-1 py-1 sm:px-2 sm:py-1.5 shadow-md overflow-hidden group ring-1 ring-black/10"
                      style="grid-column: {{ $entry->grid_column }}; grid-row: {{ $entry->grid_row_start }} / {{ $entry->grid_row_end }}; z-index: 10;"
                      title="{{ $entry->course->title ?? '' }} — {{ $entry->classGroup->name ?? 'No class' }} — {{ $entry->lecturer->name ?? 'Unassigned lecturer' }} — {{ $entry->is_virtual ? 'Virtual/Online' : ($entry->venue->name ?? 'No venue') }}">
                     @if($showActions)
@@ -64,10 +65,10 @@
                     @if($entry->lecturer)
                         <div class="tt-lecturer-photo mt-1 flex flex-col items-center gap-0.5 text-center">
                             @if($entry->lecturer->profile_photo)
-                                <img src="{{ asset('storage/' . $entry->lecturer->profile_photo) }}" alt="{{ $entry->lecturer->name }}" class="tt-lecturer-avatar w-12 h-12 rounded-full object-cover ring-1 ring-white/60 flex-shrink-0">
+                                <img src="{{ asset('storage/' . $entry->lecturer->profile_photo) }}" alt="{{ $entry->lecturer->name }}" class="tt-lecturer-avatar w-8 h-8 sm:w-12 sm:h-12 rounded-full object-cover ring-1 ring-white/60 flex-shrink-0">
                             @else
-                                <span class="tt-lecturer-avatar w-12 h-12 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
-                                    <i class="fas fa-user text-base"></i>
+                                <span class="tt-lecturer-avatar w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-white/25 flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-user text-sm sm:text-base"></i>
                                 </span>
                             @endif
                             <span class="tt-lecturer-name truncate opacity-90 text-[10px] leading-tight">{{ $entry->lecturer->name }}</span>

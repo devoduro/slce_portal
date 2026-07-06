@@ -52,37 +52,77 @@
     <!-- Custom Styles -->
     <style>
         [x-cloak] { display: none !important; }
-        
+
         .gradient-bg {
             background: linear-gradient(135deg, #0c9b13 0%, #0a6107 100%);
         }
-        
+
         .gradient-text {
             background: linear-gradient(135deg, #0c9c24 0%, #064b07 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        
+
         .gradient-border {
             border-image: linear-gradient(135deg, #41a10d 0%, #1f9330 100%) 1;
+        }
+
+        /* Desktop sidebar collapse (icon-only rail). Scoped to md+ so mobile's
+           overlay sidebar always shows full labels regardless of this state. */
+        @media (min-width: 768px) {
+            .sidebar-collapsed nav a > span,
+            .sidebar-collapsed nav button > span > span,
+            .sidebar-collapsed nav button > i.fa-chevron-down {
+                display: none;
+            }
+
+            .sidebar-collapsed nav a,
+            .sidebar-collapsed nav button {
+                justify-content: center;
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+
+            .sidebar-collapsed nav .pl-8 {
+                display: none;
+            }
         }
     </style>
     
     @stack('styles')
 </head>
 <body class="font-sans antialiased bg-gray-50">
-    <div x-data="{ sidebarOpen: false }" class="min-h-screen flex">
+    <div
+        x-data="{ sidebarOpen: false, sidebarCollapsed: localStorage.getItem('sidebarCollapsed') === 'true' }"
+        class="min-h-screen flex"
+    >
         <!-- Sidebar -->
-        <aside 
+        <aside
             x-cloak
-            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-            class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 shadow-lg transform transition-transform duration-300 ease-in-out md:translate-x-0 md:static md:shadow-none md:min-h-screen md:w-64 flex-shrink-0"
+            :class="{
+                'translate-x-0': sidebarOpen,
+                '-translate-x-full': !sidebarOpen,
+                'md:w-20': sidebarCollapsed,
+                'md:w-64': !sidebarCollapsed,
+                'sidebar-collapsed': sidebarCollapsed,
+            }"
+            class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 shadow-lg transform transition-all duration-300 ease-in-out md:translate-x-0 md:static md:shadow-none md:min-h-screen flex-shrink-0"
         >
+            <!-- Collapse toggle (desktop only) -->
+            <button
+                @click="sidebarCollapsed = !sidebarCollapsed; localStorage.setItem('sidebarCollapsed', sidebarCollapsed)"
+                class="hidden md:flex absolute -right-3 top-20 w-6 h-6 items-center justify-center rounded-full bg-white border border-gray-300 shadow-sm text-gray-500 hover:text-primary-600 hover:border-primary-300 transition-colors z-10"
+                :title="sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'"
+            >
+                <i class="fas text-[10px]" :class="sidebarCollapsed ? 'fa-chevron-right' : 'fa-chevron-left'"></i>
+            </button>
+
             <!-- Logo -->
-            <div class="flex items-center justify-center h-16 px-6 border-b border-gray-200">
-                <h1 class="text-xl font-bold gradient-text">Transcript System</h1>
+            <div class="flex items-center justify-center h-16 px-4 border-b border-gray-200 overflow-hidden">
+                <h1 class="text-xl font-bold gradient-text whitespace-nowrap" x-show="!sidebarCollapsed" x-cloak>Transcript System</h1>
+                <div class="w-9 h-9 rounded-lg gradient-bg flex items-center justify-center text-white font-bold text-sm flex-shrink-0" x-show="sidebarCollapsed" x-cloak>TS</div>
             </div>
-            
+
             <!-- Navigation -->
             <nav class="p-4 space-y-1">
                 <a href="{{ route('dashboard') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('dashboard') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
