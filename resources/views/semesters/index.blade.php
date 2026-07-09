@@ -73,7 +73,7 @@
                                                 @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
-                                                @if($semester->registration_open)
+                                                @if($semester->isRegistrationOpen())
                                                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
                                                         Open
                                                     </span>
@@ -81,6 +81,18 @@
                                                     <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
                                                         Closed
                                                     </span>
+                                                @endif
+                                                @if($semester->registration_start_date || $semester->registration_end_date)
+                                                    <div class="text-xs text-gray-500 mt-1">
+                                                        {{ $semester->registration_start_date?->format('M d, Y') ?? 'Any time' }}
+                                                        &ndash;
+                                                        {{ $semester->registration_end_date?->format('M d, Y') ?? 'Any time' }}
+                                                    </div>
+                                                    @if($semester->registration_open && !$semester->isRegistrationOpen())
+                                                        <div class="text-xs text-amber-600 mt-1">
+                                                            Toggle is on, but outside the date window
+                                                        </div>
+                                                    @endif
                                                 @endif
                                                 @if($semester->required_payment_percentage !== null)
                                                     <div class="text-xs text-gray-500 mt-1">

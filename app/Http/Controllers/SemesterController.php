@@ -48,6 +48,8 @@ class SemesterController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'required_payment_percentage' => 'nullable|numeric|min:0|max:100',
+            'registration_start_date' => 'nullable|date',
+            'registration_end_date' => 'nullable|date|after_or_equal:registration_start_date',
         ]);
 
         if ($validator->fails()) {
@@ -71,9 +73,14 @@ class SemesterController extends Controller
         if (($data['required_payment_percentage'] ?? '') === '') {
             $data['required_payment_percentage'] = null;
         }
+        foreach (['registration_start_date', 'registration_end_date'] as $dateField) {
+            if (($data[$dateField] ?? '') === '') {
+                $data[$dateField] = null;
+            }
+        }
 
         Semester::create($data);
-        
+
         return redirect()->route('semesters.index')
             ->with('success', 'Semester created successfully.');
     }
@@ -155,6 +162,8 @@ class SemesterController extends Controller
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'required_payment_percentage' => 'nullable|numeric|min:0|max:100',
+            'registration_start_date' => 'nullable|date',
+            'registration_end_date' => 'nullable|date|after_or_equal:registration_start_date',
         ]);
 
         if ($validator->fails()) {
@@ -179,9 +188,14 @@ class SemesterController extends Controller
         if (($data['required_payment_percentage'] ?? '') === '') {
             $data['required_payment_percentage'] = null;
         }
+        foreach (['registration_start_date', 'registration_end_date'] as $dateField) {
+            if (($data[$dateField] ?? '') === '') {
+                $data[$dateField] = null;
+            }
+        }
 
         $semester->update($data);
-        
+
         return redirect()->route('semesters.index')
             ->with('success', 'Semester updated successfully.');
     }

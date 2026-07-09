@@ -25,6 +25,8 @@ class Semester extends Model
         'is_current',
         'required_payment_percentage',
         'registration_open',
+        'registration_start_date',
+        'registration_end_date',
         'biometric_window_open',
     ];
 
@@ -39,6 +41,8 @@ class Semester extends Model
         'is_current' => 'boolean',
         'required_payment_percentage' => 'decimal:2',
         'registration_open' => 'boolean',
+        'registration_start_date' => 'date',
+        'registration_end_date' => 'date',
         'biometric_window_open' => 'boolean',
     ];
     
@@ -80,5 +84,34 @@ class Semester extends Model
     public function biometricRegistrations(): HasMany
     {
         return $this->hasMany(BiometricRegistration::class);
+    }
+
+    /**
+     * Whether course registration is actually open right now. The `registration_open`
+     * toggle is the admin's master switch (must be on for registration to ever be
+     * possible); if a registration date window is also set, registration is only open
+     * within that window. Leaving both dates blank preserves pure manual on/off control.
+     */
+    public function isRegistrationOpen(): bool
+    {
+        if (!$this->registration_open) {
+            return false;
+        }
+
+        if (!$this->registration_start_date && !$this->registration_end_date) {
+            return true;
+        }
+
+        $today = now()->startOfDay();
+
+        if ($this->registration_start_date && $today->lt($this->registration_start_date)) {
+            return false;
+        }
+
+        if ($this->registration_end_date && $today->gt($this->registration_end_date)) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -114,6 +114,30 @@
                                         helper="Minimum percentage of the annual fee a student must have paid before they can register courses this semester. Leave blank for no fee gate."
                                     />
                                 </div>
+
+                                <!-- Registration Start Date -->
+                                <div>
+                                    <x-input
+                                        id="registration_start_date"
+                                        name="registration_start_date"
+                                        type="date"
+                                        label="Registration Opens On"
+                                        :value="old('registration_start_date')"
+                                        helper="Optional. Course registration only becomes available from this date onward. Leave both dates blank to control opening/closing purely with the manual toggle on the Semesters list."
+                                    />
+                                </div>
+
+                                <!-- Registration End Date -->
+                                <div>
+                                    <x-input
+                                        id="registration_end_date"
+                                        name="registration_end_date"
+                                        type="date"
+                                        label="Registration Closes On"
+                                        :value="old('registration_end_date')"
+                                        helper="Optional. Course registration automatically closes after this date."
+                                    />
+                                </div>
                             </div>
                         </div>
 

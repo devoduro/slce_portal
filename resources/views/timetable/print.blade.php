@@ -38,10 +38,10 @@
             }
 
             .timetable-grid {
-                --tt-time-col: 34px;
-                --tt-day-col: 95px;
-                --tt-header-h: 18px;
-                --tt-slot-h: 12px;
+                --tt-time-col: 34px !important;
+                --tt-day-col: 95px !important;
+                --tt-header-h: 18px !important;
+                --tt-slot-h: 12px !important;
                 font-size: 6.5px !important;
             }
 

@@ -132,7 +132,7 @@ class RegistrationController extends Controller
 
         $semester = $registration->semester;
 
-        if (!$semester || !$semester->registration_open) {
+        if (!$semester || !$semester->isRegistrationOpen()) {
             return redirect()->route('student.registration.index')
                 ->with('error', 'Registration is closed for this semester, so courses cannot be dropped.');
         }
@@ -148,7 +148,7 @@ class RegistrationController extends Controller
      */
     protected function canRegister($student, ?Semester $semester): bool
     {
-        if (!$student || !$semester || !$semester->registration_open) {
+        if (!$student || !$semester || !$semester->isRegistrationOpen()) {
             return false;
         }
 

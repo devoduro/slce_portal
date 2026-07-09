@@ -79,7 +79,7 @@
             </div>
         </div>
 
-        @if(!$currentSemester->registration_open)
+        @if(!$currentSemester->isRegistrationOpen())
             <div class="p-4 bg-gray-100 border-l-4 border-gray-400 text-gray-700 rounded">
                 Course registration is currently closed for this semester.
             </div>
@@ -121,7 +121,7 @@
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $registration->course->title ?? 'N/A' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $registration->course->credit_hours ?? '-' }}</td>
                                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    @if($currentSemester->registration_open)
+                                    @if($currentSemester->isRegistrationOpen())
                                         <form action="{{ route('student.registration.destroy', $registration) }}" method="POST" class="inline-block">
                                             @csrf
                                             @method('DELETE')
