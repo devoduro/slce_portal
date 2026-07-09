@@ -110,10 +110,16 @@
                                     <option value="Female" {{ request('gender') == 'Female' ? 'selected' : '' }}>Female</option>
                                     <option value="Other" {{ request('gender') == 'Other' ? 'selected' : '' }}>Other</option>
                                 </select>
+                                <select name="level" class="border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-4 py-2">
+                                    <option value="">All Levels</option>
+                                    @foreach([100, 200, 300, 400] as $levelOption)
+                                        <option value="{{ $levelOption }}" {{ (string) request('level') === (string) $levelOption ? 'selected' : '' }}>Level {{ $levelOption }}</option>
+                                    @endforeach
+                                </select>
                                 <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
                                     <i class="fas fa-filter mr-2"></i>Apply Filters
                                 </button>
-                                @if(request('search') || request('programme_id') || request('gender'))
+                                @if(request('search') || request('programme_id') || request('gender') || request('level'))
                                     <a href="{{ route('students.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
                                         <i class="fas fa-times mr-2"></i>Clear
                                     </a>

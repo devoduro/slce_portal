@@ -13,8 +13,8 @@ class ClassListTemplateExport implements FromArray, WithHeadings
     public function array(): array
     {
         return [
-            ['2021SLE0012', '100A'],
-            ['2021SLE0045', '100B'],
+            ['2021SLE0012', '100A', 100],
+            ['2021SLE0045', '100B', 100],
         ];
     }
 
@@ -23,6 +23,6 @@ class ClassListTemplateExport implements FromArray, WithHeadings
      */
     public function headings(): array
     {
-        return ['index_number', 'class_name'];
+        return ['index_number', 'class_name', 'level'];
     }
 }

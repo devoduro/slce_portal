@@ -17,6 +17,7 @@
                     <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
                         <p class="font-medium mb-2">File format</p>
                         <p>The file must have these columns: <strong>index_number</strong> and <strong>class_name</strong> (must match an existing class for that student's programme and level, e.g. "100A").</p>
+                        <p class="mt-2">An optional <strong>level</strong> column (e.g. 100, 200, 300, 400) can also be included. If a student doesn't have a level on file yet, or their level is wrong, this column sets it as part of the same upload &mdash; no separate step needed first.</p>
                         <p class="mt-2">Re-uploading the same student updates their assigned class rather than creating a duplicate.</p>
                         <a href="{{ route('class-groups.import.template') }}" class="inline-flex items-center gap-1 mt-3 text-blue-700 underline">
                             <i class="fas fa-download"></i> Download Template

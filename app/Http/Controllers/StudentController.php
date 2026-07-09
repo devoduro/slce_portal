@@ -60,7 +60,12 @@ class StudentController extends Controller
         if ($request->has('gender') && $request->gender) {
             $query->where('gender', $request->gender);
         }
-        
+
+        // Filter by level
+        if ($request->has('level') && $request->level) {
+            $query->where('level', $request->level);
+        }
+
         $students = $query->paginate(10)->withQueryString();
         $programmes = Programme::all();
         
