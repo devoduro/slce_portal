@@ -506,7 +506,7 @@ class DashboardController extends Controller
         $lecturerId = $this->authLecturerId();
         $currentSemester = Semester::where('is_current', true)->first();
 
-        $courses = Course::where('lecturer_id', $lecturerId)
+        $courses = Course::whereHas('lecturers', fn ($q) => $q->where('lecturers.id', $lecturerId))
             ->with('semester')
             ->orderBy('code')
             ->get();

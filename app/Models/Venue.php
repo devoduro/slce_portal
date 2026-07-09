@@ -19,6 +19,7 @@ class Venue extends Model
         'name',
         'capacity',
         'location',
+        'max_concurrent_classes',
     ];
 
     /**

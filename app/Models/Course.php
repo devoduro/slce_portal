@@ -24,7 +24,6 @@ class Course extends Model
         'credit_hours',
         'semester_id',
         'is_core',
-        'lecturer_id',
     ];
     
     /**
@@ -62,11 +61,12 @@ class Course extends Model
     }
 
     /**
-     * Get the lecturer assigned to teach this course.
+     * Get the lecturers assigned to teach this course. A course can have more than one
+     * lecturer (e.g. different lecturers teaching different sections of the same course).
      */
-    public function lecturer(): BelongsTo
+    public function lecturers(): BelongsToMany
     {
-        return $this->belongsTo(Lecturer::class);
+        return $this->belongsToMany(Lecturer::class, 'course_lecturer');
     }
 
     /**

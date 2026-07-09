@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -55,11 +56,12 @@ class Lecturer extends Model
     }
 
     /**
-     * Get the courses this lecturer is assigned to teach.
+     * Get the courses this lecturer is assigned to teach. A lecturer can teach more than
+     * one course, and a course can be co-taught by more than one lecturer.
      */
-    public function courses(): HasMany
+    public function courses(): BelongsToMany
     {
-        return $this->hasMany(Course::class);
+        return $this->belongsToMany(Course::class, 'course_lecturer');
     }
 
     /**

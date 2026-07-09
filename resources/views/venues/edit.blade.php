@@ -22,6 +22,11 @@
                         <x-input id="location" name="location" type="text" label="Location" :value="old('location', $venue->location)" />
                         <x-input id="capacity" name="capacity" type="number" label="Capacity" :value="old('capacity', $venue->capacity)" min="1" />
 
+                        <div>
+                            <x-input id="max_concurrent_classes" name="max_concurrent_classes" type="number" label="Max Concurrent Classes" :value="old('max_concurrent_classes', $venue->max_concurrent_classes)" min="1" max="10" required />
+                            <p class="mt-1 text-xs text-gray-500">How many classes can be scheduled here at the same time. Leave at 1 for a normal room; set to 2 (or more) for a shared/split hall.</p>
+                        </div>
+
                         <div class="mt-6 flex justify-end space-x-3">
                             <x-button type="button" variant="secondary" onclick="window.history.back()">
                                 {{ __('Cancel') }}

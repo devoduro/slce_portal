@@ -23,7 +23,7 @@ class CourseController extends Controller
     public function index()
     {
         $courses = $this->scopeToLecturer(
-            Course::with(['programmes', 'semester', 'lecturer'])->orderBy('code')
+            Course::with(['programmes', 'semester', 'lecturers'])->orderBy('code')
         )->paginate(20);
 
         return view('courses.index', compact('courses'));
@@ -55,7 +55,8 @@ class CourseController extends Controller
             'programme_ids.*' => 'exists:programmes,id',
             'semester_id' => 'required|exists:semesters,id',
             'is_core' => 'boolean',
-            'lecturer_id' => 'nullable|exists:lecturers,id',
+            'lecturer_ids' => 'nullable|array',
+            'lecturer_ids.*' => 'exists:lecturers,id',
         ]);
 
         if ($validator->fails()) {
@@ -64,7 +65,7 @@ class CourseController extends Controller
                 ->withInput();
         }
 
-        // Create the course without the programme_ids
+        // Create the course without the programme_ids/lecturer_ids
         $course = Course::create([
             'code' => $request->code,
             'title' => $request->title,
@@ -72,12 +73,12 @@ class CourseController extends Controller
             'credit_hours' => $request->credit_hours,
             'semester_id' => $request->semester_id,
             'is_core' => $request->is_core ?? false,
-            'lecturer_id' => $request->lecturer_id ?: null,
         ]);
 
-        // Attach the selected programmes to the course
+        // Attach the selected programmes and lecturers to the course
         $course->programmes()->attach($request->programme_ids);
-        
+        $course->lecturers()->sync($request->lecturer_ids ?? []);
+
         return redirect()->route('courses.index')
             ->with('success', 'Course created successfully.');
     }
@@ -123,7 +124,7 @@ class CourseController extends Controller
      */
     public function edit(string $id)
     {
-        $course = Course::with('programmes')->findOrFail($id);
+        $course = Course::with(['programmes', 'lecturers'])->findOrFail($id);
         $programmes = Programme::all();
         $semesters = Semester::all();
         $prerequisites = Course::where('id', '!=', $id)->get();
@@ -148,7 +149,8 @@ class CourseController extends Controller
             'programme_ids.*' => 'exists:programmes,id',
             'semester_id' => 'required|exists:semesters,id',
             'is_core' => 'boolean',
-            'lecturer_id' => 'nullable|exists:lecturers,id',
+            'lecturer_ids' => 'nullable|array',
+            'lecturer_ids.*' => 'exists:lecturers,id',
         ]);
 
         if ($validator->fails()) {
@@ -157,7 +159,7 @@ class CourseController extends Controller
                 ->withInput();
         }
 
-        // Update the course without the programme_ids
+        // Update the course without the programme_ids/lecturer_ids
         $course->update([
             'code' => $request->code,
             'title' => $request->title,
@@ -165,12 +167,12 @@ class CourseController extends Controller
             'credit_hours' => $request->credit_hours,
             'semester_id' => $request->semester_id,
             'is_core' => $request->is_core ?? false,
-            'lecturer_id' => $request->lecturer_id ?: null,
         ]);
-        
-        // Sync the selected programmes to the course
+
+        // Sync the selected programmes and lecturers to the course
         $course->programmes()->sync($request->programme_ids);
-        
+        $course->lecturers()->sync($request->lecturer_ids ?? []);
+
         return redirect()->route('courses.show', $id)
             ->with('success', 'Course updated successfully.');
     }

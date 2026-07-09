@@ -164,7 +164,7 @@ class TimetableController extends Controller
     public function create()
     {
         $classGroups = ClassGroup::orderBy('name')->get();
-        $courses = Course::orderBy('code')->get();
+        $courses = Course::with('lecturers')->orderBy('code')->get();
         $lecturers = Lecturer::orderBy('name')->get();
         $venues = Venue::orderBy('name')->get();
         $semesters = Semester::orderBy('academic_year_id', 'desc')->orderBy('semester_number')->get();
@@ -210,7 +210,7 @@ class TimetableController extends Controller
     public function edit(TimetableEntry $timetable)
     {
         $classGroups = ClassGroup::orderBy('name')->get();
-        $courses = Course::orderBy('code')->get();
+        $courses = Course::with('lecturers')->orderBy('code')->get();
         $lecturers = Lecturer::orderBy('name')->get();
         $venues = Venue::orderBy('name')->get();
         $semesters = Semester::orderBy('academic_year_id', 'desc')->orderBy('semester_number')->get();
@@ -345,16 +345,21 @@ class TimetableController extends Controller
             return 'This class already has a lesson scheduled at an overlapping time on this day.';
         }
 
-        // A venue may legitimately host up to 2 simultaneous classes (e.g. a shared
-        // or split hall) — only reject once a 3rd booking would collide. Virtual/online
-        // lessons with no physical venue skip this check entirely.
+        // A venue's admin-configured capacity decides how many simultaneous classes it may
+        // legitimately host (e.g. a shared/split hall) — only reject once that many bookings
+        // already exist. Virtual/online lessons with no physical venue skip this check entirely.
         if ($request->filled('venue_id')) {
+            $venue = Venue::find($request->venue_id);
+            $maxConcurrent = $venue?->max_concurrent_classes ?? 1;
+
             $venueBookingCount = TimetableEntry::where('venue_id', $request->venue_id)
                 ->where($overlap)
                 ->count();
 
-            if ($venueBookingCount >= 2) {
-                return 'This venue already has 2 classes booked at an overlapping time on this day.';
+            if ($venueBookingCount >= $maxConcurrent) {
+                return $maxConcurrent > 1
+                    ? "This venue already has {$maxConcurrent} classes booked at an overlapping time on this day."
+                    : 'This venue is already booked at an overlapping time on this day.';
             }
         }
 
@@ -413,6 +418,54 @@ class TimetableController extends Controller
             $entry->grid_row_start = $rowStart;
             $entry->grid_row_end = $rowEnd;
             $entry->grid_column = $column;
+            $entry->_overlap_start = $startMinutes;
+            $entry->_overlap_end = $endMinutes;
+        }
+
+        self::applyOverlapSlots($entries);
+    }
+
+    /**
+     * Group entries that land in the same day column and overlap in time (e.g. two classes
+     * legitimately double-booked into the same venue) and assign each an overlap_index/
+     * overlap_count so the grid can render them side-by-side instead of one hiding the other.
+     */
+    protected static function applyOverlapSlots($entries): void
+    {
+        $byColumn = collect($entries)->groupBy('grid_column');
+
+        foreach ($byColumn as $columnEntries) {
+            $sorted = $columnEntries->sortBy('_overlap_start')->values();
+            $clusters = [];
+
+            foreach ($sorted as $entry) {
+                $placed = false;
+
+                foreach ($clusters as &$cluster) {
+                    $overlapsCluster = collect($cluster)->contains(
+                        fn ($member) => $entry->_overlap_start < $member->_overlap_end && $entry->_overlap_end > $member->_overlap_start
+                    );
+
+                    if ($overlapsCluster) {
+                        $cluster[] = $entry;
+                        $placed = true;
+                        break;
+                    }
+                }
+                unset($cluster);
+
+                if (!$placed) {
+                    $clusters[] = [$entry];
+                }
+            }
+
+            foreach ($clusters as $cluster) {
+                $count = count($cluster);
+                foreach ($cluster as $index => $entry) {
+                    $entry->overlap_index = $index;
+                    $entry->overlap_count = $count;
+                }
+            }
         }
     }
 

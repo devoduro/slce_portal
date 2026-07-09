@@ -40,7 +40,7 @@ class VenueController extends Controller
                 ->withInput();
         }
 
-        Venue::create($request->only(['name', 'capacity', 'location']));
+        Venue::create($request->only(['name', 'capacity', 'location', 'max_concurrent_classes']));
 
         return redirect()->route('venues.index')
             ->with('success', 'Venue created successfully.');
@@ -67,7 +67,7 @@ class VenueController extends Controller
                 ->withInput();
         }
 
-        $venue->update($request->only(['name', 'capacity', 'location']));
+        $venue->update($request->only(['name', 'capacity', 'location', 'max_concurrent_classes']));
 
         return redirect()->route('venues.index')
             ->with('success', 'Venue updated successfully.');
@@ -98,6 +98,7 @@ class VenueController extends Controller
             'name' => ['required', 'string', 'max:255', Rule::unique('venues', 'name')->ignore($ignoreId)],
             'capacity' => 'nullable|integer|min:1',
             'location' => 'nullable|string|max:255',
+            'max_concurrent_classes' => 'required|integer|min:1|max:10',
         ];
     }
 }

@@ -21,7 +21,7 @@ class ContinuousAssessmentController extends Controller
     public function index()
     {
         $courses = $this->scopeToLecturer(
-            Course::with(['semester', 'lecturer'])->orderBy('code')
+            Course::with(['semester', 'lecturers'])->orderBy('code')
         )->get();
 
         return view('continuous-assessment.index', compact('courses'));
@@ -32,7 +32,7 @@ class ContinuousAssessmentController extends Controller
      */
     public function show(Course $course)
     {
-        if ($this->isScopedLecturer() && $course->lecturer_id !== $this->authLecturerId()) {
+        if ($this->isScopedLecturer() && !$course->lecturers()->where('lecturers.id', $this->authLecturerId())->exists()) {
             abort(403);
         }
 
@@ -78,7 +78,7 @@ class ContinuousAssessmentController extends Controller
      */
     public function store(Request $request, Course $course)
     {
-        if ($this->isScopedLecturer() && $course->lecturer_id !== $this->authLecturerId()) {
+        if ($this->isScopedLecturer() && !$course->lecturers()->where('lecturers.id', $this->authLecturerId())->exists()) {
             abort(403);
         }
 

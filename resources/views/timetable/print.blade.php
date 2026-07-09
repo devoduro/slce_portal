@@ -93,7 +93,7 @@
         </button>
     </div>
 
-    <div class="max-w-6xl mx-auto p-8 print:p-3 print:max-w-none bg-white my-6 print:my-0 print:shadow-none shadow-md rounded-lg">
+    <div class="max-w-[1600px] mx-auto p-8 print:p-3 print:max-w-none bg-white my-6 print:my-0 print:shadow-none shadow-md rounded-lg">
         <!-- Letterhead -->
         <div class="text-center border-b-2 border-gray-800 pb-4 print:pb-2 mb-6 print:mb-2">
             @php

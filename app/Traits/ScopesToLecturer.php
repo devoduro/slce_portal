@@ -38,18 +38,21 @@ trait ScopesToLecturer
             return [];
         }
 
-        return Course::where('lecturer_id', $lecturerId)->pluck('id')->toArray();
+        return Course::whereHas('lecturers', fn ($q) => $q->where('lecturers.id', $lecturerId))
+            ->pluck('id')
+            ->toArray();
     }
 
     /**
-     * Scope a course query to only the authenticated lecturer's assigned courses,
-     * unless the user has broader course access.
+     * Scope a course query to only courses the authenticated lecturer is assigned to
+     * (one of possibly several lecturers on that course), unless the user has broader
+     * course access.
      */
     protected function scopeToLecturer(Builder $query): Builder
     {
         if ($this->isScopedLecturer()) {
             // No linked lecturer profile yet -> show nothing rather than everything.
-            $query->where('lecturer_id', $this->authLecturerId() ?? 0);
+            $query->whereHas('lecturers', fn ($q) => $q->where('lecturers.id', $this->authLecturerId() ?? 0));
         }
 
         return $query;

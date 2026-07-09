@@ -14,7 +14,7 @@
 @endsection
 
 @section('content')
-<div class="max-w-7xl mx-auto space-y-6">
+<div class="max-w-[1600px] mx-auto space-y-6">
     @if(!$student->class_group_id)
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center text-gray-500">
             <i class="fas fa-users-slash text-gray-300 text-4xl mb-3"></i>

@@ -33,7 +33,7 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $course->code }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $course->title }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $course->semester->name ?? 'N/A' }}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $course->lecturer->name ?? 'Not assigned' }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $course->lecturers->pluck('name')->join(', ') ?: 'Not assigned' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <a href="{{ route('continuous-assessment.show', $course) }}" class="text-primary-600 hover:text-primary-900">
                                                     <i class="fas fa-clipboard-list"></i> Enter Scores
