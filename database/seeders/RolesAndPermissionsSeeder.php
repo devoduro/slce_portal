@@ -33,6 +33,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'manage-classes',
         'manage-timetable',
         'manage-continuous-assessment',
+        'manage-sts',
     ];
 
     /**
@@ -47,6 +48,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'Principal' => ['view-reports'],
         'Exams Officer' => ['manage-results', 'manage-courses', 'manage-transcripts', 'manage-classes', 'manage-timetable', 'manage-continuous-assessment'],
         'Lecturer' => ['manage-results', 'manage-continuous-assessment'],
+        'STS Coordinator' => ['manage-sts', 'view-reports'],
     ];
 
     /**

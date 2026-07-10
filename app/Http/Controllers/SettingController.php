@@ -839,6 +839,50 @@ public function updateInstitution(Request $request)
     }
 
     /**
+     * Display STS Coordinator settings (name + signature used on placement letters).
+     */
+    public function sts()
+    {
+        $settings = DB::table('settings')->where('category', 'sts')->get();
+
+        return view('settings.sts', compact('settings'));
+    }
+
+    /**
+     * Update STS Coordinator settings.
+     */
+    public function updateSts(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'sts_coordinator_name' => 'required|string|max:255',
+            'sts_coordinator_signature' => 'nullable|image|mimes:jpeg,png|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('settings.sts')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        DB::table('settings')->updateOrInsert(
+            ['key' => 'sts_coordinator_name', 'category' => 'sts'],
+            ['value' => $request->input('sts_coordinator_name'), 'type' => 'text']
+        );
+
+        if ($request->hasFile('sts_coordinator_signature')) {
+            $path = $request->file('sts_coordinator_signature')->storeAs('signatures', $request->file('sts_coordinator_signature')->hashName(), 'public');
+
+            DB::table('settings')->updateOrInsert(
+                ['key' => 'sts_coordinator_signature', 'category' => 'sts'],
+                ['value' => $path, 'type' => 'image']
+            );
+        }
+
+        return redirect()->route('settings.sts')
+            ->with('success', 'STS settings updated successfully.');
+    }
+
+    /**
      * Set an academic year as current.
      */
     public function setCurrentAcademicYear(AcademicYear $academicYear)

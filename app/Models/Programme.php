@@ -23,7 +23,22 @@ class Programme extends Model
         'duration_years',
         'department',
         'faculty',
+        'sts_category',
     ];
+
+    public const STS_CATEGORY_LABELS = [
+        'early_grade' => 'Early Grade',
+        'upper_primary' => 'Upper Primary',
+        'jhs' => 'JHS',
+    ];
+
+    /**
+     * Human-readable label for this programme's STS/Internship category.
+     */
+    public function stsCategoryLabel(): ?string
+    {
+        return self::STS_CATEGORY_LABELS[$this->sts_category] ?? null;
+    }
     
     /**
      * Get the students for the programme.

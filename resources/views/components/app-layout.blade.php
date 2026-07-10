@@ -140,6 +140,11 @@
                     <i class="fas fa-id-badge w-5"></i>
                     <span>My Profile</span>
                 </a>
+
+                <a href="{{ route('sts-supervision.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('sts-supervision.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-user-graduate w-5"></i>
+                    <span>My STS Students</span>
+                </a>
                 @endif
 
                 @can('manage-students')
@@ -271,6 +276,25 @@
                 <a href="{{ route('continuous-assessment.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('continuous-assessment.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-tasks w-5"></i>
                     <span>Continuous Assessment</span>
+                </a>
+                @endcan
+
+                @can('manage-sts')
+                <a href="{{ route('sts-terms.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('sts-terms.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-school w-5"></i>
+                    <span>STS Terms</span>
+                </a>
+                <a href="{{ route('partner-schools.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('partner-schools.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-map-marked-alt w-5"></i>
+                    <span>Partner Schools</span>
+                </a>
+                <a href="{{ route('sts-placements.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('sts-placements.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-user-check w-5"></i>
+                    <span>STS Placements</span>
+                </a>
+                <a href="{{ route('sts-score-settings.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('sts-score-settings.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-star-half-alt w-5"></i>
+                    <span>STS Score Settings</span>
                 </a>
                 @endcan
 

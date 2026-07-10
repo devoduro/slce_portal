@@ -111,6 +111,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/my-timetable', [\App\Http\Controllers\LecturerPortalController::class, 'timetable'])->name('lecturer.timetable');
     Route::get('/my-timetable/print', [\App\Http\Controllers\LecturerPortalController::class, 'printTimetable'])->name('lecturer.timetable.print');
 
+    // STS/Internship supervision (not permission-gated - any account linked to a lecturer profile)
+    Route::get('/my-sts-students', [\App\Http\Controllers\StsSupervisionController::class, 'index'])->name('sts-supervision.index');
+    Route::get('/my-sts-students/letter', [\App\Http\Controllers\StsSupervisionController::class, 'printLetter'])->name('sts-supervision.letter');
+    Route::get('/my-sts-students/{stsPlacement}/score', [\App\Http\Controllers\StsSupervisionController::class, 'scoreForm'])->name('sts-supervision.score.edit');
+    Route::post('/my-sts-students/{stsPlacement}/score', [\App\Http\Controllers\StsSupervisionController::class, 'scoreStore'])->name('sts-supervision.score.store');
+
     // Students
     Route::middleware('permission:manage-students')->group(function () {
         Route::get('/students/{id}/create-account', [StudentController::class, 'createUserAccount'])->name('students.create-account');
@@ -240,6 +246,22 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/promotions', [\App\Http\Controllers\PromotionController::class, 'store'])->name('promotions.store');
     });
 
+    // STS / Internship
+    Route::middleware('permission:manage-sts')->group(function () {
+        Route::put('/sts-terms/{stsTerm}/activate', [\App\Http\Controllers\StsTermController::class, 'activate'])->name('sts-terms.activate');
+        Route::resource('sts-terms', \App\Http\Controllers\StsTermController::class)->except(['show']);
+
+        Route::get('/partner-schools/import', [\App\Http\Controllers\PartnerSchoolController::class, 'importForm'])->name('partner-schools.import.form');
+        Route::post('/partner-schools/import', [\App\Http\Controllers\PartnerSchoolController::class, 'import'])->name('partner-schools.import.store');
+        Route::get('/partner-schools/import/template', [\App\Http\Controllers\PartnerSchoolController::class, 'downloadTemplate'])->name('partner-schools.import.template');
+        Route::resource('partner-schools', \App\Http\Controllers\PartnerSchoolController::class)->except(['show']);
+
+        Route::resource('sts-score-settings', \App\Http\Controllers\StsScoreSettingController::class)->except(['show']);
+
+        Route::get('/sts-placements', [\App\Http\Controllers\StsPlacementController::class, 'index'])->name('sts-placements.index');
+        Route::put('/sts-placements/{stsPlacement}/assign-supervisor', [\App\Http\Controllers\StsPlacementController::class, 'assignSupervisor'])->name('sts-placements.assign-supervisor');
+    });
+
     // Timetable
     Route::middleware('permission:manage-timetable')->group(function () {
         Route::get('/timetable/print', [\App\Http\Controllers\TimetableController::class, 'print'])->name('timetable.print');
@@ -318,6 +340,12 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/registration/{registration}', [RegistrationController::class, 'destroy'])->name('registration.destroy');
 
             Route::get('/continuous-assessment', [\App\Http\Controllers\Auth\StudentAuthController::class, 'continuousAssessment'])->name('continuous-assessment');
+
+            // STS / Internship self-service
+            Route::get('/sts', [\App\Http\Controllers\StsSelectionController::class, 'index'])->name('sts.index');
+            Route::get('/sts/schools', [\App\Http\Controllers\StsSelectionController::class, 'schools'])->name('sts.schools');
+            Route::post('/sts/schools/{partnerSchool}/select', [\App\Http\Controllers\StsSelectionController::class, 'select'])->name('sts.select');
+            Route::get('/sts/letter', [\App\Http\Controllers\StsSelectionController::class, 'printLetter'])->name('sts.letter');
 
             Route::get('/timetable', [\App\Http\Controllers\Auth\StudentAuthController::class, 'timetable'])->name('timetable');
             Route::get('/timetable/print', [\App\Http\Controllers\Auth\StudentAuthController::class, 'printTimetable'])->name('timetable.print');
@@ -403,6 +431,10 @@ Route::middleware(['auth'])->group(function () {
 
             // CA Score Settings
             Route::resource('ca-score-settings', \App\Http\Controllers\CaScoreSettingController::class)->except(['show']);
+
+            // STS Settings
+            Route::get('/settings/sts', [SettingController::class, 'sts'])->name('settings.sts');
+            Route::put('/settings/sts', [SettingController::class, 'updateSts'])->name('settings.sts.update');
         });
 
         // Bulk Results Upload

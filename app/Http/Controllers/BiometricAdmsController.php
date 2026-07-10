@@ -8,6 +8,8 @@ use App\Models\BiometricRegistration;
 use App\Models\LessonAttendance;
 use App\Models\Semester;
 use App\Models\Student;
+use App\Models\StsAttendance;
+use App\Models\StsPlacement;
 use App\Models\TimetableEntry;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -150,6 +152,7 @@ class BiometricAdmsController extends Controller
             }
 
             $this->matchLessonAttendance($student, $log, $device);
+            $this->matchStsAttendance($student, $log);
         }
 
         return 1;
@@ -198,5 +201,39 @@ class BiometricAdmsController extends Controller
         );
 
         $log->update(['timetable_entry_id' => $entry->id]);
+    }
+
+    /**
+     * If this punch falls within an active STS/Internship placement's term date window,
+     * record it as a day present for that placement's mentor/attendance score. Unlike lesson
+     * attendance, no venue/device-location matching is required - any punch during the
+     * window counts, since STS attendance isn't tied to a specific timetable slot.
+     */
+    protected function matchStsAttendance(Student $student, BiometricLog $log): void
+    {
+        $date = Carbon::parse($log->punched_at)->toDateString();
+
+        $placement = StsPlacement::whereNotNull('partner_school_id')
+            ->where('student_id', $student->id)
+            ->whereHas('stsTerm', function ($query) use ($date) {
+                $query->whereDate('proposed_start_date', '<=', $date)
+                    ->whereDate('proposed_end_date', '>=', $date);
+            })
+            ->first();
+
+        if (!$placement) {
+            return;
+        }
+
+        StsAttendance::firstOrCreate(
+            [
+                'sts_placement_id' => $placement->id,
+                'attendance_date' => $date,
+            ],
+            [
+                'student_id' => $student->id,
+                'biometric_log_id' => $log->id,
+            ]
+        );
     }
 }

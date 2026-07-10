@@ -110,6 +110,14 @@ class Student extends Model
     }
 
     /**
+     * Get the STS/Internship placements for the student.
+     */
+    public function stsPlacements(): HasMany
+    {
+        return $this->hasMany(StsPlacement::class);
+    }
+
+    /**
      * Get the total outstanding arrears across all previous years.
      * This is informational only and does not affect the course-registration fee gate.
      */

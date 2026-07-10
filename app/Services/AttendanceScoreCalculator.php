@@ -18,6 +18,10 @@ class AttendanceScoreCalculator
      */
     public static function score(Student $student, Course $course, Semester $semester): float
     {
+        if ($course->is_sts_course) {
+            return StsAttendanceScoreCalculator::scoreForCourse($student, $semester);
+        }
+
         $setting = CaScoreSetting::where('level', $student->level)->first();
 
         if (!$setting) {

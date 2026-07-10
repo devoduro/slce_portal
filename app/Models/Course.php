@@ -24,8 +24,9 @@ class Course extends Model
         'credit_hours',
         'semester_id',
         'is_core',
+        'is_sts_course',
     ];
-    
+
     /**
      * The attributes that should be cast.
      *
@@ -34,6 +35,7 @@ class Course extends Model
     protected $casts = [
         'credit_hours' => 'decimal:2',
         'is_core' => 'boolean',
+        'is_sts_course' => 'boolean',
     ];
     
     /**

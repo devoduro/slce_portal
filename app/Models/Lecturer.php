@@ -71,4 +71,12 @@ class Lecturer extends Model
     {
         return $this->hasMany(TimetableEntry::class);
     }
+
+    /**
+     * Get the STS/Internship placements this lecturer supervises.
+     */
+    public function stsPlacements(): HasMany
+    {
+        return $this->hasMany(StsPlacement::class);
+    }
 }
