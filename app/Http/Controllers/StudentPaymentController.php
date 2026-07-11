@@ -202,13 +202,17 @@ class StudentPaymentController extends Controller
      */
     public function printLedger(Student $student)
     {
-        $totalArrears = $student->totalArrears();
         $ledger = FeeLedgerService::ledgerFor($student);
+
+        // ledgerFor() returns newest-first (for the on-screen statement); the printed
+        // statement reads top-to-bottom oldest-first instead, so the balance builds down
+        // the page and the most recent transaction lands at the bottom, not the top.
         $balanceDue = $ledger[0]['balance'] ?? 0.0;
+        $ledger = array_reverse($ledger);
 
         $settings = \Illuminate\Support\Facades\DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
 
-        return view('fees.payments.print-ledger', compact('student', 'totalArrears', 'ledger', 'balanceDue', 'settings'));
+        return view('fees.payments.print-ledger', compact('student', 'ledger', 'balanceDue', 'settings'));
     }
 
     /**

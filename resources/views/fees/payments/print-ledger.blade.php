@@ -64,12 +64,8 @@
         </div>
 
         <!-- Balance Summary -->
-        <div class="grid grid-cols-2 gap-4 mb-6 text-center">
-            <div class="border border-gray-300 rounded-lg p-3">
-                <p class="text-xs text-gray-500 uppercase">Arrears</p>
-                <p class="text-lg font-semibold {{ $totalArrears > 0 ? 'text-red-700' : ($totalArrears < 0 ? 'text-green-700' : '') }}">{{ number_format($totalArrears, 2) }}</p>
-            </div>
-            <div class="border border-gray-300 rounded-lg p-3">
+        <div class="mb-6 text-center">
+            <div class="border border-gray-300 rounded-lg p-3 inline-block min-w-[240px]">
                 <p class="text-xs text-gray-500 uppercase">Total Balance Due</p>
                 <p class="text-lg font-semibold {{ $balanceDue > 0 ? 'text-red-700' : 'text-green-700' }}">{{ number_format($balanceDue, 2) }}</p>
             </div>
