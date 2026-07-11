@@ -174,14 +174,7 @@ class StudentPaymentController extends Controller
 
         $feeStructure = $academicYear ? $student->applicableFeeStructure($academicYear) : null;
         $totalPaid = $academicYear ? $student->totalPaid($academicYear) : 0;
-        $balance = $academicYear ? $student->feeBalance($academicYear) : 0;
         $percentage = $academicYear ? $student->paymentPercentage($academicYear) : 0;
-
-        $payments = $academicYear
-            ? $student->payments()->where('academic_year_id', $academicYear->id)->orderByDesc('payment_date')->get()
-            : collect();
-
-        $arrears = $student->arrears()->with('academicYear')->orderByDesc('academic_year_id')->get();
         $totalArrears = $student->totalArrears();
 
         $ledger = FeeLedgerService::ledgerFor($student);
@@ -196,14 +189,26 @@ class StudentPaymentController extends Controller
             'academicYears',
             'feeStructure',
             'totalPaid',
-            'balance',
             'percentage',
-            'payments',
-            'arrears',
             'totalArrears',
             'ledger',
             'balanceDue'
         ));
+    }
+
+    /**
+     * Printable statement of account (full ledger) for a student - a standalone
+     * letterhead document, independent of the academic year currently selected on screen.
+     */
+    public function printLedger(Student $student)
+    {
+        $totalArrears = $student->totalArrears();
+        $ledger = FeeLedgerService::ledgerFor($student);
+        $balanceDue = $ledger[0]['balance'] ?? 0.0;
+
+        $settings = \Illuminate\Support\Facades\DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
+
+        return view('fees.payments.print-ledger', compact('student', 'totalArrears', 'ledger', 'balanceDue', 'settings'));
     }
 
     /**

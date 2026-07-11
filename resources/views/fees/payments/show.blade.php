@@ -4,9 +4,14 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('Fee Ledger') }} - {{ $student->full_name }}
             </h2>
-            <x-button href="{{ route('fees.index') }}" variant="secondary" icon="fas fa-arrow-left">
-                {{ __('Back to Fees') }}
-            </x-button>
+            <div class="flex gap-2">
+                <x-button href="{{ route('fees.print', $student) }}" variant="secondary" icon="fas fa-print" target="_blank">
+                    {{ __('Print Statement') }}
+                </x-button>
+                <x-button href="{{ route('fees.index') }}" variant="secondary" icon="fas fa-arrow-left">
+                    {{ __('Back to Fees') }}
+                </x-button>
+            </div>
         </div>
     </x-slot>
 
@@ -42,6 +47,15 @@
                 <!-- Fee Summary -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="bg-white shadow-sm rounded-lg p-4">
+                        <p class="text-sm text-gray-500">Previous Balance (Arrears)</p>
+                        <p class="text-xl font-semibold {{ $totalArrears > 0 ? 'text-red-600' : ($totalArrears < 0 ? 'text-green-600' : 'text-gray-900') }}">
+                            {{ number_format($totalArrears, 2) }}
+                        </p>
+                        @if($totalArrears < 0)
+                            <p class="text-xs text-green-500">Credit - school owes student</p>
+                        @endif
+                    </div>
+                    <div class="bg-white shadow-sm rounded-lg p-4">
                         <p class="text-sm text-gray-500">Fee Amount</p>
                         <p class="text-xl font-semibold text-gray-900">
                             {{ $feeStructure ? number_format($feeStructure->amount, 2) : 'Not set' }}
@@ -55,10 +69,6 @@
                     <div class="bg-white shadow-sm rounded-lg p-4">
                         <p class="text-sm text-gray-500">Total Paid</p>
                         <p class="text-xl font-semibold text-green-600">{{ number_format($totalPaid, 2) }}</p>
-                    </div>
-                    <div class="bg-white shadow-sm rounded-lg p-4">
-                        <p class="text-sm text-gray-500">Balance</p>
-                        <p class="text-xl font-semibold text-red-600">{{ number_format($balance, 2) }}</p>
                     </div>
                     <div class="bg-white shadow-sm rounded-lg p-4">
                         <p class="text-sm text-gray-500">Percentage Paid</p>

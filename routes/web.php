@@ -218,6 +218,7 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/fees/arrears/{arrear}', [ArrearsController::class, 'destroy'])->name('fees.arrears.destroy');
 
         Route::get('/fees/{student}', [StudentPaymentController::class, 'show'])->name('fees.show');
+        Route::get('/fees/{student}/print', [StudentPaymentController::class, 'printLedger'])->name('fees.print');
         Route::post('/fees/{student}/payments', [StudentPaymentController::class, 'store'])->name('fees.payments.store');
         Route::delete('/fees/payments/{payment}', [StudentPaymentController::class, 'destroy'])->name('fees.payments.destroy');
     });
