@@ -26,6 +26,15 @@
             </p>
             <p class="text-xs text-gray-400 mt-2">This does not affect your ability to register courses this semester.</p>
         </div>
+    @elseif($totalArrears < 0)
+        <div class="bg-white rounded-2xl shadow-sm border border-green-100 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-2">Credit Balance</h3>
+            <p class="text-sm text-gray-600">
+                You have a credit balance of
+                <span class="font-semibold text-green-600">{{ number_format(abs($totalArrears), 2) }}</span>
+                from previous academic year(s) — the school owes you this amount. Please contact the accounts office.
+            </p>
+        </div>
     @endif
 
     @if(!$currentSemester)

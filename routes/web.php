@@ -205,6 +205,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('permission:manage-fees')->group(function () {
         Route::resource('fee-structures', FeeStructureController::class)->except(['show']);
         Route::get('/fees', [StudentPaymentController::class, 'index'])->name('fees.index');
+        Route::get('/fees/export/excel', [StudentPaymentController::class, 'exportExcel'])->name('fees.export.excel');
+        Route::get('/fees/export/pdf', [StudentPaymentController::class, 'exportPdf'])->name('fees.export.pdf');
         Route::get('/fees/report', [StudentPaymentController::class, 'report'])->name('fees.report');
         Route::get('/fees/report/print', [StudentPaymentController::class, 'printReport'])->name('fees.report.print');
 

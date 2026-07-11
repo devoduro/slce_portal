@@ -4,6 +4,14 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('Student Fees') }}
             </h2>
+            <div class="flex gap-2">
+                <x-button href="{{ route('fees.export.excel', request()->query()) }}" variant="secondary" icon="fas fa-file-excel">
+                    {{ __('Export Excel') }}
+                </x-button>
+                <x-button href="{{ route('fees.export.pdf', request()->query()) }}" variant="secondary" icon="fas fa-file-pdf" target="_blank">
+                    {{ __('Export PDF') }}
+                </x-button>
+            </div>
         </div>
     </x-slot>
 
@@ -11,7 +19,7 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <form method="GET" action="{{ route('fees.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                    <form method="GET" action="{{ route('fees.index') }}" class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
                         <div>
                             <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name or index number" class="block w-full pl-3 pr-3 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
                         </div>
@@ -29,6 +37,13 @@
                                 @foreach($levels as $level)
                                     <option value="{{ $level }}" {{ (string) request('level') === (string) $level ? 'selected' : '' }}>Level {{ $level }}</option>
                                 @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <select name="status" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                <option value="">All Students</option>
+                                <option value="debtors" {{ request('status') === 'debtors' ? 'selected' : '' }}>Debtors (owe fees)</option>
+                                <option value="creditors" {{ request('status') === 'creditors' ? 'selected' : '' }}>Creditors (overpaid)</option>
                             </select>
                         </div>
                         <div>
@@ -61,20 +76,15 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fee Amount</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">%</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Arrears</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                @forelse($students as $student)
-                                    @php
-                                        $structure = $academicYear ? $student->applicableFeeStructure($academicYear) : null;
-                                        $paid = $academicYear ? $student->totalPaid($academicYear) : 0;
-                                        $balance = $academicYear ? $student->feeBalance($academicYear) : 0;
-                                        $percentage = $academicYear ? $student->paymentPercentage($academicYear) : 0;
-                                        $totalArrears = $student->totalArrears();
-                                    @endphp
+                                @forelse($students as $row)
+                                    @php $student = $row['student']; @endphp
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="text-sm font-medium text-gray-900">{{ $student->full_name }}</div>
@@ -82,18 +92,33 @@
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $student->programme->name ?? 'N/A' }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $student->level ?? '-' }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $structure ? number_format($structure->amount, 2) : 'Not set' }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($paid, 2) }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($balance, 2) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $row['fee_amount'] !== null ? number_format($row['fee_amount'], 2) : 'Not set' }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($row['paid'], 2) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium {{ $row['status'] === 'debtor' ? 'text-red-600' : ($row['status'] === 'creditor' ? 'text-green-600' : 'text-gray-900') }}">
+                                            {{ number_format($row['balance'], 2) }}
+                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $percentage >= 100 ? 'bg-green-100 text-green-800' : ($percentage > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800') }}">
-                                                {{ number_format($percentage, 1) }}%
+                                            @if($row['status'] === 'debtor')
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Debtor</span>
+                                            @elseif($row['status'] === 'creditor')
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Creditor</span>
+                                            @else
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">Settled</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $row['percentage'] >= 100 ? 'bg-green-100 text-green-800' : ($row['percentage'] > 0 ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800') }}">
+                                                {{ number_format($row['percentage'], 1) }}%
                                             </span>
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                            @if($totalArrears > 0)
+                                            @if($row['arrears'] > 0)
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                                    {{ number_format($totalArrears, 2) }}
+                                                    {{ number_format($row['arrears'], 2) }}
+                                                </span>
+                                            @elseif($row['arrears'] < 0)
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                                                    {{ number_format($row['arrears'], 2) }}
                                                 </span>
                                             @else
                                                 <span class="text-gray-400">-</span>
@@ -107,7 +132,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="px-6 py-8 text-center text-gray-400">No students found.</td>
+                                        <td colspan="10" class="px-6 py-8 text-center text-gray-400">No students found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

@@ -207,7 +207,7 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-lg font-medium text-gray-900">Arrears (Previous Years)</h3>
-                        <p class="text-sm text-gray-500">Total outstanding: <span class="font-semibold text-red-600">{{ number_format($totalArrears, 2) }}</span></p>
+                        <p class="text-sm text-gray-500">Total outstanding: <span class="font-semibold {{ $totalArrears < 0 ? 'text-green-600' : 'text-red-600' }}">{{ number_format($totalArrears, 2) }}</span>{{ $totalArrears < 0 ? ' (school owes student)' : '' }}</p>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
@@ -223,7 +223,12 @@
                                 @forelse($arrears as $arrear)
                                     <tr>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $arrear->academicYear->name ?? 'N/A' }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-medium">{{ number_format($arrear->amount, 2) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium {{ $arrear->amount < 0 ? 'text-green-600' : 'text-red-600' }}">
+                                            {{ number_format($arrear->amount, 2) }}
+                                            @if($arrear->amount < 0)
+                                                <span class="text-xs font-normal text-green-500">(credit)</span>
+                                            @endif
+                                        </td>
                                         <td class="px-6 py-4 text-sm text-gray-500">{{ $arrear->notes ?? '-' }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <form action="{{ route('fees.arrears.destroy', $arrear) }}" method="POST" class="inline-block">

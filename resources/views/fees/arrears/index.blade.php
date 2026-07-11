@@ -65,7 +65,12 @@
                                                 <div class="text-sm text-gray-500">{{ $arrear->student->index_number ?? '-' }}</div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $arrear->academicYear->name ?? 'N/A' }}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($arrear->amount, 2) }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium {{ $arrear->amount < 0 ? 'text-green-600' : 'text-gray-900' }}">
+                                                {{ number_format($arrear->amount, 2) }}
+                                                @if($arrear->amount < 0)
+                                                    <span class="text-xs font-normal text-green-500">(credit - school owes student)</span>
+                                                @endif
+                                            </td>
                                             <td class="px-6 py-4 text-sm text-gray-500">{{ $arrear->notes ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {{ $arrear->recordedBy->name ?? 'System' }}<br>

@@ -14,21 +14,31 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
             <p class="text-sm text-gray-500">Arrears (Previous Years)</p>
-            <p class="text-xl font-semibold {{ $totalArrears > 0 ? 'text-red-600' : 'text-gray-900' }}">{{ number_format($totalArrears, 2) }}</p>
+            <p class="text-xl font-semibold {{ $totalArrears > 0 ? 'text-red-600' : ($totalArrears < 0 ? 'text-green-600' : 'text-gray-900') }}">{{ number_format($totalArrears, 2) }}</p>
+            @if($totalArrears < 0)
+                <p class="text-xs text-green-500">Credit - school owes you</p>
+            @endif
         </div>
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
             <p class="text-sm text-gray-500">Current Academic Year Balance</p>
             <p class="text-xl font-semibold {{ $currentYearBalance > 0 ? 'text-red-600' : 'text-gray-900' }}">{{ number_format($currentYearBalance, 2) }}</p>
         </div>
-        <div class="bg-white rounded-2xl shadow-sm border-2 {{ $balanceDue > 0 ? 'border-red-300' : 'border-gray-100' }} p-4">
+        <div class="bg-white rounded-2xl shadow-sm border-2 {{ $balanceDue > 0 ? 'border-red-300' : ($balanceDue < 0 ? 'border-green-300' : 'border-gray-100') }} p-4">
             <p class="text-sm text-gray-500">Total Balance Due</p>
             <p class="text-2xl font-bold {{ $balanceDue > 0 ? 'text-red-600' : 'text-green-600' }}">{{ number_format($balanceDue, 2) }}</p>
+            @if($balanceDue < 0)
+                <p class="text-xs text-green-500">Credit - school owes you</p>
+            @endif
         </div>
     </div>
 
     @if($balanceDue > 0)
         <div class="p-4 bg-red-50 border-l-4 border-red-400 text-red-700 rounded text-sm">
             You have an outstanding balance of <span class="font-semibold">{{ number_format($balanceDue, 2) }}</span> — this is your arrears plus any unpaid tuition across all academic years shown in the statement below.
+        </div>
+    @elseif($balanceDue < 0)
+        <div class="p-4 bg-green-50 border-l-4 border-green-400 text-green-700 rounded text-sm">
+            You have a credit balance of <span class="font-semibold">{{ number_format(abs($balanceDue), 2) }}</span> — the school owes you this amount, shown as a credit in the statement below.
         </div>
     @endif
 

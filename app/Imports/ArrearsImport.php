@@ -64,7 +64,9 @@ class ArrearsImport implements ToCollection, WithHeadingRow, WithValidation, Ski
                 continue;
             }
 
-            if (!is_numeric($amount) || (float) $amount <= 0) {
+            // Negative amounts are valid here: they represent the school owing the student
+            // (e.g. an overpayment) rather than the student owing the school.
+            if (!is_numeric($amount) || (float) $amount == 0.0) {
                 $this->errors[] = "Invalid amount for student {$indexNumber} ({$academicYearName}).";
                 $this->skipped++;
                 continue;
@@ -94,7 +96,9 @@ class ArrearsImport implements ToCollection, WithHeadingRow, WithValidation, Ski
         return [
             'index_number' => 'required',
             'academic_year' => 'required',
-            'amount' => 'required|numeric|min:0.01',
+            // Negative amounts are allowed (school owes the student, e.g. an overpayment);
+            // only zero is meaningless here.
+            'amount' => ['required', 'numeric', 'not_in:0'],
         ];
     }
 

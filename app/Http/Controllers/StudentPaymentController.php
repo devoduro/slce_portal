@@ -2,14 +2,20 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\StudentFeesExport;
 use App\Models\AcademicYear;
 use App\Models\FeeStructure;
 use App\Models\Programme;
 use App\Models\Student;
+use App\Models\StudentArrear;
 use App\Models\StudentPayment;
 use App\Services\FeeLedgerService;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
+use PDF;
 
 class StudentPaymentController extends Controller
 {
@@ -18,13 +24,64 @@ class StudentPaymentController extends Controller
      */
     public function index(Request $request)
     {
-        $academicYear = $request->filled('academic_year_id')
-            ? AcademicYear::find($request->academic_year_id)
-            : AcademicYear::where('is_current', true)->first();
+        [$academicYear, $rows] = $this->buildFeeRows($request);
 
         $academicYears = AcademicYear::chronological()->get();
         $programmes = Programme::orderBy('name')->get();
         $levels = Student::whereNotNull('level')->distinct()->orderBy('level')->pluck('level');
+
+        $perPage = 20;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+
+        $students = new LengthAwarePaginator(
+            $rows->forPage($page, $perPage)->values(),
+            $rows->count(),
+            $perPage,
+            $page,
+            ['path' => $request->url(), 'query' => $request->except('page')]
+        );
+
+        return view('fees.payments.index', compact('students', 'academicYear', 'academicYears', 'programmes', 'levels'));
+    }
+
+    /**
+     * Export the current filtered fee list to Excel.
+     */
+    public function exportExcel(Request $request)
+    {
+        [$academicYear, $rows] = $this->buildFeeRows($request);
+
+        $filename = 'student-fees' . ($academicYear ? '-' . str_replace('/', '-', $academicYear->name) : '') . '.xlsx';
+
+        return Excel::download(new StudentFeesExport($rows), $filename);
+    }
+
+    /**
+     * Export the current filtered fee list to PDF.
+     */
+    public function exportPdf(Request $request)
+    {
+        [$academicYear, $rows] = $this->buildFeeRows($request);
+
+        $filename = 'student-fees' . ($academicYear ? '-' . str_replace('/', '-', $academicYear->name) : '') . '.pdf';
+
+        $pdf = PDF::loadView('fees.payments.export-pdf', compact('rows', 'academicYear'))->setPaper('a4', 'landscape');
+
+        return $pdf->download($filename);
+    }
+
+    /**
+     * Build the filtered, balance-annotated student fee rows shared by the on-screen
+     * list and both exports. Balance is unclamped (fee due minus paid) so an overpayment
+     * shows as negative - a creditor - rather than flooring at zero.
+     *
+     * @return array{0: ?AcademicYear, 1: \Illuminate\Support\Collection}
+     */
+    protected function buildFeeRows(Request $request): array
+    {
+        $academicYear = $request->filled('academic_year_id')
+            ? AcademicYear::find($request->academic_year_id)
+            : AcademicYear::where('is_current', true)->first();
 
         $query = Student::with('programme');
 
@@ -44,9 +101,61 @@ class StudentPaymentController extends Controller
             $query->where('level', $request->level);
         }
 
-        $students = $query->orderBy('full_name')->paginate(20)->withQueryString();
+        $students = $query->orderBy('full_name')->get();
+        $studentIds = $students->pluck('id');
 
-        return view('fees.payments.index', compact('students', 'academicYear', 'academicYears', 'programmes', 'levels'));
+        $feeStructures = $academicYear
+            ? FeeStructure::where('academic_year_id', $academicYear->id)->get()
+            : collect();
+
+        $paymentSums = $academicYear
+            ? StudentPayment::where('academic_year_id', $academicYear->id)
+                ->whereIn('student_id', $studentIds)
+                ->selectRaw('student_id, SUM(amount) as total')
+                ->groupBy('student_id')
+                ->pluck('total', 'student_id')
+            : collect();
+
+        $arrearSums = StudentArrear::whereIn('student_id', $studentIds)
+            ->selectRaw('student_id, SUM(amount) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
+
+        $rows = $students->map(function (Student $student) use ($academicYear, $feeStructures, $paymentSums, $arrearSums) {
+            $structure = null;
+            $paid = 0.0;
+            $balance = 0.0;
+            $percentage = 0.0;
+
+            if ($academicYear) {
+                $structure = $feeStructures->first(fn (FeeStructure $f) => (int) $f->programme_id === (int) $student->programme_id && (int) $f->level === (int) $student->level)
+                    ?? $feeStructures->first(fn (FeeStructure $f) => (int) $f->programme_id === (int) $student->programme_id && $f->level === null);
+
+                $paid = (float) ($paymentSums[$student->id] ?? 0);
+                $balance = $structure ? ((float) $structure->amount - $paid) : -$paid;
+                $percentage = ($structure && (float) $structure->amount > 0) ? round(($paid / (float) $structure->amount) * 100, 1) : 0.0;
+            }
+
+            return [
+                'student' => $student,
+                'fee_amount' => $structure?->amount,
+                'paid' => $paid,
+                'balance' => $balance,
+                'percentage' => $percentage,
+                'arrears' => (float) ($arrearSums[$student->id] ?? 0),
+                'status' => $balance < 0 ? 'creditor' : ($balance > 0 ? 'debtor' : 'settled'),
+            ];
+        });
+
+        if ($request->filled('status')) {
+            if ($request->status === 'creditors') {
+                $rows = $rows->filter(fn (array $r) => $r['status'] === 'creditor');
+            } elseif ($request->status === 'debtors') {
+                $rows = $rows->filter(fn (array $r) => $r['status'] === 'debtor');
+            }
+        }
+
+        return [$academicYear, $rows->values()];
     }
 
     /**
