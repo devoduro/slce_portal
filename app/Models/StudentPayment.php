@@ -20,6 +20,7 @@ class StudentPayment extends Model
         'academic_year_id',
         'amount',
         'payment_method',
+        'bank',
         'reference_number',
         'payment_date',
         'recorded_by',

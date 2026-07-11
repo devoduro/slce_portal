@@ -27,6 +27,13 @@
                 </form>
             </div>
 
+            <!-- Total Balance Due (All Years) -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-2 {{ $balanceDue > 0 ? 'border-red-300' : 'border-gray-100' }} p-6">
+                <p class="text-sm text-gray-500">Total Balance Due (Arrears + All Years' Unpaid Tuition)</p>
+                <p class="text-2xl font-bold {{ $balanceDue > 0 ? 'text-red-600' : 'text-green-600' }}">{{ number_format($balanceDue, 2) }}</p>
+                <p class="text-xs text-gray-400 mt-1">Sourced from the Full Statement of Account below - includes arrears and every academic year's unpaid tuition, not just {{ $academicYear->name ?? 'the selected year' }}.</p>
+            </div>
+
             @if(!$academicYear)
                 <div class="p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700">
                     No academic years have been created yet.
@@ -69,7 +76,7 @@
                 <!-- Record Payment -->
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
                     <h3 class="text-lg font-medium text-gray-900 mb-4">Record a Payment</h3>
-                    <form method="POST" action="{{ route('fees.payments.store', $student) }}" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                    <form method="POST" action="{{ route('fees.payments.store', $student) }}" class="grid grid-cols-1 md:grid-cols-6 gap-4 items-end">
                         @csrf
                         <input type="hidden" name="academic_year_id" value="{{ $academicYear->id }}">
 
@@ -85,6 +92,9 @@
                                 <option value="cheque">Cheque</option>
                                 <option value="other">Other</option>
                             </select>
+                        </div>
+                        <div>
+                            <x-input id="bank" name="bank" type="text" label="Bank" placeholder="Optional" />
                         </div>
                         <div>
                             <x-input id="payment_date" name="payment_date" type="date" label="Payment Date" :value="date('Y-m-d')" required />
@@ -114,6 +124,7 @@
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Method</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reference</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Recorded By</th>
                                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -125,6 +136,7 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $payment->payment_date->format('M d, Y') }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($payment->amount, 2) }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ucwords(str_replace('_', ' ', $payment->payment_method)) }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $payment->bank ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $payment->reference_number ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $payment->recordedBy->name ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -139,7 +151,7 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="px-6 py-8 text-center text-gray-400">No payments recorded yet.</td>
+                                            <td colspan="7" class="px-6 py-8 text-center text-gray-400">No payments recorded yet.</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
@@ -148,6 +160,47 @@
                     </div>
                 </div>
             @endif
+
+            <!-- Full Statement of Account -->
+            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="p-6 bg-white border-b border-gray-200">
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Full Statement of Account (All Years)</h3>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Academic Year</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Debit</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Credit</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Mode</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                @forelse($ledger as $row)
+                                    <tr>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ \Illuminate\Support\Carbon::parse($row['date'])->format('M d, Y') }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $row['academic_year'] }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $row['description'] }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-red-600">{{ $row['debit'] ? number_format($row['debit'], 2) : '-' }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600">{{ $row['credit'] ? number_format($row['credit'], 2) : '-' }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">{{ number_format($row['balance'], 2) }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $row['bank'] ?? '-' }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $row['payment_mode'] ? ucwords(str_replace('_', ' ', $row['payment_mode'])) : '-' }}</td>
+                                    </tr>
+                                @empty
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-8 text-center text-gray-400">No fee transactions recorded yet.</td>
+                                    </tr>
+                                @endforelse
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
             <!-- Arrears (Previous Years) -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">

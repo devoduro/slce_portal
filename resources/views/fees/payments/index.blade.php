@@ -11,7 +11,7 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <form method="GET" action="{{ route('fees.index') }}" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                    <form method="GET" action="{{ route('fees.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
                         <div>
                             <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name or index number" class="block w-full pl-3 pr-3 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
                         </div>
@@ -20,6 +20,14 @@
                                 <option value="">All Programmes</option>
                                 @foreach($programmes as $programme)
                                     <option value="{{ $programme->id }}" {{ request('programme_id') == $programme->id ? 'selected' : '' }}>{{ $programme->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <select name="level" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                <option value="">All Levels</option>
+                                @foreach($levels as $level)
+                                    <option value="{{ $level }}" {{ (string) request('level') === (string) $level ? 'selected' : '' }}>Level {{ $level }}</option>
                                 @endforeach
                             </select>
                         </div>

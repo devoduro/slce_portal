@@ -208,6 +208,8 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('permission:manage-fees')->group(function () {
         Route::resource('fee-structures', FeeStructureController::class)->except(['show']);
         Route::get('/fees', [StudentPaymentController::class, 'index'])->name('fees.index');
+        Route::get('/fees/report', [StudentPaymentController::class, 'report'])->name('fees.report');
+        Route::get('/fees/report/print', [StudentPaymentController::class, 'printReport'])->name('fees.report.print');
 
         // Arrears (debtors list) routes must be registered before the /fees/{student} wildcard below.
         Route::get('/fees/arrears', [ArrearsController::class, 'index'])->name('fees.arrears.index');
@@ -340,6 +342,8 @@ Route::middleware(['auth'])->group(function () {
             Route::delete('/registration/{registration}', [RegistrationController::class, 'destroy'])->name('registration.destroy');
 
             Route::get('/continuous-assessment', [\App\Http\Controllers\Auth\StudentAuthController::class, 'continuousAssessment'])->name('continuous-assessment');
+
+            Route::get('/fees', [\App\Http\Controllers\StudentFeeController::class, 'index'])->name('fees.index');
 
             // STS / Internship self-service
             Route::get('/sts', [\App\Http\Controllers\StsSelectionController::class, 'index'])->name('sts.index');

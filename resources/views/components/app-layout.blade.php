@@ -219,11 +219,14 @@
                         <a href="{{ route('fee-structures.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fee-structures.*') ? 'text-primary-600 font-medium' : '' }}">
                             Fee Structures
                         </a>
-                        <a href="{{ route('fees.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.*') && !request()->routeIs('fees.arrears.*') ? 'text-primary-600 font-medium' : '' }}">
-                            Payments
+                        <a href="{{ route('fees.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.index') || request()->routeIs('fees.show') ? 'text-primary-600 font-medium' : '' }}">
+                            Student Fees
                         </a>
                         <a href="{{ route('fees.arrears.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.arrears.*') ? 'text-primary-600 font-medium' : '' }}">
                             Arrears / Debtors
+                        </a>
+                        <a href="{{ route('fees.report') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.report') ? 'text-primary-600 font-medium' : '' }}">
+                            Fees Report
                         </a>
                     </div>
                 </div>
