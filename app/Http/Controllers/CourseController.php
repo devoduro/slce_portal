@@ -20,13 +20,34 @@ class CourseController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $courses = $this->scopeToLecturer(
-            Course::with(['programmes', 'semester', 'lecturers'])->orderBy('code')
-        )->paginate(20);
+        $query = $this->scopeToLecturer(
+            Course::with(['programmes', 'semester', 'lecturers'])->where('is_sts_course', false)
+        );
 
-        return view('courses.index', compact('courses'));
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                    ->orWhere('title', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('programme_id')) {
+            $query->whereHas('programmes', fn ($q) => $q->where('programmes.id', $request->programme_id));
+        }
+
+        if ($request->filled('semester_id')) {
+            $query->where('semester_id', $request->semester_id);
+        }
+
+        $courses = $query->orderBy('code')->paginate(20)->withQueryString();
+
+        $programmes = Programme::orderBy('name')->get();
+        $semesters = Semester::with('academicYear')->orderBy('academic_year_id', 'desc')->orderBy('semester_number')->get();
+
+        return view('courses.index', compact('courses', 'programmes', 'semesters'));
     }
 
     /**
@@ -200,58 +221,6 @@ class CourseController extends Controller
         
         return redirect()->route('courses.index')
             ->with('success', 'Course deleted successfully.');
-    }
-    
-    /**
-     * Search courses.
-     */
-    public function search(Request $request)
-    {
-        $query = $request->input('query');
-        
-        $courses = Course::with(['programmes', 'semester'])
-            ->where('code', 'like', "%{$query}%")
-            ->orWhere('title', 'like', "%{$query}%")
-            ->orderBy('code')
-            ->paginate(20);
-            
-        return view('courses.index', compact('courses', 'query'));
-    }
-    
-    /**
-     * Filter courses by programme.
-     */
-    public function filterByProgramme(Request $request)
-    {
-        $programmeId = $request->input('programme_id');
-        
-        $courses = Course::with(['programmes', 'semester'])
-            ->whereHas('programmes', function($query) use ($programmeId) {
-                $query->where('programmes.id', $programmeId);
-            })
-            ->orderBy('code')
-            ->paginate(20);
-            
-        $programme = Programme::findOrFail($programmeId);
-            
-        return view('courses.index', compact('courses', 'programme'));
-    }
-    
-    /**
-     * Filter courses by semester.
-     */
-    public function filterBySemester(Request $request)
-    {
-        $semesterId = $request->input('semester_id');
-        
-        $courses = Course::with(['programmes', 'semester'])
-            ->where('semester_id', $semesterId)
-            ->orderBy('code')
-            ->paginate(20);
-            
-        $semester = Semester::findOrFail($semesterId);
-            
-        return view('courses.index', compact('courses', 'semester'));
     }
     
     /**

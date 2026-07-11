@@ -3,24 +3,27 @@
 namespace App\Services;
 
 use App\Models\AcademicYear;
-use App\Models\FeeStructure;
 use App\Models\Student;
 use Illuminate\Support\Collection;
 
 class FeeLedgerService
 {
     /**
-     * Reference fee schedule for a student's programme: every configured fee
-     * (per level, per academic year), regardless of whether the student has
-     * actually reached that level/year yet.
+     * The fee that applies to a student right now: their current level, for the
+     * current academic year. Delegates to Student::applicableFeeStructure() so this
+     * always matches the same figure used for balance/percentage calculations elsewhere.
      */
     public static function scheduleFor(Student $student): Collection
     {
-        return FeeStructure::where('programme_id', $student->programme_id)
-            ->with('academicYear')
-            ->get()
-            ->sortByDesc(fn (FeeStructure $fee) => $fee->academicYear->start_date ?? null)
-            ->values();
+        $currentAcademicYear = AcademicYear::where('is_current', true)->first();
+
+        if (!$currentAcademicYear) {
+            return collect();
+        }
+
+        $feeStructure = $student->applicableFeeStructure($currentAcademicYear);
+
+        return $feeStructure ? collect([$feeStructure]) : collect();
     }
 
     /**

@@ -36,7 +36,7 @@
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
         <div class="p-6 border-b border-gray-100">
             <h3 class="text-lg font-semibold text-gray-800">Fee Schedule</h3>
-            <p class="text-sm text-gray-500 mt-1">Fee amounts for {{ $student->programme->name ?? 'your programme' }} across every level and academic year.</p>
+            <p class="text-sm text-gray-500 mt-1">Your current fee for {{ $student->programme->name ?? 'your programme' }} — Level {{ $student->level ?? 'N/A' }}, current academic year.</p>
         </div>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">

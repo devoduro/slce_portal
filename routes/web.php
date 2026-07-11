@@ -149,9 +149,6 @@ Route::middleware(['auth'])->group(function () {
     // Courses
     Route::middleware('permission:manage-courses')->group(function () {
         Route::resource('courses', CourseController::class);
-        Route::get('/courses/search', [CourseController::class, 'search'])->name('courses.search');
-        Route::get('/courses/filter/programme', [CourseController::class, 'filterByProgramme'])->name('courses.filter.programme');
-        Route::get('/courses/filter/semester', [CourseController::class, 'filterBySemester'])->name('courses.filter.semester');
         Route::get('/courses/{course}/students', [CourseController::class, 'students'])->name('courses.students');
         Route::get('/courses/{course}/students/add', [CourseController::class, 'addStudentsForm'])->name('courses.students.add');
         Route::post('/courses/{course}/students/add', [CourseController::class, 'addStudents'])->name('courses.students.store');
