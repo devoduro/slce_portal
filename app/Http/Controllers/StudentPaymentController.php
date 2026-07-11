@@ -126,14 +126,17 @@ class StudentPaymentController extends Controller
             $paid = 0.0;
             $balance = 0.0;
             $percentage = 0.0;
+            $arrears = (float) ($arrearSums[$student->id] ?? 0);
 
             if ($academicYear) {
                 $structure = $feeStructures->first(fn (FeeStructure $f) => (int) $f->programme_id === (int) $student->programme_id && (int) $f->level === (int) $student->level)
                     ?? $feeStructures->first(fn (FeeStructure $f) => (int) $f->programme_id === (int) $student->programme_id && $f->level === null);
 
                 $paid = (float) ($paymentSums[$student->id] ?? 0);
-                $balance = $structure ? ((float) $structure->amount - $paid) : -$paid;
-                $percentage = ($structure && (float) $structure->amount > 0) ? round(($paid / (float) $structure->amount) * 100, 1) : 0.0;
+                $feeAmount = $structure ? (float) $structure->amount : 0.0;
+                // Balance is fee due plus any carried-forward arrears, minus what's been paid.
+                $balance = ($feeAmount + $arrears) - $paid;
+                $percentage = ($structure && $feeAmount > 0) ? round(($paid / $feeAmount) * 100, 1) : 0.0;
             }
 
             return [
@@ -142,7 +145,7 @@ class StudentPaymentController extends Controller
                 'paid' => $paid,
                 'balance' => $balance,
                 'percentage' => $percentage,
-                'arrears' => (float) ($arrearSums[$student->id] ?? 0),
+                'arrears' => $arrears,
                 'status' => $balance < 0 ? 'creditor' : ($balance > 0 ? 'debtor' : 'settled'),
             ];
         });

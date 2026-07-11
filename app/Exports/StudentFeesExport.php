@@ -20,7 +20,7 @@ class StudentFeesExport implements FromCollection, WithHeadings, WithMapping
 
     public function headings(): array
     {
-        return ['Index Number', 'Full Name', 'Programme', 'Level', 'Fee Amount', 'Paid', 'Balance', 'Status', '% Paid', 'Arrears'];
+        return ['Index Number', 'Full Name', 'Programme', 'Level', 'Arrears', 'Fee Amount', 'Paid', 'Balance', 'Status', '% Paid'];
     }
 
     public function map($row): array
@@ -32,12 +32,12 @@ class StudentFeesExport implements FromCollection, WithHeadings, WithMapping
             $student->full_name,
             $student->programme->name ?? 'N/A',
             $student->level,
+            number_format($row['arrears'], 2),
             $row['fee_amount'] !== null ? number_format($row['fee_amount'], 2) : 'Not set',
             number_format($row['paid'], 2),
             number_format($row['balance'], 2),
             ucfirst($row['status']),
             $row['percentage'] . '%',
-            number_format($row['arrears'], 2),
         ];
     }
 }

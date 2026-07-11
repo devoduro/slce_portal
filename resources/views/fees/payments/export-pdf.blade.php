@@ -63,12 +63,12 @@
                 <th>Full Name</th>
                 <th>Programme</th>
                 <th>Level</th>
+                <th class="text-right">Arrears</th>
                 <th class="text-right">Fee Amount</th>
                 <th class="text-right">Paid</th>
                 <th class="text-right">Balance</th>
                 <th>Status</th>
                 <th class="text-right">% Paid</th>
-                <th class="text-right">Arrears</th>
             </tr>
         </thead>
         <tbody>
@@ -79,12 +79,12 @@
                     <td>{{ $student->full_name }}</td>
                     <td>{{ $student->programme->name ?? 'N/A' }}</td>
                     <td>{{ $student->level ?? '-' }}</td>
+                    <td class="text-right">{{ number_format($row['arrears'], 2) }}</td>
                     <td class="text-right">{{ $row['fee_amount'] !== null ? number_format($row['fee_amount'], 2) : 'Not set' }}</td>
                     <td class="text-right">{{ number_format($row['paid'], 2) }}</td>
                     <td class="text-right {{ $row['status'] }}">{{ number_format($row['balance'], 2) }}</td>
                     <td class="{{ $row['status'] }}">{{ ucfirst($row['status']) }}</td>
                     <td class="text-right">{{ $row['percentage'] }}%</td>
-                    <td class="text-right">{{ number_format($row['arrears'], 2) }}</td>
                 </tr>
             @endforeach
         </tbody>
