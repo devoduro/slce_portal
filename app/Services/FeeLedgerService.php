@@ -72,9 +72,11 @@ class FeeLedgerService
             $yearName = $arrear->academicYear->name ?? 'N/A';
 
             // A negative arrear means the school owes the student (e.g. an overpayment) -
-            // show it as a credit rather than a negative debit.
+            // show it as a credit rather than a negative debit. Dated by when the arrear was
+            // actually recorded (not the academic year's nominal start date), so the statement
+            // reflects when the transaction really happened.
             $rows->push([
-                'date' => $arrear->academicYear->start_date ?? $arrear->created_at,
+                'date' => $arrear->created_at,
                 'description' => $amount >= 0 ? "Arrears - {$yearName}" : "Overpayment Credit - {$yearName}",
                 'debit' => $amount > 0 ? $amount : null,
                 'credit' => $amount < 0 ? abs($amount) : null,
