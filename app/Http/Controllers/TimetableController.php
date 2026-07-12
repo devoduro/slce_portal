@@ -85,15 +85,16 @@ class TimetableController extends Controller
         $departments = Department::orderBy('name')->get();
         $semesters = Semester::orderBy('academic_year_id', 'desc')->orderBy('semester_number')->get();
 
-        $filters = $request->only(['class_group_id', 'lecturer_id', 'department_id', 'semester_id']);
+        $filters = $request->only(['class_group_id', 'lecturer_id', 'department_id', 'semester_id', 'level']);
 
         $showGrid = $request->filled('semester_id')
-            && ($request->filled('class_group_id') || $request->filled('lecturer_id') || $request->filled('department_id'));
+            && ($request->filled('class_group_id') || $request->filled('lecturer_id') || $request->filled('department_id') || $request->filled('level'));
 
         $entries = collect();
         $paginatedEntries = null;
         $slotLabels = [];
         $workload = null;
+        $classSummary = null;
 
         if ($showGrid) {
             $entries = self::fetchEntries($filters);
@@ -103,13 +104,17 @@ class TimetableController extends Controller
             if (!empty($filters['lecturer_id'])) {
                 $workload = self::calculateWorkload((int) $filters['lecturer_id'], (int) $filters['semester_id']);
             }
+
+            if (!empty($filters['class_group_id'])) {
+                $classSummary = self::classSummary((int) $filters['class_group_id'], $filters['semester_id'] ?? null);
+            }
         } else {
             $paginatedEntries = self::fetchEntriesQuery($filters)
                 ->paginate(20)->withQueryString();
         }
 
         return view('timetable.index', compact(
-            'entries', 'paginatedEntries', 'classGroups', 'lecturers', 'departments', 'semesters', 'showGrid', 'slotLabels', 'workload'
+            'entries', 'paginatedEntries', 'classGroups', 'lecturers', 'departments', 'semesters', 'showGrid', 'slotLabels', 'workload', 'classSummary'
         ));
     }
 
@@ -123,39 +128,45 @@ class TimetableController extends Controller
             'class_group_id' => 'nullable|exists:class_groups,id',
             'lecturer_id' => 'nullable|exists:lecturers,id',
             'department_id' => 'nullable|exists:departments,id',
+            'level' => 'nullable|integer',
         ]);
 
-        $hasScope = $request->filled('class_group_id') || $request->filled('lecturer_id') || $request->filled('department_id');
+        $hasScope = $request->filled('class_group_id') || $request->filled('lecturer_id') || $request->filled('department_id') || $request->filled('level');
 
         if ($validator->fails() || !$hasScope) {
             return redirect()->route('timetable.index')
-                ->with('error', 'Select a class, lecturer or department, and a semester, before printing.');
+                ->with('error', 'Select a class, lecturer, department or level, and a semester, before printing.');
         }
 
-        return self::buildPrintView($request->only(['class_group_id', 'lecturer_id', 'department_id', 'semester_id']));
+        return self::buildPrintView($request->only(['class_group_id', 'lecturer_id', 'department_id', 'semester_id', 'level']));
     }
 
     /**
      * Build the print-friendly timetable view for a given filter set. Public/static so the
      * lecturer and student self-service portals can print their own timetable without needing
      * the admin-only manage-timetable permission.
+     *
+     * @param \App\Models\Student|null $student Passed only when a student is printing their own
+     *                                          timetable, so the letterhead can show their photo/index number.
      */
-    public static function buildPrintView(array $filters)
+    public static function buildPrintView(array $filters, $student = null)
     {
         $semester = Semester::with('academicYear')->findOrFail($filters['semester_id']);
         $classGroup = !empty($filters['class_group_id']) ? ClassGroup::find($filters['class_group_id']) : null;
         $lecturer = !empty($filters['lecturer_id']) ? Lecturer::find($filters['lecturer_id']) : null;
         $department = !empty($filters['department_id']) ? Department::find($filters['department_id']) : null;
+        $level = $filters['level'] ?? null;
 
         $entries = self::fetchEntries($filters);
         self::applyGridPositions($entries);
         $slotLabels = self::gridSlotLabels();
 
         $workload = $lecturer ? self::calculateWorkload($lecturer->id, (int) $filters['semester_id']) : null;
+        $classSummary = $classGroup ? self::classSummary($classGroup->id, (int) $filters['semester_id']) : null;
 
         $settings = DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
 
-        return view('timetable.print', compact('entries', 'slotLabels', 'semester', 'classGroup', 'lecturer', 'department', 'settings', 'workload'));
+        return view('timetable.print', compact('entries', 'slotLabels', 'semester', 'classGroup', 'lecturer', 'department', 'level', 'settings', 'workload', 'classSummary', 'student'));
     }
 
     /**
@@ -381,6 +392,7 @@ class TimetableController extends Controller
             ->when(!empty($filters['lecturer_id']), fn ($q) => $q->where('lecturer_id', $filters['lecturer_id']))
             ->when(!empty($filters['department_id']), fn ($q) => $q->whereHas('lecturer', fn ($lq) => $lq->where('department_id', $filters['department_id'])))
             ->when(!empty($filters['semester_id']), fn ($q) => $q->where('semester_id', $filters['semester_id']))
+            ->when(!empty($filters['level']), fn ($q) => $q->whereHas('classGroup', fn ($cq) => $cq->where('level', $filters['level'])))
             ->orderBy('day_of_week')->orderBy('start_time');
     }
 
@@ -508,6 +520,26 @@ class TimetableController extends Controller
         return [
             'classes' => (clone $query)->count(),
             'workload' => (float) (clone $query)->sum('courses.credit_hours'),
+        ];
+    }
+
+    /**
+     * A class group's course load: how many distinct courses it takes, and their combined
+     * credit hours (each course counted once, regardless of how many timetable slots a
+     * week it occupies), optionally scoped to one semester.
+     *
+     * @return array{courses: int, credit: float}
+     */
+    public static function classSummary(int $classGroupId, ?int $semesterId = null): array
+    {
+        $courseIds = TimetableEntry::where('class_group_id', $classGroupId)
+            ->when($semesterId, fn ($q) => $q->where('semester_id', $semesterId))
+            ->distinct()
+            ->pluck('course_id');
+
+        return [
+            'courses' => $courseIds->count(),
+            'credit' => (float) Course::whereIn('id', $courseIds)->sum('credit_hours'),
         ];
     }
 

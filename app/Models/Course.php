@@ -22,6 +22,7 @@ class Course extends Model
         'title',
         'description',
         'credit_hours',
+        'level',
         'semester_id',
         'is_core',
         'is_sts_course',

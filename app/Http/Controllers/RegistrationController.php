@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Registration;
 use App\Models\Semester;
+use App\Services\FeeLedgerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -25,6 +26,7 @@ class RegistrationController extends Controller
         $feeStructure = null;
         $isBiometricVerified = false;
         $totalArrears = $student->totalArrears();
+        $ledger = FeeLedgerService::ledgerFor($student);
 
         if ($currentSemester) {
             $registrations = $student->registrations()
@@ -50,7 +52,8 @@ class RegistrationController extends Controller
             'balance',
             'feeStructure',
             'isBiometricVerified',
-            'totalArrears'
+            'totalArrears',
+            'ledger'
         ));
     }
 
@@ -79,7 +82,9 @@ class RegistrationController extends Controller
     }
 
     /**
-     * Register the selected courses for the current semester.
+     * Sync the student's registered courses for the current semester to match the submitted
+     * selection - registers newly-checked courses and drops previously-registered courses that
+     * were unchecked, so the same form can be used to both register and edit a registration.
      */
     public function store(Request $request)
     {
@@ -104,7 +109,16 @@ class RegistrationController extends Controller
                 ->with('error', 'None of the selected courses are available for registration.');
         }
 
-        foreach ($selectedCourseIds as $courseId) {
+        $currentRegistrations = $student->registrations()
+            ->where('semester_id', $currentSemester->id)
+            ->where('status', 'registered')
+            ->get();
+        $currentCourseIds = $currentRegistrations->pluck('course_id')->toArray();
+
+        $toAdd = array_diff($selectedCourseIds, $currentCourseIds);
+        $toRemove = array_diff($currentCourseIds, $selectedCourseIds);
+
+        foreach ($toAdd as $courseId) {
             Registration::firstOrCreate([
                 'student_id' => $student->id,
                 'course_id' => $courseId,
@@ -115,8 +129,47 @@ class RegistrationController extends Controller
             ]);
         }
 
+        if (!empty($toRemove)) {
+            $currentRegistrations->whereIn('course_id', $toRemove)->each->delete();
+        }
+
         return redirect()->route('student.registration.index')
-            ->with('success', 'Courses registered successfully.');
+            ->with('success', 'Course registration updated successfully.');
+    }
+
+    /**
+     * Print the student's already-submitted registration slip for the current semester.
+     * Only allowed once courses have actually been registered - there is nothing to print
+     * before submission.
+     */
+    public function print()
+    {
+        $student = Auth::user()->student;
+        $currentSemester = Semester::with('academicYear')->where('is_current', true)->first();
+
+        $courses = collect();
+        if ($currentSemester) {
+            $courses = Course::whereIn('id', $student->registrations()
+                ->where('semester_id', $currentSemester->id)
+                ->where('status', 'registered')
+                ->pluck('course_id'))
+                ->orderBy('code')
+                ->get();
+        }
+
+        if ($courses->isEmpty()) {
+            return redirect()->route('student.registration.index')
+                ->with('error', 'You have not registered any courses yet, so there is nothing to print.');
+        }
+
+        $settings = \Illuminate\Support\Facades\DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
+
+        return view('student.registration.print', [
+            'student' => $student,
+            'semester' => $currentSemester,
+            'courses' => $courses,
+            'settings' => $settings,
+        ]);
     }
 
     /**
@@ -165,6 +218,7 @@ class RegistrationController extends Controller
         }
 
         return Course::where('semester_id', $semester->id)
+            ->where('level', $student->level)
             ->whereHas('programmes', function ($query) use ($student) {
                 $query->where('programme_id', $student->programme_id);
             })

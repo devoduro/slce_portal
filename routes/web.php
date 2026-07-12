@@ -150,6 +150,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('permission:manage-courses')->group(function () {
         Route::resource('courses', CourseController::class);
         Route::get('/courses/{course}/students', [CourseController::class, 'students'])->name('courses.students');
+        Route::get('/courses/{course}/students/attendance', [CourseController::class, 'printAttendance'])->name('courses.students.attendance');
         Route::get('/courses/{course}/students/add', [CourseController::class, 'addStudentsForm'])->name('courses.students.add');
         Route::post('/courses/{course}/students/add', [CourseController::class, 'addStudents'])->name('courses.students.store');
         Route::get('/courses/{course}/results', [CourseController::class, 'results'])->name('courses.results');
@@ -274,6 +275,8 @@ Route::middleware(['auth'])->group(function () {
     // Continuous Assessment
     Route::middleware('permission:manage-continuous-assessment')->group(function () {
         Route::get('/continuous-assessment', [\App\Http\Controllers\ContinuousAssessmentController::class, 'index'])->name('continuous-assessment.index');
+        Route::get('/continuous-assessment/export/excel', [\App\Http\Controllers\ContinuousAssessmentController::class, 'exportExcel'])->name('continuous-assessment.export.excel');
+        Route::get('/continuous-assessment/export/pdf', [\App\Http\Controllers\ContinuousAssessmentController::class, 'exportPdf'])->name('continuous-assessment.export.pdf');
         Route::get('/continuous-assessment/{course}', [\App\Http\Controllers\ContinuousAssessmentController::class, 'show'])->name('continuous-assessment.show');
         Route::post('/continuous-assessment/{course}', [\App\Http\Controllers\ContinuousAssessmentController::class, 'store'])->name('continuous-assessment.store');
     });
@@ -339,6 +342,7 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/registration', [RegistrationController::class, 'index'])->name('registration.index');
             Route::get('/registration/create', [RegistrationController::class, 'create'])->name('registration.create');
             Route::post('/registration', [RegistrationController::class, 'store'])->name('registration.store');
+            Route::get('/registration/print', [RegistrationController::class, 'print'])->name('registration.print');
             Route::delete('/registration/{registration}', [RegistrationController::class, 'destroy'])->name('registration.destroy');
 
             Route::get('/continuous-assessment', [\App\Http\Controllers\Auth\StudentAuthController::class, 'continuousAssessment'])->name('continuous-assessment');

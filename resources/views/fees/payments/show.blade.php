@@ -36,7 +36,7 @@
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg border-2 {{ $balanceDue > 0 ? 'border-red-300' : 'border-gray-100' }} p-6">
                 <p class="text-sm text-gray-500">Total Balance Due (Arrears + All Years' Unpaid Tuition)</p>
                 <p class="text-2xl font-bold {{ $balanceDue > 0 ? 'text-red-600' : 'text-green-600' }}">{{ number_format($balanceDue, 2) }}</p>
-                <p class="text-xs text-gray-400 mt-1">Sourced from the Full Statement of Account below - includes arrears and every academic year's unpaid tuition, not just {{ $academicYear->name ?? 'the selected year' }}.</p>
+                <p class="text-xs text-red-500 mt-1"><strong>Note:</strong> Pay this amount at the Bank. Fees paid are <strong> NON-REFUNDABLE.</strong> - includes arrears and every academic year's unpaid tuition, not just {{ $academicYear->name ?? 'the selected year' }}.</p>
             </div>
 
             @if(!$academicYear)

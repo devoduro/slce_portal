@@ -2,14 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\CaCoursesExport;
 use App\Models\CaScoreSetting;
 use App\Models\Course;
 use App\Models\ContinuousAssessment;
+use App\Models\Programme;
 use App\Models\Registration;
+use App\Models\Semester;
 use App\Models\Student;
 use App\Services\AttendanceScoreCalculator;
 use App\Traits\ScopesToLecturer;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Facades\Excel;
+use PDF;
 
 class ContinuousAssessmentController extends Controller
 {
@@ -18,13 +23,68 @@ class ContinuousAssessmentController extends Controller
     /**
      * List the courses the authenticated user can enter CA scores for.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $courses = $this->scopeToLecturer(
-            Course::with(['semester', 'lecturers'])->orderBy('code')
-        )->get();
+        $courses = $this->buildCourseRows($request);
 
-        return view('continuous-assessment.index', compact('courses'));
+        $programmes = Programme::orderBy('name')->get();
+        $semesters = Semester::orderBy('academic_year_id', 'desc')->orderBy('semester_number')->get();
+
+        return view('continuous-assessment.index', compact('courses', 'programmes', 'semesters'));
+    }
+
+    /**
+     * Export the current filtered course list to Excel.
+     */
+    public function exportExcel(Request $request)
+    {
+        $courses = $this->buildCourseRows($request);
+
+        return Excel::download(new CaCoursesExport($courses), 'continuous-assessment-courses.xlsx');
+    }
+
+    /**
+     * Export the current filtered course list to PDF.
+     */
+    public function exportPdf(Request $request)
+    {
+        $courses = $this->buildCourseRows($request);
+
+        $pdf = PDF::loadView('continuous-assessment.export-pdf', compact('courses'))->setPaper('a4', 'landscape');
+
+        return $pdf->download('continuous-assessment-courses.pdf');
+    }
+
+    /**
+     * Build the filtered course list shared by the on-screen index and both exports.
+     */
+    protected function buildCourseRows(Request $request)
+    {
+        $query = $this->scopeToLecturer(
+            Course::with(['semester', 'lecturers', 'programmes'])->orderBy('code')
+        );
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('code', 'like', "%{$search}%")
+                    ->orWhere('title', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('programme_id')) {
+            $query->whereHas('programmes', fn ($q) => $q->where('programmes.id', $request->programme_id));
+        }
+
+        if ($request->filled('semester_id')) {
+            $query->where('semester_id', $request->semester_id);
+        }
+
+        if ($request->filled('level')) {
+            $query->where('level', $request->level);
+        }
+
+        return $query->get();
     }
 
     /**

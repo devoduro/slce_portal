@@ -24,7 +24,7 @@
             <p class="text-xl font-semibold {{ $currentYearBalance > 0 ? 'text-red-600' : 'text-gray-900' }}">{{ number_format($currentYearBalance, 2) }}</p>
         </div>
         <div class="bg-white rounded-2xl shadow-sm border-2 {{ $balanceDue > 0 ? 'border-red-300' : ($balanceDue < 0 ? 'border-green-300' : 'border-gray-100') }} p-4">
-            <p class="text-sm text-gray-500">Total Balance Due</p>
+            <p class="text-sm text-gray-500">Total Balance Due (Amount to pay)</p>
             <p class="text-2xl font-bold {{ $balanceDue > 0 ? 'text-red-600' : 'text-green-600' }}">{{ number_format($balanceDue, 2) }}</p>
             @if($balanceDue < 0)
                 <p class="text-xs text-green-500">Credit - school owes you</p>

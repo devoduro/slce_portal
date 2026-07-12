@@ -448,14 +448,16 @@ class StudentAuthController extends Controller
 
         $entries = collect();
         $slotLabels = [];
+        $classSummary = null;
 
         if ($semester && $student->class_group_id) {
             $entries = TimetableController::fetchEntries(['class_group_id' => $student->class_group_id, 'semester_id' => $semester->id]);
             TimetableController::applyGridPositions($entries);
             $slotLabels = TimetableController::gridSlotLabels();
+            $classSummary = TimetableController::classSummary($student->class_group_id, $semester->id);
         }
 
-        return view('student.timetable', compact('student', 'semesters', 'semester', 'entries', 'slotLabels'));
+        return view('student.timetable', compact('student', 'semesters', 'semester', 'entries', 'slotLabels', 'classSummary'));
     }
 
     /**
@@ -473,7 +475,7 @@ class StudentAuthController extends Controller
 
         abort_unless($semesterId, 404, 'No semester is available to print.');
 
-        return TimetableController::buildPrintView(['class_group_id' => $student->class_group_id, 'semester_id' => $semesterId]);
+        return TimetableController::buildPrintView(['class_group_id' => $student->class_group_id, 'semester_id' => $semesterId], $student);
     }
 
     /**

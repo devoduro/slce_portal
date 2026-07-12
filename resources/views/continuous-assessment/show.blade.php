@@ -63,25 +63,43 @@
                                                     @endif
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <input type="number" step="0.01" min="0" max="{{ $row['setting']->project_max ?? '' }}"
-                                                        name="scores[{{ $row['student']->id }}][project]"
-                                                        value="{{ old('scores.' . $row['student']->id . '.project', $row['ca']->project_score ?? '') }}"
-                                                        class="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm">
+                                                    <div class="flex items-center gap-1">
+                                                        <input type="number" step="0.01" min="0" max="{{ $row['setting']->project_max ?? '' }}"
+                                                            name="scores[{{ $row['student']->id }}][project]"
+                                                            value="{{ old('scores.' . $row['student']->id . '.project', $row['ca']->project_score ?? '') }}"
+                                                            class="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm">
+                                                        @if($row['setting'])
+                                                            <span class="text-xs text-gray-400">/ {{ $row['setting']->project_max }}</span>
+                                                        @endif
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <input type="number" step="0.01" min="0" max="{{ $row['setting']->assignment_max ?? '' }}"
-                                                        name="scores[{{ $row['student']->id }}][assignment]"
-                                                        value="{{ old('scores.' . $row['student']->id . '.assignment', $row['ca']->assignment_score ?? '') }}"
-                                                        class="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm">
+                                                    <div class="flex items-center gap-1">
+                                                        <input type="number" step="0.01" min="0" max="{{ $row['setting']->assignment_max ?? '' }}"
+                                                            name="scores[{{ $row['student']->id }}][assignment]"
+                                                            value="{{ old('scores.' . $row['student']->id . '.assignment', $row['ca']->assignment_score ?? '') }}"
+                                                            class="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm">
+                                                        @if($row['setting'])
+                                                            <span class="text-xs text-gray-400">/ {{ $row['setting']->assignment_max }}</span>
+                                                        @endif
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
-                                                    <input type="number" step="0.01" min="0" max="{{ $row['setting']->mid_semester_max ?? '' }}"
-                                                        name="scores[{{ $row['student']->id }}][mid_semester]"
-                                                        value="{{ old('scores.' . $row['student']->id . '.mid_semester', $row['ca']->mid_semester_score ?? '') }}"
-                                                        class="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm">
+                                                    <div class="flex items-center gap-1">
+                                                        <input type="number" step="0.01" min="0" max="{{ $row['setting']->mid_semester_max ?? '' }}"
+                                                            name="scores[{{ $row['student']->id }}][mid_semester]"
+                                                            value="{{ old('scores.' . $row['student']->id . '.mid_semester', $row['ca']->mid_semester_score ?? '') }}"
+                                                            class="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm">
+                                                        @if($row['setting'])
+                                                            <span class="text-xs text-gray-400">/ {{ $row['setting']->mid_semester_max }}</span>
+                                                        @endif
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                                     {{ number_format($row['total'], 2) }}
+                                                    @if($row['setting'])
+                                                        <span class="text-xs text-gray-400 font-normal">/ {{ number_format($row['setting']->attendance_max + $row['setting']->project_max + $row['setting']->assignment_max + $row['setting']->mid_semester_max, 2) }}</span>
+                                                    @endif
                                                 </td>
                                             </tr>
                                         @endforeach

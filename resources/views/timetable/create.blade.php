@@ -30,10 +30,10 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Class <span class="text-red-500">*</span></label>
-                                <select name="class_group_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md" required>
+                                <select id="class_group_id" name="class_group_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md" required>
                                     <option value="">Select Class</option>
                                     @foreach($classGroups as $classGroup)
-                                        <option value="{{ $classGroup->id }}" {{ old('class_group_id') == $classGroup->id ? 'selected' : '' }}>{{ $classGroup->name }} ({{ $classGroup->programme->name ?? '' }})</option>
+                                        <option value="{{ $classGroup->id }}" data-level="{{ $classGroup->level }}" {{ old('class_group_id') == $classGroup->id ? 'selected' : '' }}>{{ $classGroup->name }} ({{ $classGroup->programme->name ?? '' }})</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -43,10 +43,10 @@
                                 <select id="course_id" name="course_id" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md" required>
                                     <option value="">Select Course</option>
                                     @foreach($courses as $course)
-                                        <option value="{{ $course->id }}" data-semester-id="{{ $course->semester_id }}" data-lecturer-ids="{{ $course->lecturers->pluck('id')->implode(',') }}" {{ old('course_id') == $course->id ? 'selected' : '' }}>{{ $course->code }} - {{ $course->title }}</option>
+                                        <option value="{{ $course->id }}" data-semester-id="{{ $course->semester_id }}" data-level="{{ $course->level }}" data-lecturer-ids="{{ $course->lecturers->pluck('id')->implode(',') }}" {{ old('course_id') == $course->id ? 'selected' : '' }}>{{ $course->code }} - {{ $course->title }}</option>
                                     @endforeach
                                 </select>
-                                <p class="mt-1 text-xs text-gray-500">Filtered to courses in the selected semester.</p>
+                                <p class="mt-1 text-xs text-gray-500">Filtered to courses in the selected semester and the selected class's level.</p>
                             </div>
 
                             <div>
@@ -124,16 +124,21 @@
 
     @push('scripts')
     <script>
+        const classSelect = document.getElementById('class_group_id');
         const semesterSelect = document.getElementById('semester_id');
         const courseSelect = document.getElementById('course_id');
         const lecturerSelect = document.getElementById('lecturer_id');
 
         function filterCoursesBySemester() {
             const semesterId = semesterSelect.value;
+            const selectedClass = classSelect.options[classSelect.selectedIndex];
+            const level = selectedClass?.dataset.level || '';
 
             Array.from(courseSelect.options).forEach(option => {
                 if (!option.value) return; // keep the placeholder always visible
-                option.hidden = !!semesterId && option.dataset.semesterId !== semesterId;
+                const matchesSemester = !semesterId || option.dataset.semesterId === semesterId;
+                const matchesLevel = !level || option.dataset.level === level;
+                option.hidden = !(matchesSemester && matchesLevel);
             });
 
             // If the currently selected course no longer matches, clear it (and the lecturer list with it).
@@ -168,10 +173,11 @@
             }
         }
 
+        classSelect.addEventListener('change', filterCoursesBySemester);
         semesterSelect.addEventListener('change', filterCoursesBySemester);
         courseSelect.addEventListener('change', filterLecturersByCourse);
 
-        // Apply filtering immediately for the pre-selected current semester / any old() input.
+        // Apply filtering immediately for the pre-selected current semester/class / any old() input.
         filterCoursesBySemester();
 
         document.getElementById('is_virtual').addEventListener('change', function () {

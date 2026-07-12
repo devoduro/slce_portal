@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Course;
 use App\Models\Lecturer;
 use App\Models\Programme;
+use App\Models\Registration;
 use App\Models\Result;
 use App\Models\Semester;
 use App\Traits\ScopesToLecturer;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -42,6 +44,10 @@ class CourseController extends Controller
             $query->where('semester_id', $request->semester_id);
         }
 
+        if ($request->filled('level')) {
+            $query->where('level', $request->level);
+        }
+
         $courses = $query->orderBy('code')->paginate(20)->withQueryString();
 
         $programmes = Programme::orderBy('name')->get();
@@ -72,6 +78,7 @@ class CourseController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'credit_hours' => 'required|numeric|min:0|max:12',
+            'level' => 'required|integer|in:100,200,300,400',
             'programme_ids' => 'required|array|min:1',
             'programme_ids.*' => 'exists:programmes,id',
             'semester_id' => 'required|exists:semesters,id',
@@ -92,6 +99,7 @@ class CourseController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'credit_hours' => $request->credit_hours,
+            'level' => $request->level,
             'semester_id' => $request->semester_id,
             'is_core' => $request->is_core ?? false,
         ]);
@@ -110,7 +118,14 @@ class CourseController extends Controller
     public function show(string $id)
     {
         $course = Course::with(['programmes', 'semester', 'prerequisite'])->findOrFail($id);
-        
+
+        $enrolledStudents = Registration::where('course_id', $id)
+            ->where('status', 'registered')
+            ->with('student.programme')
+            ->get()
+            ->pluck('student')
+            ->filter();
+
         // Get statistics for this course
         $resultStats = Result::where('course_id', $id)
             ->select(
@@ -133,9 +148,10 @@ class CourseController extends Controller
         $dependentCourses = Course::where('prerequisite_id', $id)->get();
         
         return view('courses.show', compact(
-            'course', 
-            'resultStats', 
-            'gradeDistribution', 
+            'course',
+            'enrolledStudents',
+            'resultStats',
+            'gradeDistribution',
             'dependentCourses'
         ));
     }
@@ -166,6 +182,7 @@ class CourseController extends Controller
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'credit_hours' => 'required|numeric|min:0|max:12',
+            'level' => 'required|integer|in:100,200,300,400',
             'programme_ids' => 'required|array|min:1',
             'programme_ids.*' => 'exists:programmes,id',
             'semester_id' => 'required|exists:semesters,id',
@@ -186,6 +203,7 @@ class CourseController extends Controller
             'title' => $request->title,
             'description' => $request->description,
             'credit_hours' => $request->credit_hours,
+            'level' => $request->level,
             'semester_id' => $request->semester_id,
             'is_core' => $request->is_core ?? false,
         ]);
@@ -224,18 +242,64 @@ class CourseController extends Controller
     }
     
     /**
-     * Display students enrolled in a course.
+     * Display students registered for a course, with their result (if graded yet).
      */
     public function students(string $id)
     {
         $course = Course::findOrFail($id);
-        
-        $results = Result::with('student')
-            ->where('course_id', $id)
-            ->orderBy('score', 'desc')
-            ->paginate(20);
-            
-        return view('courses.students', compact('course', 'results'));
+
+        $registrations = Registration::where('course_id', $id)
+            ->where('status', 'registered')
+            ->with('student')
+            ->get()
+            ->filter(fn ($registration) => $registration->student !== null);
+
+        $rows = $registrations->map(function ($registration) use ($id) {
+            $result = Result::where('student_id', $registration->student_id)
+                ->where('course_id', $id)
+                ->where('semester_id', $registration->semester_id)
+                ->where('academic_year_id', $registration->academic_year_id)
+                ->first();
+
+            return [
+                'student' => $registration->student,
+                'result' => $result,
+            ];
+        })->sortBy(fn ($row) => $row['student']->full_name)->values();
+
+        $perPage = 20;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+
+        $rows = new LengthAwarePaginator(
+            $rows->forPage($page, $perPage)->values(),
+            $rows->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+
+        return view('courses.students', compact('course', 'rows'));
+    }
+
+    /**
+     * Printable attendance sheet for a course's registered students, sorted by index number.
+     */
+    public function printAttendance(string $id)
+    {
+        $course = Course::with('semester.academicYear')->findOrFail($id);
+
+        $students = Registration::where('course_id', $id)
+            ->where('status', 'registered')
+            ->with('student')
+            ->get()
+            ->pluck('student')
+            ->filter()
+            ->sortBy('index_number')
+            ->values();
+
+        $settings = DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
+
+        return view('courses.print-attendance', compact('course', 'students', 'settings'));
     }
     
     /**

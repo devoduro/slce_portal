@@ -96,10 +96,7 @@
                                 <div>
                                     <h4 class="text-sm font-medium text-gray-500">Students Enrolled</h4>
                                     <div class="mt-1 flex items-center">
-                                        <span class="text-lg font-medium">{{ $course->students_count ?? 0 }}</span>
-                                        @if($course->max_students)
-                                            <span class="text-sm text-gray-500 ml-1">/ {{ $course->max_students }}</span>
-                                        @endif
+                                        <span class="text-lg font-medium">{{ $enrolledStudents->count() }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -238,7 +235,7 @@
                         <a href="{{ route('courses.students', $course) }}" class="text-sm text-primary-600 hover:text-primary-500">View All</a>
                     </div>
                     
-                    @if(isset($course->students) && count($course->students) > 0)
+                    @if($enrolledStudents->isNotEmpty())
                     <div class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -261,7 +258,7 @@
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
-                                @foreach($course->students ?? [] as $student)
+                                @foreach($enrolledStudents->take(10) as $student)
                                 <tr>
                                     <td class="px-6 py-4 whitespace-nowrap">
                                         <div class="flex items-center">

@@ -14,7 +14,7 @@
         <div class="max-w-[1600px] mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <form method="GET" action="{{ route('timetable.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                    <form method="GET" action="{{ route('timetable.index') }}" class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
                         <div>
                             <select name="class_group_id" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
                                 <option value="">All Classes</option>
@@ -40,6 +40,14 @@
                             </select>
                         </div>
                         <div>
+                            <select name="level" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                <option value="">All Levels</option>
+                                @foreach([100, 200, 300, 400] as $levelOption)
+                                    <option value="{{ $levelOption }}" {{ (string) request('level') === (string) $levelOption ? 'selected' : '' }}>Level {{ $levelOption }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
                             <select name="semester_id" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
                                 <option value="">All Semesters</option>
                                 @foreach($semesters as $semester)
@@ -52,7 +60,7 @@
                                 <i class="fas fa-filter mr-1"></i> Filter
                             </button>
                             @if($showGrid)
-                                <a href="{{ route('timetable.print', request()->only(['class_group_id', 'lecturer_id', 'department_id', 'semester_id'])) }}" target="_blank" class="flex-1 text-center bg-gray-800 text-white rounded-md px-4 py-2 text-sm hover:bg-gray-900">
+                                <a href="{{ route('timetable.print', request()->only(['class_group_id', 'lecturer_id', 'department_id', 'semester_id', 'level'])) }}" target="_blank" class="flex-1 text-center bg-gray-800 text-white rounded-md px-4 py-2 text-sm hover:bg-gray-900">
                                     <i class="fas fa-print mr-1"></i> Print
                                 </a>
                             @endif
@@ -67,6 +75,16 @@
                                 </span>
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-50 text-amber-700">
                                     <i class="fas fa-weight-hanging"></i> Workload: {{ rtrim(rtrim(number_format($workload['workload'], 2), '0'), '.') }}
+                                </span>
+                            </div>
+                        @endif
+                        @if($classSummary)
+                            <div class="mb-4 flex flex-wrap gap-3">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700">
+                                    <i class="fas fa-book"></i> Total Courses: {{ $classSummary['courses'] }}
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-700">
+                                    <i class="fas fa-award"></i> Total Credit: {{ rtrim(rtrim(number_format($classSummary['credit'], 2), '0'), '.') }}
                                 </span>
                             </div>
                         @endif

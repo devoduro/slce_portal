@@ -95,7 +95,7 @@
 
     <div class="max-w-[1600px] mx-auto p-8 print:p-3 print:max-w-none bg-white my-6 print:my-0 print:shadow-none shadow-md rounded-lg">
         <!-- Letterhead -->
-        <div class="text-center border-b-2 border-gray-800 pb-4 print:pb-2 mb-6 print:mb-2">
+        <div class="relative text-center border-b-2 border-gray-800 pb-4 print:pb-2 mb-6 print:mb-2">
             @php
                 $logoFile = public_path('images/logos/institution_logo.png');
                 $logoBase64 = file_exists($logoFile) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoFile)) : null;
@@ -115,12 +115,24 @@
                     Class: <span class="font-semibold">{{ $classGroup->name }}</span>
                 @elseif($department)
                     Department: <span class="font-semibold">{{ $department->name }}</span>
+                @elseif($level)
+                    Level: <span class="font-semibold">{{ $level }}</span>
                 @endif
                 &bull; {{ $semester->name }} &bull; {{ $semester->academicYear->name ?? '' }}
                 @if($workload)
                     &bull; {{ $workload['classes'] }} class{{ $workload['classes'] === 1 ? '' : 'es' }}, workload {{ rtrim(rtrim(number_format($workload['workload'], 2), '0'), '.') }}
                 @endif
+                @if($classSummary)
+                    &bull; {{ $classSummary['courses'] }} course{{ $classSummary['courses'] === 1 ? '' : 's' }}, total credit {{ rtrim(rtrim(number_format($classSummary['credit'], 2), '0'), '.') }}
+                @endif
             </p>
+
+            @if($student)
+                <p class="text-sm print:text-[8px] text-gray-600 mt-1">
+                    {{ $student->full_name }} &bull; Index Number: <span class="font-semibold">{{ $student->index_number }}</span>
+                </p>
+                <x-student-photo :student="$student" class="absolute top-0 right-0 w-16 h-16 print:w-10 print:h-10 rounded-lg border border-gray-200" />
+            @endif
         </div>
 
         @include('timetable._grid', ['entries' => $entries, 'slotLabels' => $slotLabels, 'showActions' => false])

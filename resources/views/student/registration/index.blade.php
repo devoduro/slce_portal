@@ -16,26 +16,7 @@
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
 
-    @if($totalArrears > 0)
-        <div class="bg-white rounded-2xl shadow-sm border border-red-100 p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Previous Balance</h3>
-            <p class="text-sm text-gray-600">
-                You have an outstanding balance of
-                <span class="font-semibold text-red-600">{{ number_format($totalArrears, 2) }}</span>
-                from previous academic year(s). Please contact the accounts office to settle this.
-            </p>
-            <p class="text-xs text-gray-400 mt-2">This does not affect your ability to register courses this semester.</p>
-        </div>
-    @elseif($totalArrears < 0)
-        <div class="bg-white rounded-2xl shadow-sm border border-green-100 p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-2">Credit Balance</h3>
-            <p class="text-sm text-gray-600">
-                You have a credit balance of
-                <span class="font-semibold text-green-600">{{ number_format(abs($totalArrears), 2) }}</span>
-                from previous academic year(s) — the school owes you this amount. Please contact the accounts office.
-            </p>
-        </div>
-    @endif
+    
 
     @if(!$currentSemester)
         <div class="p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700 rounded">
@@ -66,27 +47,7 @@
             </div>
         </div>
 
-        <!-- Fee Status -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 class="text-lg font-semibold text-gray-800 mb-4">Fee Status</h3>
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-sm text-gray-500">Fee Amount</p>
-                    <p class="text-xl font-semibold text-gray-900">{{ $feeStructure ? number_format($feeStructure->amount, 2) : 'Not set' }}</p>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-sm text-gray-500">Balance</p>
-                    <p class="text-xl font-semibold text-red-600">{{ number_format($balance, 2) }}</p>
-                </div>
-                <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-sm text-gray-500">Percentage Paid</p>
-                    <p class="text-xl font-semibold text-gray-900">{{ number_format($percentage, 1) }}%</p>
-                    @if($currentSemester->required_payment_percentage !== null)
-                        <p class="text-xs text-gray-400">Requires {{ rtrim(rtrim(number_format($currentSemester->required_payment_percentage, 2), '0'), '.') }}%</p>
-                    @endif
-                </div>
-            </div>
-        </div>
+       
 
         @if(!$currentSemester->isRegistrationOpen())
             <div class="p-4 bg-gray-100 border-l-4 border-gray-400 text-gray-700 rounded">
@@ -103,15 +64,20 @@
         @else
             <div class="flex justify-end">
                 <a href="{{ route('student.registration.create') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-                    <i class="fas fa-plus"></i> Register Courses
+                    <i class="fas fa-{{ $registrations->isNotEmpty() ? 'pen' : 'plus' }}"></i> {{ $registrations->isNotEmpty() ? 'Edit Registration' : 'Register Courses' }}
                 </a>
             </div>
         @endif
 
         <!-- Registered Courses -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <div class="p-6 border-b border-gray-100">
+            <div class="p-6 border-b border-gray-100 flex justify-between items-center">
                 <h3 class="text-lg font-semibold text-gray-800">Registered Courses</h3>
+                @if($registrations->isNotEmpty())
+                    <a href="{{ route('student.registration.print') }}" target="_blank" class="text-sm text-primary-600 hover:underline">
+                        <i class="fas fa-print"></i> Print Registration Slip
+                    </a>
+                @endif
             </div>
             <div class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">

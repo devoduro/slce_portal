@@ -55,7 +55,12 @@
                                     <span class="text-xs text-gray-400">/ {{ $row['setting']->mid_semester_max }}</span>
                                 @endif
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{{ number_format($row['total'], 2) }}</td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                {{ number_format($row['total'], 2) }}
+                                @if($row['setting'])
+                                    <span class="text-xs text-gray-400 font-normal">/ {{ number_format($row['setting']->attendance_max + $row['setting']->project_max + $row['setting']->assignment_max + $row['setting']->mid_semester_max, 2) }}</span>
+                                @endif
+                            </td>
                         </tr>
                     @empty
                         <tr>

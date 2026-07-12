@@ -43,6 +43,16 @@
                     No semesters have been set up yet.
                 </div>
             @else
+                @if($classSummary)
+                    <div class="mb-4 flex flex-wrap gap-3">
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700">
+                            <i class="fas fa-book"></i> Total Courses: {{ $classSummary['courses'] }}
+                        </span>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-indigo-50 text-indigo-700">
+                            <i class="fas fa-award"></i> Total Credit: {{ rtrim(rtrim(number_format($classSummary['credit'], 2), '0'), '.') }}
+                        </span>
+                    </div>
+                @endif
                 @include('timetable._grid', ['entries' => $entries, 'slotLabels' => $slotLabels, 'showActions' => false])
             @endif
         </div>
