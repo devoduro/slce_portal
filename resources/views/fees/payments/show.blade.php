@@ -140,7 +140,9 @@
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Credit</th>
                                     <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Balance</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bank Reference</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment Mode</th>
+                                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
@@ -153,11 +155,83 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-green-600">{{ $row['credit'] ? number_format($row['credit'], 2) : '-' }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">{{ number_format($row['balance'], 2) }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $row['bank'] ?? '-' }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $row['reference_number'] ?? '-' }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $row['payment_mode'] ? ucwords(str_replace('_', ' ', $row['payment_mode'])) : '-' }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                            @if($row['payment_id'] ?? null)
+                                                <div class="flex justify-end gap-2">
+                                                    <x-modal :id="'edit-payment-' . $row['payment_id']" title="Edit Payment" maxWidth="lg">
+                                                        <x-slot name="trigger">
+                                                            <button type="button" class="text-indigo-600 hover:text-indigo-900" title="Edit Payment">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                        </x-slot>
+
+                                                        <form method="POST" action="{{ route('fees.payments.update', $row['payment_id']) }}" class="space-y-4">
+                                                            @csrf
+                                                            @method('PUT')
+
+                                                            <div>
+                                                                <label class="block text-sm font-medium text-gray-700 mb-1">Academic Year <span class="text-red-500">*</span></label>
+                                                                <select name="academic_year_id" class="w-full rounded-lg shadow-sm border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50" required>
+                                                                    @foreach($academicYears as $year)
+                                                                        <option value="{{ $year->id }}" {{ $row['academic_year_id'] == $year->id ? 'selected' : '' }}>{{ $year->name }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <x-input :id="'amount-' . $row['payment_id']" name="amount" type="number" label="Amount" min="0.01" step="0.01" :value="$row['credit']" required />
+                                                            </div>
+                                                            <div>
+                                                                <label class="block text-sm font-medium text-gray-700 mb-1">Method <span class="text-red-500">*</span></label>
+                                                                <select name="payment_method" class="w-full rounded-lg shadow-sm border-gray-300 focus:border-primary-500 focus:ring focus:ring-primary-200 focus:ring-opacity-50" required>
+                                                                    @foreach(['cash' => 'Cash', 'mobile_money' => 'Mobile Money', 'bank_transfer' => 'Bank Transfer', 'cheque' => 'Cheque', 'other' => 'Other'] as $value => $label)
+                                                                        <option value="{{ $value }}" {{ $row['payment_mode'] === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                                                    @endforeach
+                                                                </select>
+                                                            </div>
+                                                            <div>
+                                                                <x-input :id="'bank-' . $row['payment_id']" name="bank" type="text" label="Bank" placeholder="Optional" :value="$row['bank']" />
+                                                            </div>
+                                                            <div>
+                                                                <x-input :id="'payment_date-' . $row['payment_id']" name="payment_date" type="date" label="Payment Date" :value="\Illuminate\Support\Carbon::parse($row['date'])->format('Y-m-d')" required />
+                                                            </div>
+                                                            <div>
+                                                                <x-input :id="'reference_number-' . $row['payment_id']" name="reference_number" type="text" label="Reference No." placeholder="Optional" :value="$row['reference_number']" />
+                                                            </div>
+
+                                                            @if($errors->getBag('edit_payment_' . $row['payment_id'])->any())
+                                                                <div class="p-3 bg-red-50 border-l-4 border-red-400 text-red-700 text-sm">
+                                                                    <ul class="list-disc list-inside">
+                                                                        @foreach($errors->getBag('edit_payment_' . $row['payment_id'])->all() as $error)
+                                                                            <li>{{ $error }}</li>
+                                                                        @endforeach
+                                                                    </ul>
+                                                                </div>
+                                                            @endif
+
+                                                            <div class="flex justify-end gap-3 pt-2">
+                                                                <x-button type="submit">
+                                                                    {{ __('Save Changes') }}
+                                                                </x-button>
+                                                            </div>
+                                                        </form>
+                                                    </x-modal>
+
+                                                    <form action="{{ route('fees.payments.destroy', $row['payment_id']) }}" method="POST" class="inline-block">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="text-red-600 hover:text-red-900" title="Delete Payment" onclick="return confirm('Delete this payment record? This cannot be undone.')">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            @endif
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="px-6 py-8 text-center text-gray-400">No fee transactions recorded yet.</td>
+                                        <td colspan="10" class="px-6 py-8 text-center text-gray-400">No fee transactions recorded yet.</td>
                                     </tr>
                                 @endforelse
                             </tbody>

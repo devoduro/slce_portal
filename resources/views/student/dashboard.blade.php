@@ -8,6 +8,21 @@
                 <i class="fas fa-graduation-cap mr-2"></i>
                 {{ $student->programme->name }} • Level {{ $student->current_level }}
             </p>
+            <div class="mt-3 flex flex-wrap gap-2">
+                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm bg-white/10 text-blue-50">
+                    <i class="fas fa-id-badge"></i> {{ $student->index_number }}
+                </span>
+                @if($student->reference_number)
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm bg-white/10 text-blue-50">
+                        <i class="fas fa-hashtag"></i> Ref: {{ $student->reference_number }}
+                    </span>
+                @endif
+                @if($student->hall)
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm bg-white/10 text-blue-50">
+                        <i class="fas fa-building"></i> {{ $student->hall }}
+                    </span>
+                @endif
+            </div>
         </div>
         <div class="absolute right-0 top-0 h-full w-1/2 bg-gradient-to-l from-blue-500 to-transparent opacity-50"></div>
     </div>

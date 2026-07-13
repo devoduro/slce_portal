@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\FeeLedgerService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -18,6 +19,8 @@ class Student extends Model
      */
     protected $fillable = [
         'index_number',
+        'reference_number',
+        'hall',
         'full_name',
         'date_of_birth',
         'gender',
@@ -118,12 +121,21 @@ class Student extends Model
     }
 
     /**
-     * Get the total outstanding arrears across all previous years.
+     * Get the total outstanding arrears carried in from all previous years - i.e. the
+     * ledger's overall running balance minus the current academic year's own balance, so it
+     * reflects the closing balance of the previous year(s) rather than a stale/manually-entered
+     * arrear figure that never gets updated when a year rolls over without a payment shortfall
+     * being converted into a new arrear row.
      * This is informational only and does not affect the course-registration fee gate.
      */
     public function totalArrears(): float
     {
-        return (float) $this->arrears()->sum('amount');
+        $balanceDue = FeeLedgerService::ledgerFor($this)[0]['balance'] ?? 0.0;
+
+        $currentYear = AcademicYear::where('is_current', true)->first();
+        $currentYearBalance = $currentYear ? $this->feeBalance($currentYear) : 0.0;
+
+        return $balanceDue - $currentYearBalance;
     }
 
     /**

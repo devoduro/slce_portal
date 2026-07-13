@@ -365,4 +365,37 @@ class StudentPaymentController extends Controller
         return redirect()->route('fees.show', ['student' => $studentId, 'academic_year_id' => $academicYearId])
             ->with('success', 'Payment removed successfully.');
     }
+
+    /**
+     * Update an existing payment record.
+     */
+    public function update(Request $request, StudentPayment $payment)
+    {
+        $validator = Validator::make($request->all(), [
+            'academic_year_id' => 'required|exists:academic_years,id',
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method' => 'required|in:cash,mobile_money,bank_transfer,cheque,other',
+            'bank' => 'nullable|string|max:255',
+            'payment_date' => 'required|date',
+            'reference_number' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return back()->withErrors($validator, 'edit_payment_' . $payment->id)->withInput();
+        }
+
+        $payment->update([
+            'academic_year_id' => $request->academic_year_id,
+            'amount' => $request->amount,
+            'payment_method' => $request->payment_method,
+            'bank' => $request->bank,
+            'payment_date' => $request->payment_date,
+            'reference_number' => $request->reference_number,
+            'notes' => $request->notes,
+        ]);
+
+        return redirect()->route('fees.show', ['student' => $payment->student_id, 'academic_year_id' => $request->academic_year_id])
+            ->with('success', 'Payment updated successfully.');
+    }
 }

@@ -152,6 +152,11 @@
                     <i class="fas fa-user-graduate w-5"></i>
                     <span>Students</span>
                 </a>
+
+                <a href="{{ route('student-halls.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('student-halls.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-building w-5"></i>
+                    <span>Student Halls</span>
+                </a>
                 @endcan
 
                 @can('manage-programmes')
@@ -224,6 +229,12 @@
                         </a>
                         <a href="{{ route('fees.arrears.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.arrears.*') ? 'text-primary-600 font-medium' : '' }}">
                             Arrears / Debtors
+                        </a>
+                        <a href="{{ route('fees.payments.upload') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.payments.upload') ? 'text-primary-600 font-medium' : '' }}">
+                            Upload Payments
+                        </a>
+                        <a href="{{ route('fees.reference-numbers.index') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.reference-numbers.*') ? 'text-primary-600 font-medium' : '' }}">
+                            Reference Numbers
                         </a>
                         <a href="{{ route('fees.report') }}" class="block px-4 py-2 text-sm text-gray-600 hover:text-primary-600 rounded-lg {{ request()->routeIs('fees.report') ? 'text-primary-600 font-medium' : '' }}">
                             Fees Report

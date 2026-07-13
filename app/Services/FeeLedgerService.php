@@ -95,6 +95,13 @@ class FeeLedgerService
                 'academic_year' => $payment->academicYear->name ?? 'N/A',
                 'bank' => $payment->bank,
                 'payment_mode' => $payment->payment_method,
+                // Only payment rows are backed by an editable StudentPayment record - tuition
+                // fee and arrears rows are derived figures, not something a CRUD form applies to.
+                // The raw academic_year_id/reference_number are carried too so an edit form can
+                // be pre-filled without a second lookup.
+                'payment_id' => $payment->id,
+                'academic_year_id' => $payment->academic_year_id,
+                'reference_number' => $payment->reference_number,
             ]);
         }
 

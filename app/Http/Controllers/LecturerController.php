@@ -2,10 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\LecturerExport;
 use App\Exports\LecturerTemplateExport;
 use App\Imports\LecturerImport;
+use App\Models\Course;
 use App\Models\Department;
 use App\Models\Lecturer;
+use App\Models\Semester;
+use App\Models\TimetableEntry;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -14,6 +18,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Facades\Excel;
+use PDF;
 
 class LecturerController extends Controller
 {
@@ -21,6 +26,46 @@ class LecturerController extends Controller
      * Display a listing of the resource.
      */
     public function index(Request $request)
+    {
+        $lecturers = $this->buildLecturerQuery($request)
+            ->orderBy('name')->paginate(20)->withQueryString();
+
+        $this->attachWorkload($lecturers);
+
+        $departments = Department::orderBy('name')->get();
+        $courses = Course::orderBy('code')->get();
+
+        return view('lecturers.index', compact('lecturers', 'departments', 'courses'));
+    }
+
+    /**
+     * Export the current filtered lecturer list to Excel.
+     */
+    public function exportExcel(Request $request)
+    {
+        $lecturers = $this->buildLecturerQuery($request)->orderBy('name')->get();
+        $this->attachWorkload($lecturers);
+
+        return Excel::download(new LecturerExport($lecturers), 'lecturers.xlsx');
+    }
+
+    /**
+     * Export the current filtered lecturer list to PDF.
+     */
+    public function exportPdf(Request $request)
+    {
+        $lecturers = $this->buildLecturerQuery($request)->orderBy('name')->get();
+        $this->attachWorkload($lecturers);
+
+        $pdf = PDF::loadView('lecturers.export-pdf', compact('lecturers'))->setPaper('a4', 'landscape');
+
+        return $pdf->download('lecturers.pdf');
+    }
+
+    /**
+     * Build the filtered lecturer query shared by the on-screen list and both exports.
+     */
+    protected function buildLecturerQuery(Request $request)
     {
         $query = Lecturer::withCount('courses')->with('department');
 
@@ -33,9 +78,44 @@ class LecturerController extends Controller
             });
         }
 
-        $lecturers = $query->orderBy('name')->paginate(20)->withQueryString();
+        if ($request->filled('department_id')) {
+            $query->where('department_id', $request->department_id);
+        }
 
-        return view('lecturers.index', compact('lecturers'));
+        if ($request->filled('course_id')) {
+            $query->whereHas('courses', fn ($q) => $q->where('courses.id', $request->course_id));
+        }
+
+        return $query;
+    }
+
+    /**
+     * Attach each lecturer's current-semester timetable workload (classes taught and total
+     * credit hours) via a single grouped query, rather than querying per lecturer.
+     */
+    protected function attachWorkload($lecturers): void
+    {
+        $lecturerIds = collect($lecturers instanceof \Illuminate\Pagination\LengthAwarePaginator ? $lecturers->items() : $lecturers)
+            ->pluck('id');
+
+        if ($lecturerIds->isEmpty()) {
+            return;
+        }
+
+        $currentSemester = Semester::where('is_current', true)->first();
+
+        $workloads = TimetableEntry::join('courses', 'courses.id', '=', 'timetable_entries.course_id')
+            ->whereIn('timetable_entries.lecturer_id', $lecturerIds)
+            ->when($currentSemester, fn ($q) => $q->where('timetable_entries.semester_id', $currentSemester->id))
+            ->selectRaw('timetable_entries.lecturer_id, COUNT(*) as classes, SUM(courses.credit_hours) as workload')
+            ->groupBy('timetable_entries.lecturer_id')
+            ->get()
+            ->keyBy('lecturer_id');
+
+        foreach ($lecturers as $lecturer) {
+            $lecturer->workload_classes = (int) ($workloads[$lecturer->id]->classes ?? 0);
+            $lecturer->workload_credit = (float) ($workloads[$lecturer->id]->workload ?? 0);
+        }
     }
 
     /**

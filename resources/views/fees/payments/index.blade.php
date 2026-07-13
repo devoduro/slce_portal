@@ -5,6 +5,9 @@
                 {{ __('Student Fees') }}
             </h2>
             <div class="flex gap-2">
+                <x-button href="{{ route('fees.payments.upload') }}" icon="fas fa-upload">
+                    {{ __('Upload Payments') }}
+                </x-button>
                 <x-button href="{{ route('fees.export.excel', request()->query()) }}" variant="secondary" icon="fas fa-file-excel">
                     {{ __('Export Excel') }}
                 </x-button>

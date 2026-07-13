@@ -9,7 +9,9 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FeeStructureController;
 use App\Http\Controllers\GpaDistributionController;
 use App\Http\Controllers\ImportExportController;
+use App\Http\Controllers\PaymentUploadController;
 use App\Http\Controllers\ProgrammeController;
+use App\Http\Controllers\ReferenceNumberController;
 use App\Http\Controllers\RegistrationController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ResultController;
@@ -134,6 +136,15 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/students-import-template', [StudentController::class, 'downloadTemplate'])->name('students.import.template');
     });
 
+    // Student Halls
+    Route::middleware('permission:manage-students')->group(function () {
+        Route::get('/student-halls', [\App\Http\Controllers\StudentHallController::class, 'index'])->name('student-halls.index');
+        Route::get('/student-halls/upload', [\App\Http\Controllers\StudentHallController::class, 'uploadForm'])->name('student-halls.upload');
+        Route::post('/student-halls/import', [\App\Http\Controllers\StudentHallController::class, 'import'])->name('student-halls.import');
+        Route::get('/student-halls/template', [\App\Http\Controllers\StudentHallController::class, 'downloadTemplate'])->name('student-halls.template');
+        Route::get('/student-halls/print', [\App\Http\Controllers\StudentHallController::class, 'print'])->name('student-halls.print');
+    });
+
     // Bulk SMS
     Route::middleware('permission:send-sms')->group(function () {
         Route::get('/sms', [\App\Http\Controllers\SmsController::class, 'index'])->name('sms.index');
@@ -160,6 +171,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/lecturers/import', [\App\Http\Controllers\LecturerController::class, 'importForm'])->name('lecturers.import.form');
         Route::post('/lecturers/import', [\App\Http\Controllers\LecturerController::class, 'import'])->name('lecturers.import.store');
         Route::get('/lecturers/import/template', [\App\Http\Controllers\LecturerController::class, 'downloadTemplate'])->name('lecturers.import.template');
+        Route::get('/lecturers/export/excel', [\App\Http\Controllers\LecturerController::class, 'exportExcel'])->name('lecturers.export.excel');
+        Route::get('/lecturers/export/pdf', [\App\Http\Controllers\LecturerController::class, 'exportPdf'])->name('lecturers.export.pdf');
         Route::post('/lecturers/{lecturer}/create-account', [\App\Http\Controllers\LecturerController::class, 'createUserAccount'])->name('lecturers.create-account');
         Route::resource('lecturers', \App\Http\Controllers\LecturerController::class);
 
@@ -218,9 +231,20 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/fees/arrears/template', [ArrearsController::class, 'downloadTemplate'])->name('fees.arrears.template');
         Route::delete('/fees/arrears/{arrear}', [ArrearsController::class, 'destroy'])->name('fees.arrears.destroy');
 
+        // Reference numbers and payment upload routes must also be registered before /fees/{student}.
+        Route::get('/fees/reference-numbers', [ReferenceNumberController::class, 'index'])->name('fees.reference-numbers.index');
+        Route::get('/fees/reference-numbers/upload', [ReferenceNumberController::class, 'uploadForm'])->name('fees.reference-numbers.upload');
+        Route::post('/fees/reference-numbers/import', [ReferenceNumberController::class, 'import'])->name('fees.reference-numbers.import');
+        Route::get('/fees/reference-numbers/template', [ReferenceNumberController::class, 'downloadTemplate'])->name('fees.reference-numbers.template');
+
+        Route::get('/fees/payments/upload', [PaymentUploadController::class, 'uploadForm'])->name('fees.payments.upload');
+        Route::post('/fees/payments/import', [PaymentUploadController::class, 'import'])->name('fees.payments.import');
+        Route::get('/fees/payments/template', [PaymentUploadController::class, 'downloadTemplate'])->name('fees.payments.template');
+
         Route::get('/fees/{student}', [StudentPaymentController::class, 'show'])->name('fees.show');
         Route::get('/fees/{student}/print', [StudentPaymentController::class, 'printLedger'])->name('fees.print');
         Route::post('/fees/{student}/payments', [StudentPaymentController::class, 'store'])->name('fees.payments.store');
+        Route::put('/fees/payments/{payment}', [StudentPaymentController::class, 'update'])->name('fees.payments.update');
         Route::delete('/fees/payments/{payment}', [StudentPaymentController::class, 'destroy'])->name('fees.payments.destroy');
     });
 

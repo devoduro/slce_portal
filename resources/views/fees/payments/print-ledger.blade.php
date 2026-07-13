@@ -28,7 +28,7 @@
 
     <div class="max-w-4xl mx-auto p-8 bg-white my-6 print:my-0 print:shadow-none shadow-md rounded-lg">
         <!-- Letterhead -->
-        <div class="relative text-center border-b-2 border-gray-800 pb-4 mb-6">
+        <div class="text-center border-b-2 border-gray-800 pb-4 mb-6">
             @php
                 $logoFile = public_path('images/logos/institution_logo.png');
                 $logoBase64 = file_exists($logoFile) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoFile)) : null;
@@ -41,12 +41,11 @@
                 <p class="text-xs text-gray-500 mt-1">{{ $settings['institution_address'] }}</p>
             @endif
             <h2 class="text-lg font-semibold text-primary-700 mt-3">Statement of Account</h2>
-
-            <x-student-photo :student="$student" class="absolute top-0 right-0 w-20 h-20 rounded-lg border border-gray-200" />
         </div>
 
         <!-- Student Details -->
-        <div class="grid grid-cols-2 gap-4 mb-6 text-sm">
+        <div class="relative grid grid-cols-2 gap-4 mb-6 text-sm">
+            <x-student-photo :student="$student" class="absolute top-0 right-0 w-20 h-20 rounded-lg border border-gray-200" />
             <div>
                 <p class="text-gray-500">Student Name</p>
                 <p class="font-semibold">{{ $student->full_name }}</p>
