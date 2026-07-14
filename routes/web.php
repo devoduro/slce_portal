@@ -217,7 +217,23 @@ Route::middleware(['auth'])->group(function () {
 
     // Fee Management
     Route::middleware('permission:manage-fees')->group(function () {
+        // Fee structure upload routes must be registered before the resource's /fee-structures/{fee_structure} wildcard.
+        Route::get('/fee-structures/upload', [FeeStructureController::class, 'uploadForm'])->name('fee-structures.upload');
+        Route::post('/fee-structures/import', [FeeStructureController::class, 'import'])->name('fee-structures.import');
+        Route::get('/fee-structures/template', [FeeStructureController::class, 'downloadTemplate'])->name('fee-structures.template');
         Route::resource('fee-structures', FeeStructureController::class)->except(['show']);
+
+        // Specific student fee charges (graduation fee, resit fee, etc. billed to individual students).
+        Route::get('/fees/charges', [\App\Http\Controllers\StudentFeeChargeController::class, 'index'])->name('fees.charges.index');
+        Route::get('/fees/charges/upload', [\App\Http\Controllers\StudentFeeChargeController::class, 'uploadForm'])->name('fees.charges.upload');
+        Route::post('/fees/charges/import', [\App\Http\Controllers\StudentFeeChargeController::class, 'import'])->name('fees.charges.import');
+        Route::get('/fees/charges/template', [\App\Http\Controllers\StudentFeeChargeController::class, 'downloadTemplate'])->name('fees.charges.template');
+        Route::delete('/fees/charges/{charge}', [\App\Http\Controllers\StudentFeeChargeController::class, 'destroy'])->name('fees.charges.destroy');
+
+        // Fee categories (tuition, graduation, resit, and any custom ones an admin adds).
+        Route::post('/fees/categories', [\App\Http\Controllers\FeeCategoryController::class, 'store'])->name('fees.categories.store');
+        Route::delete('/fees/categories/{category}', [\App\Http\Controllers\FeeCategoryController::class, 'destroy'])->name('fees.categories.destroy');
+
         Route::get('/fees', [StudentPaymentController::class, 'index'])->name('fees.index');
         Route::get('/fees/export/excel', [StudentPaymentController::class, 'exportExcel'])->name('fees.export.excel');
         Route::get('/fees/export/pdf', [StudentPaymentController::class, 'exportPdf'])->name('fees.export.pdf');
@@ -229,6 +245,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/fees/arrears/upload', [ArrearsController::class, 'uploadForm'])->name('fees.arrears.upload');
         Route::post('/fees/arrears/import', [ArrearsController::class, 'import'])->name('fees.arrears.import');
         Route::get('/fees/arrears/template', [ArrearsController::class, 'downloadTemplate'])->name('fees.arrears.template');
+        Route::post('/fees/arrears/bulk-destroy', [ArrearsController::class, 'bulkDestroy'])->name('fees.arrears.bulk-destroy');
         Route::delete('/fees/arrears/{arrear}', [ArrearsController::class, 'destroy'])->name('fees.arrears.destroy');
 
         // Reference numbers and payment upload routes must also be registered before /fees/{student}.
@@ -252,6 +269,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('permission:manage-biometric')->group(function () {
         Route::resource('biometric-devices', \App\Http\Controllers\BiometricDeviceController::class)->except(['show']);
         Route::get('/biometric-verifications', [\App\Http\Controllers\BiometricRegistrationController::class, 'index'])->name('biometric-verifications.index');
+        Route::post('/biometric-verifications/bulk-verify', [\App\Http\Controllers\BiometricRegistrationController::class, 'bulkStore'])->name('biometric-verifications.bulk-verify');
         Route::get('/biometric-verifications/{student}', [\App\Http\Controllers\BiometricRegistrationController::class, 'show'])->name('biometric-verifications.show');
         Route::post('/biometric-verifications/{student}', [\App\Http\Controllers\BiometricRegistrationController::class, 'store'])->name('biometric-verifications.store');
         Route::delete('/biometric-verifications/entry/{registration}', [\App\Http\Controllers\BiometricRegistrationController::class, 'destroy'])->name('biometric-verifications.destroy');

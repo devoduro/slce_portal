@@ -4,9 +4,17 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('Fee Structures') }}
             </h2>
-            <x-button href="{{ route('fee-structures.create') }}" icon="fas fa-plus">
-                {{ __('Add Fee Structure') }}
-            </x-button>
+            <div class="flex gap-2">
+                <x-button href="{{ route('fees.charges.index') }}" variant="secondary" icon="fas fa-user-tag">
+                    {{ __('Bill Specific Students') }}
+                </x-button>
+                <x-button href="{{ route('fee-structures.upload') }}" variant="secondary" icon="fas fa-upload">
+                    {{ __('Bulk Upload') }}
+                </x-button>
+                <x-button href="{{ route('fee-structures.create') }}" icon="fas fa-plus">
+                    {{ __('Add Fee Structure') }}
+                </x-button>
+            </div>
         </div>
     </x-slot>
 
@@ -35,6 +43,7 @@
                                             <tr>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Programme</th>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Level</th>
+                                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                                                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                             </tr>
@@ -47,6 +56,9 @@
                                                     </td>
                                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                         {{ $structure->level ?? 'All levels' }}
+                                                    </td>
+                                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        <span class="px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">{{ $structure->categoryLabel() }}</span>
                                                     </td>
                                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                                         {{ number_format($structure->amount, 2) }}

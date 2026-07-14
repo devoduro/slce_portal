@@ -4,9 +4,14 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('Add Fee Structure') }}
             </h2>
-            <x-button href="{{ route('fee-structures.index') }}" variant="secondary" icon="fas fa-arrow-left">
-                {{ __('Back to Fee Structures') }}
-            </x-button>
+            <div class="flex gap-2">
+                <x-button href="{{ route('fee-structures.upload') }}" variant="secondary" icon="fas fa-upload">
+                    {{ __('Bulk Upload') }}
+                </x-button>
+                <x-button href="{{ route('fee-structures.index') }}" variant="secondary" icon="fas fa-arrow-left">
+                    {{ __('Back to Fee Structures') }}
+                </x-button>
+            </div>
         </div>
     </x-slot>
 
@@ -65,6 +70,20 @@
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
                                 @enderror
                                 <p class="mt-1 text-sm text-gray-500">Leave as "All levels" if the fee is the same across every level of this programme.</p>
+                            </div>
+
+                            <!-- Category -->
+                            <div>
+                                <label for="category" class="block text-sm font-medium text-gray-700">Fee Category <span class="text-red-500">*</span></label>
+                                <select id="category" name="category" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md" required>
+                                    <option value="">Select Category</option>
+                                    @foreach(\App\Models\FeeCategory::options() as $value => $label)
+                                        <option value="{{ $value }}" {{ old('category') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                    @endforeach
+                                </select>
+                                @error('category')
+                                    <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
+                                @enderror
                             </div>
 
                             <!-- Amount -->

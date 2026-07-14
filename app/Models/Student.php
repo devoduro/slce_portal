@@ -113,6 +113,15 @@ class Student extends Model
     }
 
     /**
+     * Get the one-off fee charges (graduation fee, resit fee, etc.) billed directly to
+     * this student, as opposed to the programme-wide fee structures.
+     */
+    public function feeCharges(): HasMany
+    {
+        return $this->hasMany(StudentFeeCharge::class);
+    }
+
+    /**
      * Get the STS/Internship placements for the student.
      */
     public function stsPlacements(): HasMany
@@ -149,13 +158,16 @@ class Student extends Model
     }
 
     /**
-     * Get the fee structure that applies to this student for a given academic year.
-     * Matches on programme + level first, falling back to a programme-wide (null level) entry.
+     * Get the fee structure that applies to this student for a given academic year and
+     * category (defaults to the base tuition/school fee - the one that gates course
+     * registration). Matches on programme + level first, falling back to a
+     * programme-wide (null level) entry.
      */
-    public function applicableFeeStructure(AcademicYear $academicYear): ?FeeStructure
+    public function applicableFeeStructure(AcademicYear $academicYear, string $category = 'tuition'): ?FeeStructure
     {
         $query = FeeStructure::where('academic_year_id', $academicYear->id)
-            ->where('programme_id', $this->programme_id);
+            ->where('programme_id', $this->programme_id)
+            ->where('category', $category);
 
         if ($this->level !== null) {
             $structure = (clone $query)->where('level', $this->level)->first();
@@ -178,17 +190,26 @@ class Student extends Model
     }
 
     /**
-     * Get the student's outstanding fee balance for a given academic year.
+     * Get the student's outstanding fee balance for a given academic year - the base tuition
+     * fee plus any one-off charges billed to them that year (graduation, resit, etc.), minus
+     * what they've paid. Payment percentage/registration-threshold deliberately stay scoped to
+     * tuition alone (see paymentPercentage()) so a resit/graduation charge never blocks
+     * course registration; this balance figure is display-only and reflects everything owed.
      */
     public function feeBalance(AcademicYear $academicYear): float
     {
         $structure = $this->applicableFeeStructure($academicYear);
+        $structureAmount = $structure ? (float) $structure->amount : 0.0;
 
-        if (!$structure) {
+        $chargesAmount = (float) $this->feeCharges()
+            ->where('academic_year_id', $academicYear->id)
+            ->sum('amount');
+
+        if ($structureAmount <= 0 && $chargesAmount <= 0) {
             return 0.0;
         }
 
-        return max(0, (float) $structure->amount - $this->totalPaid($academicYear));
+        return max(0, $structureAmount + $chargesAmount - $this->totalPaid($academicYear));
     }
 
     /**

@@ -31,6 +31,20 @@ class ArrearsController extends Controller
             $query->where('academic_year_id', $request->academic_year_id);
         }
 
+        if ($request->filled('status') && $request->status === 'debtor') {
+            $query->where('amount', '>', 0);
+        } elseif ($request->filled('status') && $request->status === 'creditor') {
+            $query->where('amount', '<', 0);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
         $arrears = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
         $academicYears = AcademicYear::chronological()->get();
 
@@ -100,5 +114,26 @@ class ArrearsController extends Controller
 
         return redirect()->route('fees.arrears.index')
             ->with('success', 'Arrears record removed successfully.');
+    }
+
+    /**
+     * Remove several selected arrears entries at once.
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'arrear_ids' => 'required|array|min:1',
+            'arrear_ids.*' => 'integer|exists:student_arrears,id',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('fees.arrears.index')
+                ->with('error', 'Select at least one record to delete.');
+        }
+
+        $count = StudentArrear::whereIn('id', $request->arrear_ids)->delete();
+
+        return redirect()->route('fees.arrears.index')
+            ->with('success', "Deleted {$count} arrears record(s).");
     }
 }

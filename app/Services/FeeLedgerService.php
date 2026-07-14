@@ -40,9 +40,11 @@ class FeeLedgerService
 
         $payments = $student->payments()->with('academicYear')->get();
         $arrears = $student->arrears()->with('academicYear')->get();
+        $feeCharges = $student->feeCharges()->with('academicYear')->get();
 
         $relevantYearIds = $payments->pluck('academic_year_id')
             ->merge($arrears->pluck('academic_year_id'))
+            ->merge($feeCharges->pluck('academic_year_id'))
             ->when($currentAcademicYear, fn (Collection $ids) => $ids->push($currentAcademicYear->id))
             ->unique()
             ->filter();
@@ -80,6 +82,20 @@ class FeeLedgerService
                 'description' => $amount >= 0 ? "Arrears - {$yearName}" : "Overpayment Credit - {$yearName}",
                 'debit' => $amount > 0 ? $amount : null,
                 'credit' => $amount < 0 ? abs($amount) : null,
+                'academic_year' => $yearName,
+                'bank' => null,
+                'payment_mode' => null,
+            ]);
+        }
+
+        foreach ($feeCharges as $charge) {
+            $yearName = $charge->academicYear->name ?? 'N/A';
+
+            $rows->push([
+                'date' => $charge->created_at,
+                'description' => $charge->categoryLabel() . ' - ' . $yearName,
+                'debit' => (float) $charge->amount,
+                'credit' => null,
                 'academic_year' => $yearName,
                 'bank' => null,
                 'payment_mode' => null,

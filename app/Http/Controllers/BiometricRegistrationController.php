@@ -109,6 +109,49 @@ class BiometricRegistrationController extends Controller
     }
 
     /**
+     * Mark several selected students as biometrically verified for a semester in one action.
+     */
+    public function bulkStore(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'semester_id' => 'required|exists:semesters,id',
+            'student_ids' => 'required|array|min:1',
+            'student_ids.*' => 'integer|exists:students,id',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('biometric-verifications.index', $request->query())
+                ->with('error', 'Select a semester and at least one student to verify.');
+        }
+
+        $count = 0;
+
+        foreach ($request->student_ids as $studentId) {
+            BiometricRegistration::updateOrCreate(
+                [
+                    'student_id' => $studentId,
+                    'semester_id' => $request->semester_id,
+                ],
+                [
+                    'verified_at' => now(),
+                    'source' => 'manual',
+                    'verified_by' => Auth::id(),
+                    'notes' => 'Bulk verified',
+                ]
+            );
+            $count++;
+        }
+
+        ActivityLogger::log(
+            'biometric-bulk-verify',
+            "Bulk-verified biometric registration for {$count} student(s) for semester #{$request->semester_id}"
+        );
+
+        return redirect()->route('biometric-verifications.index', $request->query())
+            ->with('success', "Verified {$count} student(s) successfully.");
+    }
+
+    /**
      * Remove a mistaken verification entry.
      */
     public function destroy(BiometricRegistration $registration)

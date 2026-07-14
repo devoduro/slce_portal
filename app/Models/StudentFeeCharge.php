@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class FeeStructure extends Model
+class StudentFeeCharge extends Model
 {
     use HasFactory;
 
@@ -16,11 +16,12 @@ class FeeStructure extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'student_id',
         'academic_year_id',
-        'programme_id',
-        'level',
         'category',
         'amount',
+        'notes',
+        'recorded_by',
     ];
 
     /**
@@ -33,7 +34,7 @@ class FeeStructure extends Model
     ];
 
     /**
-     * Get the human-readable label for this structure's category.
+     * Get the human-readable label for this charge's category.
      */
     public function categoryLabel(): string
     {
@@ -41,7 +42,15 @@ class FeeStructure extends Model
     }
 
     /**
-     * Get the academic year this fee structure belongs to.
+     * Get the student this charge was billed to.
+     */
+    public function student(): BelongsTo
+    {
+        return $this->belongsTo(Student::class);
+    }
+
+    /**
+     * Get the academic year this charge belongs to.
      */
     public function academicYear(): BelongsTo
     {
@@ -49,10 +58,10 @@ class FeeStructure extends Model
     }
 
     /**
-     * Get the programme this fee structure belongs to.
+     * Get the admin who uploaded/recorded this charge.
      */
-    public function programme(): BelongsTo
+    public function recordedBy(): BelongsTo
     {
-        return $this->belongsTo(Programme::class);
+        return $this->belongsTo(User::class, 'recorded_by');
     }
 }
