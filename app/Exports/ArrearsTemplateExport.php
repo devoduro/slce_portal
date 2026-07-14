@@ -13,16 +13,18 @@ class ArrearsTemplateExport implements FromArray, WithHeadings
     public function array(): array
     {
         return [
-            ['2021SLE0012', '2022/2023', 350.00, 'Outstanding hostel fee'],
-            ['2020SLE0045', '2021/2022', 500.00, ''],
+            ['1234567', '2022/2023', 350.00, 'Outstanding hostel fee'],
+            ['2345678', '2021/2022', 500.00, ''],
         ];
     }
 
     /**
-     * Column headings expected by ArrearsImport.
+     * Column headings expected by ArrearsImport. reference_number is the student's 7-digit
+     * bank reference number (see Student Reference Numbers), not their index number - it's
+     * what the bank uses to identify the student, so it's what bank-sourced debtor lists use.
      */
     public function headings(): array
     {
-        return ['index_number', 'academic_year', 'amount', 'notes'];
+        return ['reference_number', 'academic_year', 'amount', 'notes'];
     }
 }

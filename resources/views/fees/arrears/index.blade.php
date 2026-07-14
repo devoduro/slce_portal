@@ -41,11 +41,19 @@
                             <label class="block text-xs text-gray-500 mb-1">Uploaded To</label>
                             <input type="date" name="date_to" value="{{ request('date_to') }}" class="block w-full pl-3 pr-3 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
                         </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">Per Page</label>
+                            <select name="per_page" onchange="this.form.submit()" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                @foreach([20, 50, 100, 200, 500] as $option)
+                                    <option value="{{ $option }}" {{ (int) request('per_page', 20) === $option ? 'selected' : '' }}>{{ $option }} per page</option>
+                                @endforeach
+                            </select>
+                        </div>
                         <div class="flex gap-2 items-end">
                             <button type="submit" class="flex-1 bg-primary-600 text-white rounded-md px-4 py-2 text-sm hover:bg-primary-700">
                                 <i class="fas fa-filter mr-1"></i> Filter
                             </button>
-                            @if(request()->hasAny(['search', 'academic_year_id', 'status', 'date_from', 'date_to']))
+                            @if(request()->hasAny(['search', 'academic_year_id', 'status', 'date_from', 'date_to', 'per_page']))
                                 <a href="{{ route('fees.arrears.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600">
                                     Clear
                                 </a>
@@ -106,6 +114,7 @@
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <div class="text-sm font-medium text-gray-900">{{ $arrear->student->full_name ?? 'Unknown' }}</div>
                                                 <div class="text-sm text-gray-500">{{ $arrear->student->index_number ?? '-' }}</div>
+                                                <div class="text-xs text-gray-400">Ref: {{ $arrear->student->reference_number ?? 'Not set' }}</div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $arrear->academicYear->name ?? 'N/A' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium {{ $arrear->amount < 0 ? 'text-green-600' : 'text-gray-900' }}">

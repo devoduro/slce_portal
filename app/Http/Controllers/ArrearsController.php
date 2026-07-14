@@ -45,7 +45,12 @@ class ArrearsController extends Controller
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $arrears = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
+        $perPage = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, [20, 50, 100, 200, 500], true)) {
+            $perPage = 20;
+        }
+
+        $arrears = $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
         $academicYears = AcademicYear::chronological()->get();
 
         return view('fees.arrears.index', compact('arrears', 'academicYears'));

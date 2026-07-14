@@ -39,19 +39,19 @@ class ArrearsImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
-            $indexNumber = trim((string) ($row['index_number'] ?? ''));
+            $referenceNumber = trim((string) ($row['reference_number'] ?? ''));
             $academicYearName = trim((string) ($row['academic_year'] ?? ''));
             $amount = $row['amount'] ?? null;
 
-            if ($indexNumber === '' || $academicYearName === '' || $amount === null || $amount === '') {
+            if ($referenceNumber === '' || $academicYearName === '' || $amount === null || $amount === '') {
                 $this->skipped++;
                 continue;
             }
 
-            $student = Student::where('index_number', $indexNumber)->first();
+            $student = Student::where('reference_number', $referenceNumber)->first();
 
             if (!$student) {
-                $this->errors[] = "Student with index number {$indexNumber} not found.";
+                $this->errors[] = "Student with reference number {$referenceNumber} not found.";
                 $this->skipped++;
                 continue;
             }
@@ -59,7 +59,7 @@ class ArrearsImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             $academicYear = AcademicYear::where('name', $academicYearName)->first();
 
             if (!$academicYear) {
-                $this->errors[] = "Academic year \"{$academicYearName}\" not found for student {$indexNumber}.";
+                $this->errors[] = "Academic year \"{$academicYearName}\" not found for student with reference number {$referenceNumber}.";
                 $this->skipped++;
                 continue;
             }
@@ -67,7 +67,7 @@ class ArrearsImport implements ToCollection, WithHeadingRow, WithValidation, Ski
             // Negative amounts are valid here: they represent the school owing the student
             // (e.g. an overpayment) rather than the student owing the school.
             if (!is_numeric($amount) || (float) $amount == 0.0) {
-                $this->errors[] = "Invalid amount for student {$indexNumber} ({$academicYearName}).";
+                $this->errors[] = "Invalid amount for student with reference number {$referenceNumber} ({$academicYearName}).";
                 $this->skipped++;
                 continue;
             }
@@ -94,7 +94,7 @@ class ArrearsImport implements ToCollection, WithHeadingRow, WithValidation, Ski
     public function rules(): array
     {
         return [
-            'index_number' => 'required',
+            'reference_number' => 'required',
             'academic_year' => 'required',
             // Negative amounts are allowed (school owes the student, e.g. an overpayment);
             // only zero is meaningless here.
