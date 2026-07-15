@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Exports\PartnerSchoolTemplateExport;
 use App\Imports\PartnerSchoolImport;
 use App\Models\PartnerSchool;
+use App\Models\StsPlacement;
+use App\Models\StsTerm;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
@@ -32,7 +34,22 @@ class PartnerSchoolController extends Controller
 
         $schools = $query->orderBy('name')->paginate(20)->withQueryString();
 
-        return view('partner-schools.index', compact('schools'));
+        $currentTerm = StsTerm::where('is_current', true)->first();
+
+        // Grouped by school + level in one query rather than per-row lookups, so the
+        // "Placed / Open" column below doesn't turn this listing into an N+1.
+        $placedCounts = collect();
+
+        if ($currentTerm) {
+            $placedCounts = StsPlacement::where('sts_term_id', $currentTerm->id)
+                ->whereIn('partner_school_id', $schools->pluck('id'))
+                ->selectRaw('partner_school_id, level, COUNT(*) as total')
+                ->groupBy('partner_school_id', 'level')
+                ->get()
+                ->groupBy('partner_school_id');
+        }
+
+        return view('partner-schools.index', compact('schools', 'currentTerm', 'placedCounts'));
     }
 
     /**

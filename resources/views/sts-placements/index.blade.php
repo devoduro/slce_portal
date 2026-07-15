@@ -12,6 +12,9 @@
                     @if(session('success'))
                         <div class="mb-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 text-sm">{{ session('success') }}</div>
                     @endif
+                    @if(session('error'))
+                        <div class="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm">{{ session('error') }}</div>
+                    @endif
 
                     @if(!$term)
                         <div class="p-4 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-700 rounded">
@@ -23,6 +26,7 @@
                         </p>
 
                         <form method="GET" class="flex flex-wrap gap-3 mb-4">
+                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search index number, ref number or name" class="rounded-md border-gray-300 shadow-sm text-sm w-64">
                             <select name="category" class="rounded-md border-gray-300 shadow-sm text-sm">
                                 <option value="">All Categories</option>
                                 @foreach(\App\Models\Programme::STS_CATEGORY_LABELS as $value => $label)
@@ -35,6 +39,9 @@
                                 <option value="internship" {{ request('type') === 'internship' ? 'selected' : '' }}>Internship</option>
                             </select>
                             <button type="submit" class="px-4 py-2 bg-gray-100 rounded-md text-sm text-gray-700 hover:bg-gray-200">Filter</button>
+                            @if(request()->hasAny(['search', 'category', 'type']))
+                                <a href="{{ route('sts-placements.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600">Clear</a>
+                            @endif
                         </form>
 
                         @if($placements->isEmpty())
@@ -61,7 +68,34 @@
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $placement->level }}</td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ ucfirst($placement->type) }}</td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $placement->partnerSchool->name ?? 'Not selected yet' }}</td>
+                                                <td class="px-6 py-4 text-sm text-gray-500">
+                                                    <div class="mb-1">{{ $placement->partnerSchool->name ?? 'Not selected yet' }}</div>
+                                                    @php
+                                                        $eligibleSchools = $partnerSchools->where('category', $placement->student->programme->sts_category ?? null);
+                                                    @endphp
+                                                    <div class="flex items-center gap-2">
+                                                        <form action="{{ route('sts-placements.change-school', $placement) }}" method="POST" class="flex items-center gap-1">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <select name="partner_school_id" class="rounded-md border-gray-300 shadow-sm text-xs">
+                                                                <option value="">{{ $placement->partner_school_id ? 'Change to...' : 'Assign school...' }}</option>
+                                                                @foreach($eligibleSchools as $school)
+                                                                    <option value="{{ $school->id }}" {{ $placement->partner_school_id === $school->id ? 'selected' : '' }}>
+                                                                        {{ $school->name }} ({{ $school->availableQuota($placement->level, $placement->sts_term_id) }} open)
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
+                                                            <button type="submit" class="text-xs text-primary-600 hover:text-primary-900 underline">Save</button>
+                                                        </form>
+                                                        @if($placement->partner_school_id)
+                                                            <form action="{{ route('sts-placements.undo-school', $placement) }}" method="POST" onsubmit="return confirm('Undo the school selection for {{ $placement->student->full_name }}? This frees their quota slot.')">
+                                                                @csrf
+                                                                @method('PUT')
+                                                                <button type="submit" class="text-xs text-red-600 hover:text-red-900 underline">Undo</button>
+                                                            </form>
+                                                        @endif
+                                                    </div>
+                                                </td>
                                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     <form action="{{ route('sts-placements.assign-supervisor', $placement) }}" method="POST" class="flex items-center gap-2">
                                                         @csrf

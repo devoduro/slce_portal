@@ -307,6 +307,8 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/sts-placements', [\App\Http\Controllers\StsPlacementController::class, 'index'])->name('sts-placements.index');
         Route::put('/sts-placements/{stsPlacement}/assign-supervisor', [\App\Http\Controllers\StsPlacementController::class, 'assignSupervisor'])->name('sts-placements.assign-supervisor');
+        Route::put('/sts-placements/{stsPlacement}/undo-school', [\App\Http\Controllers\StsPlacementController::class, 'undoSchool'])->name('sts-placements.undo-school');
+        Route::put('/sts-placements/{stsPlacement}/change-school', [\App\Http\Controllers\StsPlacementController::class, 'changeSchool'])->name('sts-placements.change-school');
     });
 
     // Timetable

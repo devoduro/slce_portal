@@ -51,4 +51,50 @@ class StsPlacementService
             return $placement;
         });
     }
+
+    /**
+     * Admin override: assign or change a placement's partner school directly, bypassing the
+     * "already selected" guard (unlike selectSchool()) so an admin can correct a wrong pick.
+     * Category match and quota are still enforced so the assignment stays valid.
+     */
+    public static function adminAssignSchool(StsPlacement $placement, PartnerSchool $school): StsPlacement
+    {
+        return DB::transaction(function () use ($placement, $school) {
+            $placement = StsPlacement::lockForUpdate()->findOrFail($placement->id);
+            $locked = PartnerSchool::lockForUpdate()->findOrFail($school->id);
+
+            if ($locked->category !== $placement->student->programme->sts_category) {
+                throw ValidationException::withMessages(['school' => "This school is not available to the student's category."]);
+            }
+
+            $filled = StsPlacement::where('partner_school_id', $locked->id)
+                ->where('sts_term_id', $placement->sts_term_id)
+                ->where('level', $placement->level)
+                ->where('id', '!=', $placement->id)
+                ->count();
+
+            if ($filled >= $locked->capacityForLevel($placement->level)) {
+                throw ValidationException::withMessages(['school' => "{$locked->name}'s quota for level {$placement->level} is full."]);
+            }
+
+            $placement->update([
+                'partner_school_id' => $locked->id,
+                'selected_at' => now(),
+            ]);
+
+            return $placement;
+        });
+    }
+
+    /**
+     * Admin override: clear a placement's school selection (e.g. it was picked in error, or the
+     * student needs to be freed up to choose again), freeing the quota slot it held.
+     */
+    public static function undoSchoolSelection(StsPlacement $placement): void
+    {
+        $placement->update([
+            'partner_school_id' => null,
+            'selected_at' => null,
+        ]);
+    }
 }

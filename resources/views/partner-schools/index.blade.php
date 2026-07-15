@@ -54,6 +54,12 @@
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quota (100/200/300/400)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Placed / Open (100/200/300/400)
+                                            @if($currentTerm)
+                                                <div class="normal-case font-normal text-gray-400">{{ $currentTerm->name }}</div>
+                                            @endif
+                                        </th>
                                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                                     </tr>
                                 </thead>
@@ -67,6 +73,25 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $school->location ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {{ $school->capacity_level_100 }} / {{ $school->capacity_level_200 }} / {{ $school->capacity_level_300 }} / {{ $school->capacity_level_400 }}
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                @if(!$currentTerm)
+                                                    <span class="text-gray-400">No active term</span>
+                                                @else
+                                                    @php
+                                                        $levelCounts = $placedCounts->get($school->id, collect())->pluck('total', 'level');
+                                                        $placed = [];
+                                                        $open = [];
+                                                        foreach ([100, 200, 300, 400] as $level) {
+                                                            $count = (int) ($levelCounts[$level] ?? 0);
+                                                            $capacity = (int) $school->{"capacity_level_{$level}"};
+                                                            $placed[] = $count;
+                                                            $open[] = max(0, $capacity - $count);
+                                                        }
+                                                    @endphp
+                                                    <div>Placed: {{ implode(' / ', $placed) }}</div>
+                                                    <div class="text-green-600">Open: {{ implode(' / ', $open) }}</div>
+                                                @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div class="flex justify-end space-x-2">

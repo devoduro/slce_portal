@@ -28,7 +28,7 @@
         </div>
     @endif
 
-    <form action="{{ route('academic-years.update', $academicYear) }}" method="POST" class="space-y-6">
+    <form action="{{ route('settings.academic-years.update', $academicYear) }}" method="POST" class="space-y-6">
         @csrf
         @method('PUT')
 
@@ -65,7 +65,7 @@
         </div>
 
         <div class="flex justify-end space-x-3 pt-4">
-            <a href="{{ route('settings.academicYears') }}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            <a href="{{ route('settings.academic-years') }}" class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
                 Cancel
             </a>
             <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
