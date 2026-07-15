@@ -58,7 +58,7 @@
                     <div class="bg-white shadow-sm rounded-lg p-4">
                         <p class="text-sm text-gray-500">Fee Amount</p>
                         <p class="text-xl font-semibold text-gray-900">
-                            {{ $feeStructure ? number_format($feeStructure->amount, 2) : 'Not set' }}
+                            {{ $feeStructure || $feeAmount > 0 ? number_format($feeAmount, 2) : 'Not set' }}
                         </p>
                         @if($feeStructure && $feeStructure->level === null)
                             <p class="text-xs text-gray-400">Applies to all levels</p>

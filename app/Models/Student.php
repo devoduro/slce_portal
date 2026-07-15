@@ -190,26 +190,41 @@ class Student extends Model
     }
 
     /**
-     * Get the student's outstanding fee balance for a given academic year - the base tuition
-     * fee plus any one-off charges billed to them that year (graduation, resit, etc.), minus
-     * what they've paid. Payment percentage/registration-threshold deliberately stay scoped to
-     * tuition alone (see paymentPercentage()) so a resit/graduation charge never blocks
-     * course registration; this balance figure is display-only and reflects everything owed.
+     * Get the "school fee" figure for a given academic year - the base tuition fee structure
+     * plus any additional tuition-category charges billed to this student that year (e.g. a
+     * correction uploaded via the fee charges tool). Deliberately excludes graduation/resit/
+     * other categories, which are separate one-off charges shown on their own in the ledger
+     * rather than folded into the headline tuition figure shown across /fees and /student/fees.
      */
-    public function feeBalance(AcademicYear $academicYear): float
+    public function tuitionFeeAmount(AcademicYear $academicYear): float
     {
         $structure = $this->applicableFeeStructure($academicYear);
         $structureAmount = $structure ? (float) $structure->amount : 0.0;
 
         $chargesAmount = (float) $this->feeCharges()
             ->where('academic_year_id', $academicYear->id)
+            ->where('category', 'tuition')
             ->sum('amount');
 
-        if ($structureAmount <= 0 && $chargesAmount <= 0) {
+        return $structureAmount + $chargesAmount;
+    }
+
+    /**
+     * Get the student's outstanding fee balance for a given academic year - the tuition fee
+     * amount (base structure + any tuition-category charges) minus what they've paid.
+     * Graduation/resit/other charge categories are deliberately excluded here (and from
+     * paymentPercentage()) so they never affect this headline figure or the course-registration
+     * threshold gate - they still show up in the full ledger/statement of account.
+     */
+    public function feeBalance(AcademicYear $academicYear): float
+    {
+        $feeAmount = $this->tuitionFeeAmount($academicYear);
+
+        if ($feeAmount <= 0) {
             return 0.0;
         }
 
-        return max(0, $structureAmount + $chargesAmount - $this->totalPaid($academicYear));
+        return max(0, $feeAmount - $this->totalPaid($academicYear));
     }
 
     /**
@@ -217,13 +232,13 @@ class Student extends Model
      */
     public function paymentPercentage(AcademicYear $academicYear): float
     {
-        $structure = $this->applicableFeeStructure($academicYear);
+        $feeAmount = $this->tuitionFeeAmount($academicYear);
 
-        if (!$structure || (float) $structure->amount <= 0) {
+        if ($feeAmount <= 0) {
             return 0.0;
         }
 
-        return round(($this->totalPaid($academicYear) / (float) $structure->amount) * 100, 2);
+        return round(($this->totalPaid($academicYear) / $feeAmount) * 100, 2);
     }
 
     /**

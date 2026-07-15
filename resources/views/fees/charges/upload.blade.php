@@ -18,6 +18,7 @@
                         <p class="font-medium mb-2">File format</p>
                         <p>The file must have these columns: <strong>index_number</strong> (must match an existing student), <strong>category</strong> (one of: {{ implode(', ', array_keys(\App\Models\FeeCategory::options())) }}), <strong>amount</strong>, <strong>academic_year</strong> (must match an existing academic year, e.g. "2025/2026"), and an optional <strong>notes</strong> column.</p>
                         <p class="mt-2">Use this to bill only specific students - e.g. those who need to resit an exam, or are graduating this year - rather than an entire programme/level.</p>
+                        <p class="mt-2"><strong>Amount</strong> can be zero (e.g. <code>0</code>, for a waived charge still worth recording) or <strong>negative</strong> (e.g. <code>-50.00</code>, for a credit/reduction) as well as a normal positive figure.</p>
                         <p class="mt-2">Re-uploading the same student + category + academic year combination updates the amount rather than creating a duplicate.</p>
                         <a href="{{ route('fees.charges.template') }}" class="inline-flex items-center gap-1 mt-3 text-blue-700 underline">
                             <i class="fas fa-download"></i> Download Template

@@ -174,6 +174,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/lecturers/export/excel', [\App\Http\Controllers\LecturerController::class, 'exportExcel'])->name('lecturers.export.excel');
         Route::get('/lecturers/export/pdf', [\App\Http\Controllers\LecturerController::class, 'exportPdf'])->name('lecturers.export.pdf');
         Route::post('/lecturers/{lecturer}/create-account', [\App\Http\Controllers\LecturerController::class, 'createUserAccount'])->name('lecturers.create-account');
+        Route::post('/lecturers/{lecturer}/reset-password', [\App\Http\Controllers\LecturerController::class, 'resetPassword'])->name('lecturers.reset-password');
         Route::resource('lecturers', \App\Http\Controllers\LecturerController::class);
 
         // Departments

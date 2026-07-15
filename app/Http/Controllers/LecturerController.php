@@ -11,6 +11,7 @@ use App\Models\Lecturer;
 use App\Models\Semester;
 use App\Models\TimetableEntry;
 use App\Models\User;
+use App\Services\PastechSmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
@@ -225,9 +226,10 @@ class LecturerController extends Controller
     }
 
     /**
-     * Create a portal login for the lecturer.
+     * Create a portal login for the lecturer, and text the temporary password to their
+     * phone if one is on file.
      */
-    public function createUserAccount(Lecturer $lecturer)
+    public function createUserAccount(Lecturer $lecturer, PastechSmsService $sms)
     {
         if ($lecturer->user) {
             return redirect()->route('lecturers.show', $lecturer)
@@ -251,12 +253,58 @@ class LecturerController extends Controller
                 'first_login' => true,
             ])->assignRole('Lecturer');
 
-            return redirect()->route('lecturers.show', $lecturer)
-                ->with('success', "User account created successfully. Temporary password: {$temporaryPassword} (share this with the lecturer securely — it will not be shown again).");
+            $message = "User account created successfully. Temporary password: {$temporaryPassword} (share this with the lecturer securely — it will not be shown again).";
+            $message .= ' ' . $this->textTemporaryPassword($sms, $lecturer, $temporaryPassword, 'Your SLCE Portal account has been created.');
+
+            return redirect()->route('lecturers.show', $lecturer)->with('success', $message);
         } catch (\Exception $e) {
             return redirect()->route('lecturers.show', $lecturer)
                 ->with('error', 'Failed to create user account. Error: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Reset a lecturer's portal password to a new temporary one and text it to their phone.
+     */
+    public function resetPassword(Lecturer $lecturer, PastechSmsService $sms)
+    {
+        if (!$lecturer->user) {
+            return redirect()->route('lecturers.show', $lecturer)
+                ->with('error', 'This lecturer has no login account yet. Create one first.');
+        }
+
+        $temporaryPassword = Str::password(12);
+
+        $lecturer->user->update([
+            'password' => Hash::make($temporaryPassword),
+            'first_login' => true,
+        ]);
+
+        $message = "Password reset successfully. Temporary password: {$temporaryPassword} (share this with the lecturer securely — it will not be shown again).";
+        $message .= ' ' . $this->textTemporaryPassword($sms, $lecturer, $temporaryPassword, 'Your SLCE Portal password has been reset.');
+
+        return redirect()->route('lecturers.show', $lecturer)->with('success', $message);
+    }
+
+    /**
+     * Text a temporary password to a lecturer's phone, if one is on file. Returns a short
+     * status string to append to the admin-facing flash message - the password is always
+     * shown on screen too, so a missing/failed SMS never leaves the admin without it.
+     */
+    protected function textTemporaryPassword(PastechSmsService $sms, Lecturer $lecturer, string $temporaryPassword, string $intro): string
+    {
+        if (!$lecturer->phone) {
+            return 'No phone number on file, so no SMS was sent.';
+        }
+
+        $result = $sms->sendSms(
+            $lecturer->phone,
+            "{$intro} Temporary password: {$temporaryPassword}. Please log in and change it immediately."
+        );
+
+        return $result['success']
+            ? "SMS sent to {$lecturer->phone}."
+            : "SMS to {$lecturer->phone} failed: {$result['message']}.";
     }
 
     /**

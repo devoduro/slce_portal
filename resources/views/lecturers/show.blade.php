@@ -58,10 +58,19 @@
                     </div>
                     <div class="flex space-x-2">
                         @if(!$lecturer->user)
-                            <form action="{{ route('lecturers.create-account', $lecturer) }}" method="POST" class="inline-block">
+                            <form action="{{ route('lecturers.create-account', $lecturer) }}" method="POST" class="inline-block"
+                                onsubmit="return confirm('Create a login account for {{ $lecturer->name }}?{{ $lecturer->phone ? ' The temporary password will be texted to ' . $lecturer->phone . '.' : ' No phone number is on file, so the password will only be shown here.' }}')">
                                 @csrf
                                 <x-button type="submit" variant="success" icon="fas fa-user-plus">
                                     {{ __('Create Login Account') }}
+                                </x-button>
+                            </form>
+                        @else
+                            <form action="{{ route('lecturers.reset-password', $lecturer) }}" method="POST" class="inline-block"
+                                onsubmit="return confirm('Reset the password for {{ $lecturer->name }}?{{ $lecturer->phone ? ' The new temporary password will be texted to ' . $lecturer->phone . '.' : ' No phone number is on file, so the password will only be shown here.' }}')">
+                                @csrf
+                                <x-button type="submit" variant="warning" icon="fas fa-key">
+                                    {{ __('Reset Password (SMS)') }}
                                 </x-button>
                             </form>
                         @endif

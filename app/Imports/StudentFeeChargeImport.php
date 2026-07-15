@@ -72,7 +72,10 @@ class StudentFeeChargeImport implements ToCollection, WithHeadingRow, WithValida
                 continue;
             }
 
-            if (!is_numeric($amount) || (float) $amount <= 0) {
+            // Zero and negative amounts are both allowed: zero can represent a waived/void
+            // charge still worth recording, and a negative amount represents a credit/
+            // reduction against that category rather than an additional charge.
+            if (!is_numeric($amount)) {
                 $this->errors[] = "Invalid amount for student {$indexNumber}.";
                 $this->skipped++;
                 continue;
@@ -103,7 +106,9 @@ class StudentFeeChargeImport implements ToCollection, WithHeadingRow, WithValida
         return [
             'index_number' => 'required',
             'category' => 'required',
-            'amount' => 'required|numeric|min:0.01',
+            // Zero and negative amounts are valid (see the note in collection()); only a
+            // genuinely non-numeric value is rejected.
+            'amount' => 'required|numeric',
             'academic_year' => 'required',
         ];
     }

@@ -59,7 +59,10 @@ class FeePaymentImport implements ToCollection, WithHeadingRow, WithValidation, 
                 continue;
             }
 
-            if (!is_numeric($amount) || (float) $amount <= 0) {
+            // Zero and negative amounts are both allowed here: zero can represent a
+            // zero-value transaction some bank statements still list, and negative amounts
+            // represent a reversal/refund reducing what the student has paid.
+            if (!is_numeric($amount)) {
                 $this->errors[] = "Invalid amount for student with reference number {$referenceNumber}.";
                 $this->skipped++;
                 continue;
@@ -122,7 +125,9 @@ class FeePaymentImport implements ToCollection, WithHeadingRow, WithValidation, 
     {
         return [
             'reference_number' => 'required',
-            'amount' => 'required|numeric|min:0.01',
+            // Zero and negative amounts are valid (see the note in collection()); only a
+            // genuinely non-numeric value is rejected.
+            'amount' => 'required|numeric',
             'date' => 'required',
             'academic_year' => 'required',
             'bank_reference' => 'nullable',

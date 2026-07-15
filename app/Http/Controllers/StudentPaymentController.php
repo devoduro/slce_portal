@@ -8,6 +8,7 @@ use App\Models\FeeStructure;
 use App\Models\Programme;
 use App\Models\Student;
 use App\Models\StudentArrear;
+use App\Models\StudentFeeCharge;
 use App\Models\StudentPayment;
 use App\Services\FeeLedgerService;
 use Illuminate\Http\Request;
@@ -104,12 +105,27 @@ class StudentPaymentController extends Controller
         $students = $query->orderBy('full_name')->get();
         $studentIds = $students->pluck('id');
 
+        // Tuition category specifically - a programme/level can also have graduation/resit fee
+        // structures now, which must never be picked up here (they're separate one-off charges,
+        // not part of the headline "Fee Amount" shown on this list).
         $feeStructures = $academicYear
-            ? FeeStructure::where('academic_year_id', $academicYear->id)->get()
+            ? FeeStructure::where('academic_year_id', $academicYear->id)->where('category', 'tuition')->get()
             : collect();
 
         $paymentSums = $academicYear
             ? StudentPayment::where('academic_year_id', $academicYear->id)
+                ->whereIn('student_id', $studentIds)
+                ->selectRaw('student_id, SUM(amount) as total')
+                ->groupBy('student_id')
+                ->pluck('total', 'student_id')
+            : collect();
+
+        // Additional tuition-category charges (e.g. a fee correction uploaded via the fee
+        // charges tool) fold into "Fee Amount" alongside the base structure; graduation/resit/
+        // other categories deliberately don't, matching Student::tuitionFeeAmount().
+        $tuitionChargeSums = $academicYear
+            ? StudentFeeCharge::where('academic_year_id', $academicYear->id)
+                ->where('category', 'tuition')
                 ->whereIn('student_id', $studentIds)
                 ->selectRaw('student_id, SUM(amount) as total')
                 ->groupBy('student_id')
@@ -121,11 +137,12 @@ class StudentPaymentController extends Controller
             ->groupBy('student_id')
             ->pluck('total', 'student_id');
 
-        $rows = $students->map(function (Student $student) use ($academicYear, $feeStructures, $paymentSums, $arrearSums) {
+        $rows = $students->map(function (Student $student) use ($academicYear, $feeStructures, $paymentSums, $tuitionChargeSums, $arrearSums) {
             $structure = null;
             $paid = 0.0;
             $balance = 0.0;
             $percentage = 0.0;
+            $feeAmount = null;
             $arrears = (float) ($arrearSums[$student->id] ?? 0);
 
             if ($academicYear) {
@@ -133,15 +150,19 @@ class StudentPaymentController extends Controller
                     ?? $feeStructures->first(fn (FeeStructure $f) => (int) $f->programme_id === (int) $student->programme_id && $f->level === null);
 
                 $paid = (float) ($paymentSums[$student->id] ?? 0);
-                $feeAmount = $structure ? (float) $structure->amount : 0.0;
+                $chargesAmount = (float) ($tuitionChargeSums[$student->id] ?? 0);
+                $structureAmount = $structure ? (float) $structure->amount : 0.0;
+                $feeAmount = ($structure || $chargesAmount > 0) ? $structureAmount + $chargesAmount : null;
+
+                $effectiveFeeAmount = $feeAmount ?? 0.0;
                 // Balance is fee due plus any carried-forward arrears, minus what's been paid.
-                $balance = ($feeAmount + $arrears) - $paid;
-                $percentage = ($structure && $feeAmount > 0) ? round(($paid / $feeAmount) * 100, 1) : 0.0;
+                $balance = ($effectiveFeeAmount + $arrears) - $paid;
+                $percentage = $effectiveFeeAmount > 0 ? round(($paid / $effectiveFeeAmount) * 100, 1) : 0.0;
             }
 
             return [
                 'student' => $student,
-                'fee_amount' => $structure?->amount,
+                'fee_amount' => $feeAmount,
                 'paid' => $paid,
                 'balance' => $balance,
                 'percentage' => $percentage,
@@ -173,6 +194,9 @@ class StudentPaymentController extends Controller
         $academicYears = AcademicYear::chronological()->get();
 
         $feeStructure = $academicYear ? $student->applicableFeeStructure($academicYear) : null;
+        // The base structure amount plus any tuition-category charges billed on top of it -
+        // the same figure shown as "Fee Amount" on the /fees list, kept consistent here.
+        $feeAmount = $academicYear ? $student->tuitionFeeAmount($academicYear) : 0.0;
         $totalPaid = $academicYear ? $student->totalPaid($academicYear) : 0;
         $percentage = $academicYear ? $student->paymentPercentage($academicYear) : 0;
         $totalArrears = $student->totalArrears();
@@ -188,6 +212,7 @@ class StudentPaymentController extends Controller
             'academicYear',
             'academicYears',
             'feeStructure',
+            'feeAmount',
             'totalPaid',
             'percentage',
             'totalArrears',
