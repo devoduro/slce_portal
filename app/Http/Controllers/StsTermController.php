@@ -106,8 +106,13 @@ class StsTermController extends Controller
     public function activate(StsTerm $stsTerm)
     {
         DB::transaction(function () use ($stsTerm) {
+            // Plain query-builder updates, not $stsTerm->update() - if $stsTerm was already the
+            // current term when fetched (e.g. re-activating to pick up a data fix), Eloquent's
+            // dirty-checking would see is_current going true -> true as "no change" and silently
+            // skip the actual UPDATE, leaving the row flipped to false by the line above.
             StsTerm::query()->update(['is_current' => false]);
-            $stsTerm->update(['is_current' => true]);
+            StsTerm::whereKey($stsTerm->id)->update(['is_current' => true]);
+            $stsTerm->refresh();
 
             $stsCourse = Course::where('code', 'STS')->where('is_sts_course', true)->first();
             $internshipCourse = Course::where('code', 'INTERNSHIP')->where('is_sts_course', true)->first();

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PartnerSchool;
 use App\Models\StsPlacement;
 use App\Models\StsTerm;
+use App\Services\FeeLedgerService;
 use App\Services\StsPlacementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,7 +33,13 @@ class StsSelectionController extends Controller
                 ->first();
 
             $eligible = $student->meetsRegistrationThreshold($term->semester);
-            $percentage = $student->paymentPercentage($term->semester->academicYear);
+
+            // Matches what meetsRegistrationThreshold() actually gates on (Total Balance Due vs
+            // Bill Amount) rather than the raw un-netted tuition-paid percentage, so this figure
+            // can't contradict the Threshold Met/Not Met badge shown right next to it.
+            $billAmount = $student->tuitionFeeAmount($term->semester->academicYear);
+            $balanceDue = FeeLedgerService::ledgerFor($student)[0]['balance'] ?? 0.0;
+            $percentage = $billAmount > 0 ? round((($billAmount - $balanceDue) / $billAmount) * 100, 1) : 0.0;
         }
 
         return view('student.sts.index', compact('student', 'term', 'placement', 'eligible', 'percentage'));
