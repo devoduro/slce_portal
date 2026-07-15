@@ -259,6 +259,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/fees/payments/upload', [PaymentUploadController::class, 'uploadForm'])->name('fees.payments.upload');
         Route::post('/fees/payments/import', [PaymentUploadController::class, 'import'])->name('fees.payments.import');
         Route::get('/fees/payments/template', [PaymentUploadController::class, 'downloadTemplate'])->name('fees.payments.template');
+        Route::delete('/fees/payments/bulk-destroy', [PaymentUploadController::class, 'bulkDestroy'])->name('fees.payments.bulk-destroy');
 
         Route::get('/fees/{student}', [StudentPaymentController::class, 'show'])->name('fees.show');
         Route::get('/fees/{student}/print', [StudentPaymentController::class, 'printLedger'])->name('fees.print');

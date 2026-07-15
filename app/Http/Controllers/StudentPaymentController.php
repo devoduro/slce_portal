@@ -391,13 +391,11 @@ class StudentPaymentController extends Controller
      */
     public function destroy(StudentPayment $payment)
     {
-        $studentId = $payment->student_id;
-        $academicYearId = $payment->academic_year_id;
-
         $payment->delete();
 
-        return redirect()->route('fees.show', ['student' => $studentId, 'academic_year_id' => $academicYearId])
-            ->with('success', 'Payment removed successfully.');
+        // back() rather than a hardcoded route - this same endpoint is used from both the
+        // per-student ledger and the bulk payments list, and each wants to stay on its own page.
+        return back()->with('success', 'Payment removed successfully.');
     }
 
     /**
