@@ -152,12 +152,21 @@ class StudentPaymentController extends Controller
                 $paid = (float) ($paymentSums[$student->id] ?? 0);
                 $chargesAmount = (float) ($tuitionChargeSums[$student->id] ?? 0);
                 $structureAmount = $structure ? (float) $structure->amount : 0.0;
-                $feeAmount = ($structure || $chargesAmount > 0) ? $structureAmount + $chargesAmount : null;
+                $hasFeeInfo = $structure || $chargesAmount > 0;
+                $rawBill = $structureAmount + $chargesAmount;
 
-                $effectiveFeeAmount = $feeAmount ?? 0.0;
-                // Balance is fee due plus any carried-forward arrears, minus what's been paid.
-                $balance = ($effectiveFeeAmount + $arrears) - $paid;
-                $percentage = $effectiveFeeAmount > 0 ? round(($paid / $effectiveFeeAmount) * 100, 1) : 0.0;
+                // "Fee Amount" nets out arrears (a prior credit reduces it, a prior debt tops it
+                // up) so it reads as the actual amount due this year, not just the raw tuition
+                // bill sitting next to an unrelated-looking arrears figure.
+                $netFeeAmount = $rawBill + $arrears;
+                $feeAmount = $hasFeeInfo ? $netFeeAmount : null;
+
+                // Balance is fee due (net of arrears) minus what's been paid - unchanged in
+                // value from before, just expressed via the netted fee amount above.
+                $balance = $netFeeAmount - $paid;
+                $percentage = $hasFeeInfo
+                    ? ($netFeeAmount > 0 ? round(($paid / $netFeeAmount) * 100, 1) : 100.0)
+                    : 0.0;
             }
 
             return [

@@ -61,10 +61,11 @@
             <div class="p-4 bg-red-50 border-l-4 border-red-400 text-red-700 rounded">
                 <p>You have not paid enough of your fees to register courses this semester.</p>
                 <p class="mt-1">
-                    You currently owe <span class="font-semibold">{{ number_format($balance, 2) }}</span>
-                    for this academic year
-                    (<span class="font-semibold">{{ number_format($percentage, 1) }}%</span> paid
-                    of the <span class="font-semibold">{{ rtrim(rtrim(number_format($currentSemester->required_payment_percentage ?? 0, 2), '0'), '.') }}%</span> required).
+                    Your Total Balance Due is <span class="font-semibold">{{ number_format($balanceDue, 2) }}</span>,
+                    but it must be <span class="font-semibold">{{ number_format($maxAllowedBalance, 2) }}</span> or less
+                    (i.e. at least <span class="font-semibold">{{ rtrim(rtrim(number_format($currentSemester->required_payment_percentage ?? 0, 2), '0'), '.') }}%</span>
+                    of this year's <span class="font-semibold">{{ number_format($feeStructure ? $student->tuitionFeeAmount($currentSemester->academicYear) : 0, 2) }}</span> bill paid or credited)
+                    before you can register.
                 </p>
                 <p class="mt-1">Please clear the balance (or enough of it) and check back.</p>
             </div>

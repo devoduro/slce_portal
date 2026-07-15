@@ -90,6 +90,23 @@
                                     @enderror
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="sts_category">STS / Internship Category</label>
+                                    <select class="form-control @error('sts_category') is-invalid @enderror" id="sts_category" name="sts_category">
+                                        <option value="">Not applicable</option>
+                                        @foreach(\App\Models\Programme::STS_CATEGORY_LABELS as $value => $label)
+                                            <option value="{{ $value }}" {{ old('sts_category', $programme->sts_category) === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                    <small class="form-text text-muted">Determines which partner schools and STS terms students on this programme are eligible for. Leave as "Not applicable" if this programme has no STS/Internship placement.</small>
+                                    @error('sts_category')
+                                        <span class="invalid-feedback" role="alert">
+                                            <strong>{{ $message }}</strong>
+                                        </span>
+                                    @enderror
+                                </div>
+                            </div>
                         </div>
 
                         <div class="form-group mb-3">

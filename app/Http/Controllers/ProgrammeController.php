@@ -45,6 +45,7 @@ class ProgrammeController extends Controller
             'duration' => 'required|integer|min:1|max:10', // Form field is 'duration' but DB column is 'duration_years'
             'department' => 'required|string|max:255',
             'faculty' => 'required|string|max:255',
+            'sts_category' => 'nullable|in:early_grade,upper_primary,jhs',
         ]);
 
         if ($validator->fails()) {
@@ -57,7 +58,8 @@ class ProgrammeController extends Controller
         $data = $request->all();
         $data['duration_years'] = $data['duration'];
         unset($data['duration']);
-        
+        $data['sts_category'] = $data['sts_category'] ?: null;
+
         Programme::create($data);
         
         return redirect()->route('programmes.index')
@@ -111,6 +113,7 @@ class ProgrammeController extends Controller
             'duration' => 'required|integer|min:1|max:10', // Form field is 'duration' but DB column is 'duration_years'
             'department' => 'required|string|max:255',
             'faculty' => 'required|string|max:255',
+            'sts_category' => 'nullable|in:early_grade,upper_primary,jhs',
         ]);
 
         if ($validator->fails()) {
@@ -123,7 +126,8 @@ class ProgrammeController extends Controller
         $data = $request->all();
         $data['duration_years'] = $data['duration'];
         unset($data['duration']);
-        
+        $data['sts_category'] = $data['sts_category'] ?: null;
+
         $programme->update($data);
         
         return redirect()->route('programmes.index')

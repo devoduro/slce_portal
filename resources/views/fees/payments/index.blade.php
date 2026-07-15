@@ -108,7 +108,12 @@
                                                 <span class="text-gray-400">-</span>
                                             @endif
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $row['fee_amount'] !== null ? number_format($row['fee_amount'], 2) : 'Not set' }}</td>
+                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                            {{ $row['fee_amount'] !== null ? number_format($row['fee_amount'], 2) : 'Not set' }}
+                                            @if($row['fee_amount'] !== null && $row['arrears'] != 0)
+                                                <div class="text-xs text-gray-400">after arrears</div>
+                                            @endif
+                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ number_format($row['paid'], 2) }}</td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium {{ $row['status'] === 'debtor' ? 'text-red-600' : ($row['status'] === 'creditor' ? 'text-green-600' : 'text-gray-900') }}">
                                             {{ number_format($row['balance'], 2) }}

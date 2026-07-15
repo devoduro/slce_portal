@@ -27,6 +27,8 @@ class RegistrationController extends Controller
         $isBiometricVerified = false;
         $totalArrears = $student->totalArrears();
         $ledger = FeeLedgerService::ledgerFor($student);
+        $balanceDue = $ledger[0]['balance'] ?? 0.0;
+        $maxAllowedBalance = 0;
 
         if ($currentSemester) {
             $registrations = $student->registrations()
@@ -41,6 +43,12 @@ class RegistrationController extends Controller
             $balance = $student->feeBalance($academicYear);
             $meetsThreshold = $student->meetsRegistrationThreshold($currentSemester);
             $isBiometricVerified = $student->hasBiometricVerification($currentSemester);
+
+            // The exact quantity meetsRegistrationThreshold() gates on, so the "not met"
+            // message below can cite real numbers instead of the un-netted tuition percentage.
+            $billAmount = $student->tuitionFeeAmount($academicYear);
+            $required = (float) ($currentSemester->required_payment_percentage ?? 0);
+            $maxAllowedBalance = $billAmount - ($billAmount * $required / 100);
         }
 
         return view('student.registration.index', compact(
@@ -53,7 +61,9 @@ class RegistrationController extends Controller
             'feeStructure',
             'isBiometricVerified',
             'totalArrears',
-            'ledger'
+            'ledger',
+            'balanceDue',
+            'maxAllowedBalance'
         ));
     }
 

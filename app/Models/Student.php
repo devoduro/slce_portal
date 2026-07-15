@@ -210,11 +210,12 @@ class Student extends Model
     }
 
     /**
-     * Get the student's outstanding fee balance for a given academic year - the tuition fee
-     * amount (base structure + any tuition-category charges) minus what they've paid.
-     * Graduation/resit/other charge categories are deliberately excluded here (and from
-     * paymentPercentage()) so they never affect this headline figure or the course-registration
-     * threshold gate - they still show up in the full ledger/statement of account.
+     * Get the student's outstanding fee balance for a given academic year: Bill Amount + All
+     * Arrears - Payments. Arrears are entered as a running carried-forward adjustment (positive
+     * = still-owed debt, negative = credit/overpayment) rather than scoped to a specific year's
+     * own activity, so every arrear row counts here regardless of which academic_year_id it
+     * happens to be tagged with. Not floored at zero - a large enough credit correctly shows as
+     * a negative balance here, same as the other balance figures on the account.
      */
     public function feeBalance(AcademicYear $academicYear): float
     {
@@ -224,7 +225,9 @@ class Student extends Model
             return 0.0;
         }
 
-        return max(0, $feeAmount - $this->totalPaid($academicYear));
+        $allArrears = (float) $this->arrears()->sum('amount');
+
+        return $feeAmount + $allArrears - $this->totalPaid($academicYear);
     }
 
     /**
@@ -242,8 +245,13 @@ class Student extends Model
     }
 
     /**
-     * Determine whether the student has paid enough of their fees to register courses
-     * for the given semester.
+     * Determine whether the student has paid enough of their fees to register courses for the
+     * given semester. Eligible when the student's Total Balance Due (the full ledger balance -
+     * arrears, all years' tuition, graduation/resit charges, everything) is no more than the
+     * portion of this year's bill left unpaid by the required percentage, i.e.
+     * balanceDue <= billAmount - (billAmount * required%). Using the ledger-wide balance (not
+     * just this year's tuition) means credit carried forward from previous years counts toward
+     * meeting the threshold.
      */
     public function meetsRegistrationThreshold(Semester $semester): bool
     {
@@ -253,7 +261,16 @@ class Student extends Model
             return true;
         }
 
-        return $this->paymentPercentage($semester->academicYear) >= $required;
+        $billAmount = $this->tuitionFeeAmount($semester->academicYear);
+
+        if ($billAmount <= 0) {
+            return false;
+        }
+
+        $maxAllowedBalance = $billAmount - ($billAmount * $required / 100);
+        $balanceDue = FeeLedgerService::ledgerFor($this)[0]['balance'] ?? 0.0;
+
+        return $balanceDue <= $maxAllowedBalance;
     }
 
     /**
