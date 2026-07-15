@@ -229,6 +229,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/fees/charges/upload', [\App\Http\Controllers\StudentFeeChargeController::class, 'uploadForm'])->name('fees.charges.upload');
         Route::post('/fees/charges/import', [\App\Http\Controllers\StudentFeeChargeController::class, 'import'])->name('fees.charges.import');
         Route::get('/fees/charges/template', [\App\Http\Controllers\StudentFeeChargeController::class, 'downloadTemplate'])->name('fees.charges.template');
+        Route::post('/fees/charges/bulk-destroy', [\App\Http\Controllers\StudentFeeChargeController::class, 'bulkDestroy'])->name('fees.charges.bulk-destroy');
         Route::delete('/fees/charges/{charge}', [\App\Http\Controllers\StudentFeeChargeController::class, 'destroy'])->name('fees.charges.destroy');
 
         // Fee categories (tuition, graduation, resit, and any custom ones an admin adds).

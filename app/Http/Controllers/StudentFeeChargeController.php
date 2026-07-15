@@ -36,7 +36,12 @@ class StudentFeeChargeController extends Controller
             $query->where('category', $request->category);
         }
 
-        $charges = $query->orderByDesc('created_at')->paginate(20)->withQueryString();
+        $perPage = (int) $request->input('per_page', 20);
+        if (!in_array($perPage, [20, 50, 100, 200, 500], true)) {
+            $perPage = 20;
+        }
+
+        $charges = $query->orderByDesc('created_at')->paginate($perPage)->withQueryString();
         $academicYears = AcademicYear::chronological()->get();
         $categories = FeeCategory::orderBy('name')->get();
 
@@ -106,5 +111,26 @@ class StudentFeeChargeController extends Controller
 
         return redirect()->route('fees.charges.index')
             ->with('success', 'Fee charge removed successfully.');
+    }
+
+    /**
+     * Remove several selected fee charges at once.
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'charge_ids' => 'required|array|min:1',
+            'charge_ids.*' => 'integer|exists:student_fee_charges,id',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('fees.charges.index')
+                ->with('error', 'Select at least one record to delete.');
+        }
+
+        $count = StudentFeeCharge::whereIn('id', $request->charge_ids)->delete();
+
+        return redirect()->route('fees.charges.index')
+            ->with('success', "Deleted {$count} fee charge record(s).");
     }
 }
