@@ -16,7 +16,8 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
                         <p class="font-medium mb-2">File format</p>
-                        <p>The file must have these columns: <strong>index_number</strong> (must match an existing student), <strong>amount</strong>, <strong>date</strong> (the payment date), <strong>academic_year</strong> (must match an existing academic year, e.g. "2025/2026"), and an optional <strong>bank_reference</strong> column.</p>
+                        <p>The file must have these columns: <strong>reference_number</strong> (the student's 7-digit bank reference number - not their index number, since that's the number the bank uses to identify the student on their statements), <strong>amount</strong>, <strong>date</strong> (the payment date), <strong>academic_year</strong> (must match an existing academic year, e.g. "2025/2026"), and an optional <strong>bank_reference</strong> column (the specific transaction/teller reference for that payment, if any - different from the student's own reference_number).</p>
+                        <p class="mt-2">A student needs a reference number on file before they can appear in this list - see <a href="{{ route('fees.reference-numbers.index') }}" class="underline">Reference Numbers</a> to assign one.</p>
                         <p class="mt-2">Each row creates a new payment - re-uploading the same file will record duplicate payments, so only upload a batch once.</p>
                         <a href="{{ route('fees.payments.template') }}" class="inline-flex items-center gap-1 mt-3 text-blue-700 underline">
                             <i class="fas fa-download"></i> Download Template

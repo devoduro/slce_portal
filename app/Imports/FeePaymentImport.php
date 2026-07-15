@@ -40,27 +40,27 @@ class FeePaymentImport implements ToCollection, WithHeadingRow, WithValidation, 
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
-            $indexNumber = trim((string) ($row['index_number'] ?? ''));
+            $referenceNumber = trim((string) ($row['reference_number'] ?? ''));
             $amount = $row['amount'] ?? null;
             $rawDate = $row['date'] ?? null;
             $academicYearName = trim((string) ($row['academic_year'] ?? ''));
             $bankReference = trim((string) ($row['bank_reference'] ?? ''));
 
-            if ($indexNumber === '' || $amount === null || $amount === '' || $rawDate === null || $rawDate === '' || $academicYearName === '') {
+            if ($referenceNumber === '' || $amount === null || $amount === '' || $rawDate === null || $rawDate === '' || $academicYearName === '') {
                 $this->skipped++;
                 continue;
             }
 
-            $student = Student::where('index_number', $indexNumber)->first();
+            $student = Student::where('reference_number', $referenceNumber)->first();
 
             if (!$student) {
-                $this->errors[] = "Student with index number {$indexNumber} not found.";
+                $this->errors[] = "Student with reference number {$referenceNumber} not found.";
                 $this->skipped++;
                 continue;
             }
 
             if (!is_numeric($amount) || (float) $amount <= 0) {
-                $this->errors[] = "Invalid amount for student {$indexNumber}.";
+                $this->errors[] = "Invalid amount for student with reference number {$referenceNumber}.";
                 $this->skipped++;
                 continue;
             }
@@ -68,7 +68,7 @@ class FeePaymentImport implements ToCollection, WithHeadingRow, WithValidation, 
             $paymentDate = $this->parseDate($rawDate);
 
             if (!$paymentDate) {
-                $this->errors[] = "Invalid date for student {$indexNumber} (\"{$rawDate}\").";
+                $this->errors[] = "Invalid date for student with reference number {$referenceNumber} (\"{$rawDate}\").";
                 $this->skipped++;
                 continue;
             }
@@ -76,7 +76,7 @@ class FeePaymentImport implements ToCollection, WithHeadingRow, WithValidation, 
             $academicYear = AcademicYear::where('name', $academicYearName)->first();
 
             if (!$academicYear) {
-                $this->errors[] = "Academic year \"{$academicYearName}\" not found for student {$indexNumber}.";
+                $this->errors[] = "Academic year \"{$academicYearName}\" not found for student with reference number {$referenceNumber}.";
                 $this->skipped++;
                 continue;
             }
@@ -121,7 +121,7 @@ class FeePaymentImport implements ToCollection, WithHeadingRow, WithValidation, 
     public function rules(): array
     {
         return [
-            'index_number' => 'required',
+            'reference_number' => 'required',
             'amount' => 'required|numeric|min:0.01',
             'date' => 'required',
             'academic_year' => 'required',
