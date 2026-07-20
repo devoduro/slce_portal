@@ -47,7 +47,7 @@
                             </div>
 
                             <div>
-                                <x-input id="internship_level_cutoff" name="internship_level_cutoff" type="number" step="100" min="100" max="800" label="Internship Level Cutoff" :value="old('internship_level_cutoff', 300)" required helper="Students at or above this level get the Internship letter; below it, the STS letter." />
+                                <x-input id="internship_level_cutoff" name="internship_level_cutoff" type="number" step="100" min="100" max="800" label="Internship Level Cutoff" :value="old('internship_level_cutoff', 400)" required helper="College policy: Levels 100-300 are STS, Level 400 only is Internship - leave this at 400 unless the policy changes." />
                             </div>
                         </div>
 

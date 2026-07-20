@@ -13,8 +13,8 @@ class PartnerSchoolTemplateExport implements FromArray, WithHeadings
     public function array(): array
     {
         return [
-            ['Osu Presby Primary', 'early_grade', 10, 'Osu, Accra'],
-            ['Achimota Basic School', 'jhs', 15, 'Achimota, Accra'],
+            ['Osu Presby Primary', 'early_grade', 'sts', 10, 'Osu, Accra'],
+            ['Achimota Basic School', 'jhs', 'internship', 15, 'Achimota, Accra'],
         ];
     }
 
@@ -23,6 +23,6 @@ class PartnerSchoolTemplateExport implements FromArray, WithHeadings
      */
     public function headings(): array
     {
-        return ['name', 'category', 'capacity', 'location'];
+        return ['name', 'category', 'type', 'capacity', 'location'];
     }
 }

@@ -149,6 +149,26 @@ class StsTermController extends Controller
     }
 
     /**
+     * Deactivate this term without activating a replacement - existing placements and
+     * scores are untouched, but students immediately lose access to /student/sts (every
+     * eligibility/placement lookup there is scoped to the current term) until a term is
+     * activated again. Uses a query-builder update, not $stsTerm->update(), for the same
+     * dirty-checking reason documented in activate() above.
+     */
+    public function deactivate(StsTerm $stsTerm)
+    {
+        if (!$stsTerm->is_current) {
+            return redirect()->route('sts-terms.index')
+                ->with('error', "\"{$stsTerm->name}\" is not currently active.");
+        }
+
+        StsTerm::whereKey($stsTerm->id)->update(['is_current' => false]);
+
+        return redirect()->route('sts-terms.index')
+            ->with('success', "\"{$stsTerm->name}\" deactivated. Students no longer have access to it.");
+    }
+
+    /**
      * Shared validation rules for store/update.
      */
     protected function rules(): array

@@ -24,6 +24,7 @@ class StsPlacement extends Model
         'sts_term_id',
         'partner_school_id',
         'lecturer_id',
+        'second_lecturer_id',
         'level',
         'type',
         'selected_at',
@@ -58,11 +59,19 @@ class StsPlacement extends Model
     }
 
     /**
-     * Get the assigned supervisor (a Lecturer).
+     * Get the assigned (primary) supervisor (a Lecturer).
      */
     public function lecturer(): BelongsTo
     {
         return $this->belongsTo(Lecturer::class);
+    }
+
+    /**
+     * Get the second/co-supervisor (a Lecturer), if one is assigned.
+     */
+    public function secondLecturer(): BelongsTo
+    {
+        return $this->belongsTo(Lecturer::class, 'second_lecturer_id');
     }
 
     public function attendances(): HasMany

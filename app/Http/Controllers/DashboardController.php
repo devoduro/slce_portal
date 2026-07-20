@@ -3,8 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\AcademicYear;
+use App\Models\FeeCategory;
+use App\Models\FeeStructure;
 use App\Models\Result;
 use App\Models\Student;
+use App\Models\StudentArrear;
+use App\Models\StudentFeeCharge;
+use App\Models\StudentPayment;
 use App\Models\Course;
 use App\Models\Semester;
 use App\Models\Programme;
@@ -12,6 +17,7 @@ use App\Models\TimetableEntry;
 use App\Traits\ScopesToLecturer;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -39,6 +45,12 @@ class DashboardController extends Controller
         // no school-wide GPA/CGPA or other students' data.
         if ($this->isScopedLecturer()) {
             return $this->lecturerDashboard();
+        }
+
+        // Accountants get a finance-focused dashboard (collections, arrears, debtors) instead
+        // of the academic GPA/results-focused view below, which isn't relevant to their role.
+        if ($this->isAccountant()) {
+            return $this->accountantDashboard();
         }
 
         // Get filter parameters
@@ -536,5 +548,195 @@ class DashboardController extends Controller
         return view('dashboard-lecturer', compact(
             'currentSemester', 'courses', 'classGroups', 'studentCount', 'workload', 'todayEntries'
         ));
+    }
+
+    /**
+     * Determine whether the authenticated user should see the finance-focused dashboard
+     * instead of the academic one - an Accountant, unless they're also a Super Admin (who
+     * should keep seeing the full school-wide view).
+     */
+    protected function isAccountant(): bool
+    {
+        $user = Auth::user();
+
+        return $user && $user->hasRole('Accountant') && !$user->hasRole('Super Admin');
+    }
+
+    /**
+     * Finance dashboard for Accountant-role users: collections, outstanding balances, debtors,
+     * and revenue breakdowns for the current academic year - no GPA/results/grade data.
+     *
+     * Every figure here is computed via grouped bulk queries plus a single pass over active
+     * students, mirroring StudentPaymentController::buildFeeRows() - never a per-student query
+     * in a loop, since that would mean thousands of queries across the whole student body.
+     */
+    protected function accountantDashboard()
+    {
+        $currentAcademicYear = AcademicYear::where('is_current', true)->first();
+        $academicYears = AcademicYear::orderByDesc('start_date')->get();
+
+        if (!$currentAcademicYear) {
+            return view('dashboard-accountant', [
+                'currentAcademicYear' => null,
+                'academicYears' => $academicYears,
+            ]);
+        }
+
+        $yearId = $currentAcademicYear->id;
+
+        $students = Student::where('status', 'active')
+            ->whereNotNull('programme_id')
+            ->get(['id', 'programme_id', 'level']);
+
+        $tuitionStructures = FeeStructure::where('academic_year_id', $yearId)
+            ->where('category', 'tuition')
+            ->get();
+
+        $paymentSums = StudentPayment::where('academic_year_id', $yearId)
+            ->selectRaw('student_id, SUM(amount) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
+
+        $tuitionChargeSums = StudentFeeCharge::where('academic_year_id', $yearId)
+            ->where('category', 'tuition')
+            ->selectRaw('student_id, SUM(amount) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
+
+        $arrearSums = StudentArrear::selectRaw('student_id, SUM(amount) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
+
+        $programmes = Programme::all()->keyBy('id');
+
+        $totalBilled = 0.0;
+        $totalCollected = 0.0;
+        $totalArrearsNet = 0.0;
+        $debtorCount = 0;
+        $creditorCount = 0;
+        $settledCount = 0;
+        $programmeSummary = [];
+        $debtorBalances = [];
+
+        foreach ($students as $student) {
+            $structure = $tuitionStructures->first(fn (FeeStructure $s) => (int) $s->programme_id === (int) $student->programme_id && (int) $s->level === (int) $student->level)
+                ?? $tuitionStructures->first(fn (FeeStructure $s) => (int) $s->programme_id === (int) $student->programme_id && $s->level === null);
+
+            $feeAmount = ($structure ? (float) $structure->amount : 0.0) + (float) ($tuitionChargeSums[$student->id] ?? 0);
+            $paid = (float) ($paymentSums[$student->id] ?? 0);
+            $arrears = (float) ($arrearSums[$student->id] ?? 0);
+            $balance = ($feeAmount + $arrears) - $paid;
+
+            $totalBilled += $feeAmount;
+            $totalCollected += $paid;
+            $totalArrearsNet += $arrears;
+
+            if ($balance > 0.01) {
+                $debtorCount++;
+                $debtorBalances[$student->id] = $balance;
+            } elseif ($balance < -0.01) {
+                $creditorCount++;
+            } else {
+                $settledCount++;
+            }
+
+            $pid = $student->programme_id;
+            if (!isset($programmeSummary[$pid])) {
+                $programmeSummary[$pid] = [
+                    'name' => $programmes[$pid]->name ?? 'Unknown',
+                    'billed' => 0.0,
+                    'collected' => 0.0,
+                    'students' => 0,
+                ];
+            }
+            $programmeSummary[$pid]['billed'] += $feeAmount;
+            $programmeSummary[$pid]['collected'] += $paid;
+            $programmeSummary[$pid]['students']++;
+        }
+
+        $totalOutstanding = $totalBilled - $totalCollected;
+        $collectionRate = $totalBilled > 0 ? round(($totalCollected / $totalBilled) * 100, 1) : 0.0;
+
+        arsort($debtorBalances);
+        $topDebtorIds = array_slice(array_keys($debtorBalances), 0, 10, true);
+        $topDebtorStudents = Student::whereIn('id', $topDebtorIds)->with('programme')->get()->keyBy('id');
+        $topDebtors = collect($topDebtorIds)
+            ->map(fn ($id) => isset($topDebtorStudents[$id]) ? [
+                'student' => $topDebtorStudents[$id],
+                'balance' => $debtorBalances[$id],
+            ] : null)
+            ->filter()
+            ->values();
+
+        $programmeSummary = collect($programmeSummary)
+            ->map(function ($row) {
+                $row['outstanding'] = $row['billed'] - $row['collected'];
+                $row['collection_rate'] = $row['billed'] > 0 ? round(($row['collected'] / $row['billed']) * 100, 1) : 0.0;
+                return $row;
+            })
+            ->sortByDesc('outstanding')
+            ->values();
+
+        $recentPayments = StudentPayment::with(['student', 'academicYear'])
+            ->latest('id')
+            ->take(10)
+            ->get();
+
+        $monthlyCollections = [];
+        for ($i = 11; $i >= 0; $i--) {
+            $month = Carbon::now()->subMonths($i);
+            $monthlyCollections[] = [
+                'month' => $month->format('M Y'),
+                'total' => (float) StudentPayment::whereYear('payment_date', $month->year)
+                    ->whereMonth('payment_date', $month->month)
+                    ->sum('amount'),
+            ];
+        }
+
+        $paymentMethodBreakdown = StudentPayment::where('academic_year_id', $yearId)
+            ->selectRaw('payment_method, SUM(amount) as total')
+            ->groupBy('payment_method')
+            ->pluck('total', 'payment_method');
+
+        $categoryBreakdown = StudentFeeCharge::where('academic_year_id', $yearId)
+            ->selectRaw('category, SUM(amount) as total')
+            ->groupBy('category')
+            ->get()
+            ->mapWithKeys(fn ($row) => [(FeeCategory::options()[$row->category] ?? ucfirst($row->category)) => (float) $row->total]);
+
+        // Programme/level combinations with active students but no tuition fee structure set
+        // for the current year - an actionable gap (those students would show "Not set").
+        $missingStructures = Student::where('status', 'active')
+            ->whereNotNull('programme_id')
+            ->whereNotNull('level')
+            ->select('programme_id', 'level')
+            ->distinct()
+            ->get()
+            ->reject(fn ($row) => $tuitionStructures->contains(fn (FeeStructure $s) => (int) $s->programme_id === (int) $row->programme_id && ((int) $s->level === (int) $row->level || $s->level === null)))
+            ->map(fn ($row) => [
+                'programme' => $programmes[$row->programme_id]->name ?? 'Unknown',
+                'level' => $row->level,
+            ])
+            ->values();
+
+        return view('dashboard-accountant', [
+            'currentAcademicYear' => $currentAcademicYear,
+            'academicYears' => $academicYears,
+            'totalBilled' => $totalBilled,
+            'totalCollected' => $totalCollected,
+            'totalOutstanding' => $totalOutstanding,
+            'totalArrearsNet' => $totalArrearsNet,
+            'collectionRate' => $collectionRate,
+            'debtorCount' => $debtorCount,
+            'creditorCount' => $creditorCount,
+            'settledCount' => $settledCount,
+            'topDebtors' => $topDebtors,
+            'programmeSummary' => $programmeSummary,
+            'recentPayments' => $recentPayments,
+            'monthlyCollections' => $monthlyCollections,
+            'paymentMethodBreakdown' => $paymentMethodBreakdown,
+            'categoryBreakdown' => $categoryBreakdown,
+            'missingStructures' => $missingStructures,
+        ]);
     }
 }

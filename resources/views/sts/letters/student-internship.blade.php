@@ -48,21 +48,32 @@
         <p class="mb-6">{{ $placement->partnerSchool->name ?? '' }}<br>{{ $placement->partnerSchool->location ?? '' }}</p>
 
         <p class="mb-4 font-semibold">Dear Sir/Madam,</p>
-        <p class="mb-4 font-semibold">RE: PLACEMENT OF STUDENT FOR INTERNSHIP</p>
+        <p class="mb-4 font-semibold">RE: PLACEMENT OF FINAL-YEAR STUDENT FOR TEACHING INTERNSHIP</p>
+
+        <div class="flex gap-6 items-start mb-4">
+            <x-student-photo :student="$student" class="w-24 h-28 object-cover rounded border border-gray-300 flex-shrink-0" />
+            <p class="leading-relaxed">
+                This letter introduces <span class="font-semibold">{{ $student->full_name }}</span>
+                (Index Number: <span class="font-semibold">{{ $student->index_number }}</span>),
+                a final-year (Level {{ $placement->level }}) student of {{ $student->programme->name ?? '' }} at
+                {{ $settings['institution_name'] ?? 'this institution' }}, who has been placed at your school for
+                the Teaching Internship during the {{ $term->name }}
+                ({{ $term->proposed_start_date->format('M d, Y') }} &ndash; {{ $term->proposed_end_date->format('M d, Y') }}).
+            </p>
+        </div>
 
         <p class="mb-4 leading-relaxed">
-            This letter introduces <span class="font-semibold">{{ $student->full_name }}</span>
-            (Index Number: <span class="font-semibold">{{ $student->index_number }}</span>),
-            a Level {{ $placement->level }} student of {{ $student->programme->name ?? '' }} at
-            {{ $settings['institution_name'] ?? 'this institution' }}, who has been placed at your school for
-            Internship during the {{ $term->name }}
-            ({{ $term->proposed_start_date->format('M d, Y') }} &ndash; {{ $term->proposed_end_date->format('M d, Y') }}).
+            As a final-year intern, the student is expected to take full responsibility for planning, teaching, and
+            assessment in the classes assigned, working independently under your school's general oversight rather
+            than close, continuous supervision. This Internship forms part of the formal assessment of the
+            student's readiness to practise as a qualified teacher.
         </p>
 
         <p class="mb-4 leading-relaxed">
-            The assigned supervisor for this placement is <span class="font-semibold">{{ $placement->lecturer->name ?? '' }}</span>.
-            We would be grateful if you could offer the student every assistance and supervision needed to make this
-            placement a success.
+            The assigned supervisor{{ $placement->secondLecturer ? 's are' : ' for this placement is' }} <span class="font-semibold">{{ $placement->lecturer->name ?? '' }}</span>{{ $placement->secondLecturer ? ' and ' . $placement->secondLecturer->name : '' }}
+            and will visit periodically to observe and evaluate the student's performance. We would be grateful if
+            you could grant the student full teaching responsibilities appropriate to their training, and share any
+            concerns about their conduct or performance with the supervisor promptly.
         </p>
 
         <p class="mb-10 leading-relaxed">Thank you for your cooperation.</p>

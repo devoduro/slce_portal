@@ -17,7 +17,7 @@
                             </div>
                         @endif
 
-                        <form method="POST" action="{{ route('password.update') }}" class="space-y-6">
+                        <form method="POST" action="{{ route('password.change.update') }}" class="space-y-6">
                             @csrf
                             @method('PUT')
 

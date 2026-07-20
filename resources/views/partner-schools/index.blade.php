@@ -5,6 +5,12 @@
                 {{ __('Partner Schools') }}
             </h2>
             <div class="flex gap-2">
+                <x-button href="{{ route('partner-schools.print', ['type' => 'sts']) }}" variant="secondary" icon="fas fa-print" target="_blank">
+                    {{ __('Print STS Schools') }}
+                </x-button>
+                <x-button href="{{ route('partner-schools.print', ['type' => 'internship']) }}" variant="secondary" icon="fas fa-print" target="_blank">
+                    {{ __('Print Internship Schools') }}
+                </x-button>
                 <x-button href="{{ route('partner-schools.import.form') }}" variant="secondary" icon="fas fa-upload">
                     {{ __('Import') }}
                 </x-button>
@@ -37,7 +43,16 @@
                                 <option value="{{ $value }}" {{ request('category') === $value ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
+                        <select name="type" class="rounded-md border-gray-300 shadow-sm text-sm">
+                            <option value="">All Types</option>
+                            @foreach(\App\Models\PartnerSchool::TYPE_LABELS as $value => $label)
+                                <option value="{{ $value }}" {{ request('type') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
                         <button type="submit" class="px-4 py-2 bg-gray-100 rounded-md text-sm text-gray-700 hover:bg-gray-200">Filter</button>
+                        @if(request()->hasAny(['search', 'category', 'type']))
+                            <a href="{{ route('partner-schools.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600">Clear</a>
+                        @endif
                     </form>
 
                     @if($schools->isEmpty())
@@ -52,6 +67,7 @@
                                     <tr>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quota (100/200/300/400)</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -69,6 +85,13 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $school->name }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">{{ $school->categoryLabel() }}</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                @if($school->type)
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full {{ $school->type === 'internship' ? 'bg-purple-100 text-purple-800' : 'bg-teal-100 text-teal-800' }}">{{ $school->typeLabel() }}</span>
+                                                @else
+                                                    <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800" title="Edit this school to set its type">Not set</span>
+                                                @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $school->location ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -95,6 +118,9 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                                 <div class="flex justify-end space-x-2">
+                                                    <a href="{{ route('partner-schools.print', ['partner_school_id' => $school->id]) }}" target="_blank" class="text-gray-600 hover:text-gray-900" title="Print student list">
+                                                        <i class="fas fa-print"></i>
+                                                    </a>
                                                     <a href="{{ route('partner-schools.edit', $school) }}" class="text-indigo-600 hover:text-indigo-900">
                                                         <i class="fas fa-edit"></i>
                                                     </a>

@@ -19,6 +19,7 @@ class PartnerSchool extends Model
         'name',
         'location',
         'category',
+        'type',
         'capacity_level_100',
         'capacity_level_200',
         'capacity_level_300',
@@ -29,6 +30,11 @@ class PartnerSchool extends Model
         'early_grade' => 'Early Grade',
         'upper_primary' => 'Upper Primary',
         'jhs' => 'JHS',
+    ];
+
+    public const TYPE_LABELS = [
+        'sts' => 'STS',
+        'internship' => 'Internship',
     ];
 
     /**
@@ -63,5 +69,10 @@ class PartnerSchool extends Model
     public function categoryLabel(): ?string
     {
         return self::CATEGORY_LABELS[$this->category] ?? null;
+    }
+
+    public function typeLabel(): ?string
+    {
+        return self::TYPE_LABELS[$this->type] ?? null;
     }
 }

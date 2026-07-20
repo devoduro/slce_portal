@@ -47,7 +47,7 @@
                             </div>
 
                             <div>
-                                <x-input id="internship_level_cutoff" name="internship_level_cutoff" type="number" step="100" min="100" max="800" label="Internship Level Cutoff" :value="old('internship_level_cutoff', $stsTerm->internship_level_cutoff)" required />
+                                <x-input id="internship_level_cutoff" name="internship_level_cutoff" type="number" step="100" min="100" max="800" label="Internship Level Cutoff" :value="old('internship_level_cutoff', $stsTerm->internship_level_cutoff)" required helper="College policy: Levels 100-300 are STS, Level 400 only is Internship - leave this at 400 unless the policy changes." />
                             </div>
                         </div>
 

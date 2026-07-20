@@ -12,9 +12,9 @@ use Illuminate\Validation\ValidationException;
 class StsPlacementService
 {
     /**
-     * Attempt to place a student at a partner school, enforcing category match and
-     * first-come-first-serve quota under row locks so two concurrent requests for
-     * the last open slot at a school cannot both succeed.
+     * Attempt to place a student at a partner school, enforcing category match, STS/Internship
+     * type match, and first-come-first-serve quota under row locks so two concurrent requests
+     * for the last open slot at a school cannot both succeed.
      */
     public static function selectSchool(Student $student, StsTerm $term, PartnerSchool $school): StsPlacement
     {
@@ -32,6 +32,12 @@ class StsPlacementService
 
             if ($locked->category !== $student->programme->sts_category) {
                 throw ValidationException::withMessages(['school' => 'This school is not available to your category.']);
+            }
+
+            // Only enforced once the school has a type set - older schools predating this
+            // feature are left unrestricted until an admin classifies them.
+            if ($locked->type && $locked->type !== $placement->type) {
+                throw ValidationException::withMessages(['school' => 'This school is designated for ' . ($locked->type === 'internship' ? 'Internship' : 'STS') . ' placements, not ' . ($placement->type === 'internship' ? 'Internship' : 'STS') . '.']);
             }
 
             $filled = StsPlacement::where('partner_school_id', $locked->id)
@@ -65,6 +71,10 @@ class StsPlacementService
 
             if ($locked->category !== $placement->student->programme->sts_category) {
                 throw ValidationException::withMessages(['school' => "This school is not available to the student's category."]);
+            }
+
+            if ($locked->type && $locked->type !== $placement->type) {
+                throw ValidationException::withMessages(['school' => "This school is designated for " . ($locked->type === 'internship' ? 'Internship' : 'STS') . " placements, not " . ($placement->type === 'internship' ? 'Internship' : 'STS') . "."]);
             }
 
             $filled = StsPlacement::where('partner_school_id', $locked->id)

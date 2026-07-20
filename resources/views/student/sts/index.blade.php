@@ -62,8 +62,11 @@
                     <p class="text-lg font-semibold text-gray-900">{{ $placement->partnerSchool->name ?? 'Not selected yet' }}</p>
                 </div>
                 <div class="bg-gray-50 rounded-lg p-4">
-                    <p class="text-sm text-gray-500">Supervisor</p>
+                    <p class="text-sm text-gray-500">Supervisor{{ $placement->second_lecturer_id ? 's' : '' }}</p>
                     <p class="text-lg font-semibold text-gray-900">{{ $placement->lecturer->name ?? 'Not assigned yet' }}</p>
+                    @if($placement->secondLecturer)
+                        <p class="text-sm text-gray-600">{{ $placement->secondLecturer->name }}</p>
+                    @endif
                 </div>
             </div>
 

@@ -98,7 +98,10 @@ Route::middleware(['auth', 'admin'])->group(function () {
 Route::middleware(['auth'])->group(function () {
     // Password Change Routes
     Route::get('/password/change', [\App\Http\Controllers\PasswordController::class, 'edit'])->name('password.change');
-    Route::put('/password/update', [\App\Http\Controllers\PasswordController::class, 'update'])->name('password.update');
+    // Named distinctly from 'password.update' below (the guest forgot-password-via-token POST
+    // route) - sharing that name made route('password.update') always resolve to whichever was
+    // registered last, breaking whichever feature's form needed the other one.
+    Route::put('/password/update', [\App\Http\Controllers\PasswordController::class, 'update'])->name('password.change.update');
 
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
@@ -241,6 +244,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/fees/export/pdf', [StudentPaymentController::class, 'exportPdf'])->name('fees.export.pdf');
         Route::get('/fees/report', [StudentPaymentController::class, 'report'])->name('fees.report');
         Route::get('/fees/report/print', [StudentPaymentController::class, 'printReport'])->name('fees.report.print');
+        Route::get('/fees/report/export', [StudentPaymentController::class, 'exportReport'])->name('fees.report.export');
 
         // Arrears (debtors list) routes must be registered before the /fees/{student} wildcard below.
         Route::get('/fees/arrears', [ArrearsController::class, 'index'])->name('fees.arrears.index');
@@ -297,11 +301,13 @@ Route::middleware(['auth'])->group(function () {
     // STS / Internship
     Route::middleware('permission:manage-sts')->group(function () {
         Route::put('/sts-terms/{stsTerm}/activate', [\App\Http\Controllers\StsTermController::class, 'activate'])->name('sts-terms.activate');
+        Route::put('/sts-terms/{stsTerm}/deactivate', [\App\Http\Controllers\StsTermController::class, 'deactivate'])->name('sts-terms.deactivate');
         Route::resource('sts-terms', \App\Http\Controllers\StsTermController::class)->except(['show']);
 
         Route::get('/partner-schools/import', [\App\Http\Controllers\PartnerSchoolController::class, 'importForm'])->name('partner-schools.import.form');
         Route::post('/partner-schools/import', [\App\Http\Controllers\PartnerSchoolController::class, 'import'])->name('partner-schools.import.store');
         Route::get('/partner-schools/import/template', [\App\Http\Controllers\PartnerSchoolController::class, 'downloadTemplate'])->name('partner-schools.import.template');
+        Route::get('/partner-schools/print', [\App\Http\Controllers\PartnerSchoolController::class, 'printRoster'])->name('partner-schools.print');
         Route::resource('partner-schools', \App\Http\Controllers\PartnerSchoolController::class)->except(['show']);
 
         Route::resource('sts-score-settings', \App\Http\Controllers\StsScoreSettingController::class)->except(['show']);

@@ -38,8 +38,13 @@
                                 <option value="sts" {{ request('type') === 'sts' ? 'selected' : '' }}>STS</option>
                                 <option value="internship" {{ request('type') === 'internship' ? 'selected' : '' }}>Internship</option>
                             </select>
+                            <select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 shadow-sm text-sm">
+                                @foreach([20, 50, 100, 200, 500] as $option)
+                                    <option value="{{ $option }}" {{ (int) request('per_page', 50) === $option ? 'selected' : '' }}>{{ $option }} per page</option>
+                                @endforeach
+                            </select>
                             <button type="submit" class="px-4 py-2 bg-gray-100 rounded-md text-sm text-gray-700 hover:bg-gray-200">Filter</button>
-                            @if(request()->hasAny(['search', 'category', 'type']))
+                            @if(request()->hasAny(['search', 'category', 'type', 'per_page']))
                                 <a href="{{ route('sts-placements.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600">Clear</a>
                             @endif
                         </form>
@@ -71,7 +76,9 @@
                                                 <td class="px-6 py-4 text-sm text-gray-500">
                                                     <div class="mb-1">{{ $placement->partnerSchool->name ?? 'Not selected yet' }}</div>
                                                     @php
-                                                        $eligibleSchools = $partnerSchools->where('category', $placement->student->programme->sts_category ?? null);
+                                                        $eligibleSchools = $partnerSchools
+                                                            ->where('category', $placement->student->programme->sts_category ?? null)
+                                                            ->filter(fn ($s) => !$s->type || $s->type === $placement->type);
                                                     @endphp
                                                     <div class="flex items-center gap-2">
                                                         <form action="{{ route('sts-placements.change-school', $placement) }}" method="POST" class="flex items-center gap-1">
@@ -96,16 +103,28 @@
                                                         @endif
                                                     </div>
                                                 </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                    <form action="{{ route('sts-placements.assign-supervisor', $placement) }}" method="POST" class="flex items-center gap-2">
+                                                <td class="px-6 py-4 text-sm text-gray-500">
+                                                    <form action="{{ route('sts-placements.assign-supervisor', $placement) }}" method="POST" class="space-y-1">
                                                         @csrf
                                                         @method('PUT')
-                                                        <select name="lecturer_id" class="rounded-md border-gray-300 shadow-sm text-xs">
-                                                            <option value="">Not assigned</option>
-                                                            @foreach($lecturers as $lecturer)
-                                                                <option value="{{ $lecturer->id }}" {{ $placement->lecturer_id === $lecturer->id ? 'selected' : '' }}>{{ $lecturer->name }}</option>
-                                                            @endforeach
-                                                        </select>
+                                                        <div class="flex items-center gap-1">
+                                                            <span class="text-xs text-gray-400 w-14">Primary</span>
+                                                            <select name="lecturer_id" class="rounded-md border-gray-300 shadow-sm text-xs flex-1">
+                                                                <option value="">Not assigned</option>
+                                                                @foreach($lecturers as $lecturer)
+                                                                    <option value="{{ $lecturer->id }}" {{ $placement->lecturer_id === $lecturer->id ? 'selected' : '' }}>{{ $lecturer->name }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
+                                                        <div class="flex items-center gap-1">
+                                                            <span class="text-xs text-gray-400 w-14">Second</span>
+                                                            <select name="second_lecturer_id" class="rounded-md border-gray-300 shadow-sm text-xs flex-1">
+                                                                <option value="">Not assigned</option>
+                                                                @foreach($lecturers as $lecturer)
+                                                                    <option value="{{ $lecturer->id }}" {{ $placement->second_lecturer_id === $lecturer->id ? 'selected' : '' }}>{{ $lecturer->name }}</option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
                                                         <button type="submit" class="text-xs text-primary-600 hover:text-primary-900 underline">Save</button>
                                                     </form>
                                                 </td>
@@ -119,6 +138,10 @@
                                         @endforeach
                                     </tbody>
                                 </table>
+                            </div>
+
+                            <div class="mt-4">
+                                {{ $placements->links() }}
                             </div>
                         @endif
                     @endif

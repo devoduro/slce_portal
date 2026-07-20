@@ -294,10 +294,19 @@ class StudentPaymentController extends Controller
             : AcademicYear::where('is_current', true)->first();
 
         $academicYears = AcademicYear::chronological()->get();
+        $programmes = Programme::orderBy('name')->get();
 
-        [$rows, $grandExpected, $grandCollected] = $this->buildReportRows($academicYear);
+        $programmeId = $request->filled('programme_id') ? (int) $request->programme_id : null;
+        $level = $request->filled('level') ? (int) $request->level : null;
+        $category = $request->input('category', 'tuition');
 
-        return view('fees.report', compact('academicYear', 'academicYears', 'rows', 'grandExpected', 'grandCollected'));
+        [$rows, $grandExpected, $grandCollected] = $this->buildReportRows($academicYear, $programmeId, $level, $category);
+        $metrics = $this->buildReportMetrics($academicYear, $programmeId, $level);
+
+        return view('fees.report', compact(
+            'academicYear', 'academicYears', 'programmes', 'programmeId', 'level', 'category',
+            'rows', 'grandExpected', 'grandCollected', 'metrics'
+        ));
     }
 
     /**
@@ -311,20 +320,55 @@ class StudentPaymentController extends Controller
 
         abort_unless($academicYear, 404, 'No academic year selected to print.');
 
-        [$rows, $grandExpected, $grandCollected] = $this->buildReportRows($academicYear);
+        $programmeId = $request->filled('programme_id') ? (int) $request->programme_id : null;
+        $level = $request->filled('level') ? (int) $request->level : null;
+        $category = $request->input('category', 'tuition');
 
+        [$rows, $grandExpected, $grandCollected] = $this->buildReportRows($academicYear, $programmeId, $level, $category);
+        $metrics = $this->buildReportMetrics($academicYear, $programmeId, $level);
+
+        $programmeName = $programmeId ? Programme::find($programmeId)?->name : null;
         $settings = \Illuminate\Support\Facades\DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
 
-        return view('fees.report-print', compact('academicYear', 'rows', 'grandExpected', 'grandCollected', 'settings'));
+        return view('fees.report-print', compact(
+            'academicYear', 'rows', 'grandExpected', 'grandCollected', 'settings',
+            'metrics', 'programmeName', 'level', 'category'
+        ));
+    }
+
+    /**
+     * Export the current filtered report breakdown to Excel.
+     */
+    public function exportReport(Request $request)
+    {
+        $academicYear = $request->filled('academic_year_id')
+            ? AcademicYear::find($request->academic_year_id)
+            : AcademicYear::where('is_current', true)->first();
+
+        $programmeId = $request->filled('programme_id') ? (int) $request->programme_id : null;
+        $level = $request->filled('level') ? (int) $request->level : null;
+        $category = $request->input('category', 'tuition');
+
+        [$rows] = $this->buildReportRows($academicYear, $programmeId, $level, $category);
+
+        $filename = 'fees-report' . ($academicYear ? '-' . str_replace('/', '-', $academicYear->name) : '') . '.xlsx';
+
+        return Excel::download(new \App\Exports\FeesReportExport($rows), $filename);
     }
 
     /**
      * Build the programme/level breakdown rows (+ grand totals) for a fees report,
-     * shared by the on-screen report and its printable version.
+     * shared by the on-screen report, its printable version, and Excel export.
+     *
+     * "Collected" always means all payments recorded for the year, regardless of $category -
+     * payments in this app are never tagged to a specific fee category, so this matches the
+     * same all-payments assumption used everywhere else (e.g. Student::feeBalance()). Only
+     * "Expected"/"Fee Amount" change meaning based on $category, since that's what determines
+     * which FeeStructure/StudentFeeCharge rows count as billed.
      *
      * @return array{0: \Illuminate\Support\Collection, 1: float, 2: float}
      */
-    protected function buildReportRows(?AcademicYear $academicYear): array
+    protected function buildReportRows(?AcademicYear $academicYear, ?int $programmeId = null, ?int $filterLevel = null, string $category = 'tuition'): array
     {
         $rows = collect();
         $grandExpected = 0.0;
@@ -334,14 +378,32 @@ class StudentPaymentController extends Controller
             return [$rows, $grandExpected, $grandCollected];
         }
 
-        $programmes = Programme::orderBy('name')->get();
+        $programmesQuery = Programme::orderBy('name');
+        if ($programmeId) {
+            $programmesQuery->where('id', $programmeId);
+        }
+        $programmes = $programmesQuery->get();
+
+        // Same category-blind bug fixed earlier in buildFeeRows() for the /fees list - this
+        // report had its own copy of it, defaulting to 'tuition' but now filterable.
+        $structures = FeeStructure::where('academic_year_id', $academicYear->id)
+            ->where('category', $category)
+            ->get();
+
+        // Additional same-category charges fold into "Fee Amount" here too, matching
+        // Student::tuitionFeeAmount() and the /fees list (for the 'tuition' category).
+        $chargeSums = StudentFeeCharge::where('academic_year_id', $academicYear->id)
+            ->where('category', $category)
+            ->selectRaw('student_id, SUM(amount) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
 
         foreach ($programmes as $programme) {
-            $levels = Student::where('programme_id', $programme->id)
-                ->whereNotNull('level')
-                ->distinct()
-                ->orderBy('level')
-                ->pluck('level');
+            $levelsQuery = Student::where('programme_id', $programme->id)->whereNotNull('level');
+            if ($filterLevel) {
+                $levelsQuery->where('level', $filterLevel);
+            }
+            $levels = $levelsQuery->distinct()->orderBy('level')->pluck('level');
 
             foreach ($levels as $level) {
                 $studentIds = Student::where('programme_id', $programme->id)
@@ -352,17 +414,13 @@ class StudentPaymentController extends Controller
                     continue;
                 }
 
-                $feeStructure = FeeStructure::where('academic_year_id', $academicYear->id)
-                    ->where('programme_id', $programme->id)
-                    ->where('level', $level)
-                    ->first()
-                    ?? FeeStructure::where('academic_year_id', $academicYear->id)
-                        ->where('programme_id', $programme->id)
-                        ->whereNull('level')
-                        ->first();
+                $feeStructure = $structures->first(fn (FeeStructure $s) => (int) $s->programme_id === (int) $programme->id && (int) $s->level === (int) $level)
+                    ?? $structures->first(fn (FeeStructure $s) => (int) $s->programme_id === (int) $programme->id && $s->level === null);
 
                 $studentCount = $studentIds->count();
-                $expected = $feeStructure ? (float) $feeStructure->amount * $studentCount : 0.0;
+                $structureAmount = $feeStructure ? (float) $feeStructure->amount : 0.0;
+                $chargesAmount = $studentIds->sum(fn ($id) => (float) ($chargeSums[$id] ?? 0));
+                $expected = ($structureAmount * $studentCount) + $chargesAmount;
                 $collected = (float) StudentPayment::whereIn('student_id', $studentIds)
                     ->where('academic_year_id', $academicYear->id)
                     ->sum('amount');
@@ -384,6 +442,123 @@ class StudentPaymentController extends Controller
         }
 
         return [$rows, $grandExpected, $grandCollected];
+    }
+
+    /**
+     * Build the extra summary metrics shown above the report table: debtor/creditor/settled
+     * counts, collection rate, net arrears, and the two trend charts. Always tuition-scoped
+     * (the same student-standing definition used app-wide, e.g. on the accountant dashboard),
+     * independent of the $category the table above is filtered to - "how many students owe
+     * money overall" doesn't change meaning based on which fee category is being browsed.
+     *
+     * Computed via grouped bulk queries plus a single pass over the (already filtered, so
+     * typically small) student set - never a per-student query in a loop.
+     */
+    protected function buildReportMetrics(?AcademicYear $academicYear, ?int $programmeId, ?int $filterLevel): array
+    {
+        $empty = [
+            'debtorCount' => 0,
+            'creditorCount' => 0,
+            'settledCount' => 0,
+            'collectionRate' => 0.0,
+            'netArrears' => 0.0,
+            'monthlyCollections' => collect(),
+            'paymentMethodBreakdown' => collect(),
+        ];
+
+        if (!$academicYear) {
+            return $empty;
+        }
+
+        $studentsQuery = Student::where('status', 'active')->whereNotNull('programme_id');
+        if ($programmeId) {
+            $studentsQuery->where('programme_id', $programmeId);
+        }
+        if ($filterLevel) {
+            $studentsQuery->where('level', $filterLevel);
+        }
+        $students = $studentsQuery->get(['id', 'programme_id', 'level']);
+        $studentIds = $students->pluck('id');
+
+        $tuitionStructures = FeeStructure::where('academic_year_id', $academicYear->id)
+            ->where('category', 'tuition')
+            ->get();
+
+        $paymentSums = StudentPayment::where('academic_year_id', $academicYear->id)
+            ->whereIn('student_id', $studentIds)
+            ->selectRaw('student_id, SUM(amount) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
+
+        $tuitionChargeSums = StudentFeeCharge::where('academic_year_id', $academicYear->id)
+            ->where('category', 'tuition')
+            ->whereIn('student_id', $studentIds)
+            ->selectRaw('student_id, SUM(amount) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
+
+        $arrearSums = StudentArrear::whereIn('student_id', $studentIds)
+            ->selectRaw('student_id, SUM(amount) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
+
+        $debtorCount = 0;
+        $creditorCount = 0;
+        $settledCount = 0;
+        $totalBilled = 0.0;
+        $totalCollected = 0.0;
+        $netArrears = 0.0;
+
+        foreach ($students as $student) {
+            $structure = $tuitionStructures->first(fn (FeeStructure $s) => (int) $s->programme_id === (int) $student->programme_id && (int) $s->level === (int) $student->level)
+                ?? $tuitionStructures->first(fn (FeeStructure $s) => (int) $s->programme_id === (int) $student->programme_id && $s->level === null);
+
+            $feeAmount = ($structure ? (float) $structure->amount : 0.0) + (float) ($tuitionChargeSums[$student->id] ?? 0);
+            $paid = (float) ($paymentSums[$student->id] ?? 0);
+            $arrears = (float) ($arrearSums[$student->id] ?? 0);
+            $balance = $feeAmount + $arrears - $paid;
+
+            $totalBilled += $feeAmount;
+            $totalCollected += $paid;
+            $netArrears += $arrears;
+
+            if ($balance > 0.01) {
+                $debtorCount++;
+            } elseif ($balance < -0.01) {
+                $creditorCount++;
+            } else {
+                $settledCount++;
+            }
+        }
+
+        $collectionRate = $totalBilled > 0 ? round(($totalCollected / $totalBilled) * 100, 1) : 0.0;
+
+        $paymentsQuery = StudentPayment::where('academic_year_id', $academicYear->id)->whereIn('student_id', $studentIds);
+
+        $paymentMethodBreakdown = (clone $paymentsQuery)
+            ->selectRaw('payment_method, SUM(amount) as total')
+            ->groupBy('payment_method')
+            ->pluck('total', 'payment_method');
+
+        $monthlyCollections = (clone $paymentsQuery)
+            ->selectRaw("DATE_FORMAT(payment_date, '%Y-%m') as ym, SUM(amount) as total")
+            ->groupBy('ym')
+            ->orderBy('ym')
+            ->get()
+            ->map(fn ($row) => [
+                'month' => \Carbon\Carbon::parse($row->ym . '-01')->format('M Y'),
+                'total' => (float) $row->total,
+            ]);
+
+        return [
+            'debtorCount' => $debtorCount,
+            'creditorCount' => $creditorCount,
+            'settledCount' => $settledCount,
+            'collectionRate' => $collectionRate,
+            'netArrears' => $netArrears,
+            'monthlyCollections' => $monthlyCollections,
+            'paymentMethodBreakdown' => $paymentMethodBreakdown,
+        ];
     }
 
     /**

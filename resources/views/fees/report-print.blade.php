@@ -18,7 +18,7 @@
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="no-print bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-        <a href="{{ route('fees.report', ['academic_year_id' => $academicYear->id]) }}" class="text-sm text-gray-600 hover:text-primary-600">
+        <a href="{{ route('fees.report', request()->query()) }}" class="text-sm text-gray-600 hover:text-primary-600">
             <i class="fas fa-arrow-left mr-1"></i> Back to Fees Report
         </a>
         <button onclick="window.print()" class="bg-primary-600 text-white rounded-md px-4 py-2 text-sm hover:bg-primary-700">
@@ -41,7 +41,12 @@
                 <p class="text-xs text-gray-500 mt-1">{{ $settings['institution_address'] }}</p>
             @endif
             <h2 class="text-lg font-semibold text-primary-700 mt-3">Student Financial Report</h2>
-            <p class="text-sm text-gray-600 mt-1">Academic Year: <span class="font-semibold">{{ $academicYear->name }}</span></p>
+            <p class="text-sm text-gray-600 mt-1">
+                Academic Year: <span class="font-semibold">{{ $academicYear->name }}</span>
+                @if($programmeName) &bull; Programme: <span class="font-semibold">{{ $programmeName }}</span> @endif
+                @if($level) &bull; Level: <span class="font-semibold">{{ $level }}</span> @endif
+                &bull; Category: <span class="font-semibold">{{ \App\Models\FeeCategory::options()[$category] ?? ucfirst($category) }}</span>
+            </p>
         </div>
 
         <!-- Grand Totals -->
@@ -55,8 +60,32 @@
                 <p class="text-lg font-semibold text-green-700">{{ number_format($grandCollected, 2) }}</p>
             </div>
             <div class="border border-gray-300 rounded-lg p-3">
-                <p class="text-xs text-gray-500 uppercase">Outstanding Balance</p>
-                <p class="text-lg font-semibold text-red-700">{{ number_format($grandExpected - $grandCollected, 2) }}</p>
+                <p class="text-xs text-gray-500 uppercase">{{ ($grandExpected - $grandCollected) >= 0 ? 'Outstanding Balance' : 'Collected Over Expected' }}</p>
+                <p class="text-lg font-semibold {{ ($grandExpected - $grandCollected) > 0 ? 'text-red-700' : 'text-green-700' }}">{{ number_format(abs($grandExpected - $grandCollected), 2) }}</p>
+            </div>
+        </div>
+
+        <!-- Student Standing (tuition-scoped) -->
+        <div class="grid grid-cols-5 gap-3 mb-6 text-center">
+            <div class="border border-gray-300 rounded-lg p-2">
+                <p class="text-xs text-gray-500 uppercase">Collection Rate</p>
+                <p class="text-base font-semibold">{{ $metrics['collectionRate'] }}%</p>
+            </div>
+            <div class="border border-gray-300 rounded-lg p-2">
+                <p class="text-xs text-gray-500 uppercase">Debtors</p>
+                <p class="text-base font-semibold text-red-700">{{ number_format($metrics['debtorCount']) }}</p>
+            </div>
+            <div class="border border-gray-300 rounded-lg p-2">
+                <p class="text-xs text-gray-500 uppercase">Creditors</p>
+                <p class="text-base font-semibold text-green-700">{{ number_format($metrics['creditorCount']) }}</p>
+            </div>
+            <div class="border border-gray-300 rounded-lg p-2">
+                <p class="text-xs text-gray-500 uppercase">Settled</p>
+                <p class="text-base font-semibold">{{ number_format($metrics['settledCount']) }}</p>
+            </div>
+            <div class="border border-gray-300 rounded-lg p-2">
+                <p class="text-xs text-gray-500 uppercase">Net Arrears</p>
+                <p class="text-base font-semibold">{{ number_format($metrics['netArrears'], 2) }}</p>
             </div>
         </div>
 
@@ -82,7 +111,7 @@
                         <td class="border border-gray-300 px-3 py-2 text-right">{{ $row['fee_amount'] !== null ? number_format($row['fee_amount'], 2) : 'Not set' }}</td>
                         <td class="border border-gray-300 px-3 py-2 text-right">{{ number_format($row['expected'], 2) }}</td>
                         <td class="border border-gray-300 px-3 py-2 text-right">{{ number_format($row['collected'], 2) }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-right">{{ number_format($row['balance'], 2) }}</td>
+                        <td class="border border-gray-300 px-3 py-2 text-right {{ $row['balance'] > 0 ? 'text-red-700' : ($row['balance'] < 0 ? 'text-green-700' : '') }}">{{ number_format($row['balance'], 2) }}</td>
                         <td class="border border-gray-300 px-3 py-2 text-right">{{ $row['percentage'] }}%</td>
                     </tr>
                 @empty
@@ -99,7 +128,7 @@
                         <td class="border border-gray-300 px-3 py-2"></td>
                         <td class="border border-gray-300 px-3 py-2 text-right">{{ number_format($grandExpected, 2) }}</td>
                         <td class="border border-gray-300 px-3 py-2 text-right">{{ number_format($grandCollected, 2) }}</td>
-                        <td class="border border-gray-300 px-3 py-2 text-right">{{ number_format($grandExpected - $grandCollected, 2) }}</td>
+                        <td class="border border-gray-300 px-3 py-2 text-right {{ ($grandExpected - $grandCollected) > 0 ? 'text-red-700' : (($grandExpected - $grandCollected) < 0 ? 'text-green-700' : '') }}">{{ number_format($grandExpected - $grandCollected, 2) }}</td>
                         <td class="border border-gray-300 px-3 py-2 text-right">{{ $grandExpected > 0 ? round(($grandCollected / $grandExpected) * 100, 1) : 0 }}%</td>
                     </tr>
                 </tfoot>

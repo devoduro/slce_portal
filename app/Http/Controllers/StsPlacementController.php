@@ -19,10 +19,18 @@ class StsPlacementController extends Controller
     {
         $term = StsTerm::where('is_current', true)->first();
 
+        $perPage = (int) $request->input('per_page', 50);
+        if (!in_array($perPage, [20, 50, 100, 200, 500], true)) {
+            $perPage = 50;
+        }
+
         $placements = collect();
 
+        // Each row renders two lecturer <select> lists and a school <select> list, so at the
+        // full placement count (1000+ per term) an unpaginated page balloons to tens of MB -
+        // paginate rather than ->get() the whole term's placements.
         if ($term) {
-            $placements = StsPlacement::with(['student.programme', 'partnerSchool', 'lecturer'])
+            $placements = StsPlacement::with(['student.programme', 'partnerSchool', 'lecturer', 'secondLecturer'])
                 ->where('sts_term_id', $term->id)
                 ->when($request->filled('category'), function ($q) use ($request) {
                     $q->whereHas('student.programme', fn ($q2) => $q2->where('sts_category', $request->category));
@@ -39,7 +47,8 @@ class StsPlacementController extends Controller
                 ->join('students', 'students.id', '=', 'sts_placements.student_id')
                 ->orderBy('students.full_name')
                 ->select('sts_placements.*')
-                ->get();
+                ->paginate($perPage)
+                ->withQueryString();
         }
 
         $lecturers = Lecturer::orderBy('name')->get();
@@ -49,18 +58,24 @@ class StsPlacementController extends Controller
     }
 
     /**
-     * Assign a supervisor (lecturer) to a placement.
+     * Assign the primary and/or second supervisor (lecturer) to a placement.
      */
     public function assignSupervisor(Request $request, StsPlacement $stsPlacement)
     {
-        $request->validate(['lecturer_id' => 'required|exists:lecturers,id']);
+        $request->validate([
+            'lecturer_id' => 'nullable|exists:lecturers,id',
+            'second_lecturer_id' => 'nullable|exists:lecturers,id|different:lecturer_id',
+        ], [
+            'second_lecturer_id.different' => 'The second supervisor must be a different lecturer from the primary one.',
+        ]);
 
         $stsPlacement->update([
-            'lecturer_id' => $request->lecturer_id,
+            'lecturer_id' => $request->lecturer_id ?: null,
+            'second_lecturer_id' => $request->second_lecturer_id ?: null,
             'supervisor_assigned_at' => now(),
         ]);
 
-        return back()->with('success', 'Supervisor assigned.');
+        return back()->with('success', 'Supervisor(s) updated.');
     }
 
     /**

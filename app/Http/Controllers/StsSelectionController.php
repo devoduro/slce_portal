@@ -63,6 +63,9 @@ class StsSelectionController extends Controller
         $category = $student->programme->sts_category;
 
         $schools = PartnerSchool::where('category', $category)
+            // Only schools designated for this placement's type (STS or Internship) - schools
+            // predating that field (type is null) are left unrestricted.
+            ->where(fn ($q) => $q->whereNull('type')->orWhere('type', $placement->type))
             ->orderBy('name')
             ->get()
             ->map(fn ($school) => [

@@ -16,7 +16,7 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm">
                         <p class="font-medium mb-2">File format</p>
-                        <p>The file must have <strong>name</strong>, <strong>category</strong> (early_grade, upper_primary, or jhs), and <strong>capacity</strong> columns. Optional column: <strong>location</strong>.</p>
+                        <p>The file must have <strong>name</strong>, <strong>category</strong> (early_grade, upper_primary, or jhs), <strong>type</strong> (sts or internship), and <strong>capacity</strong> columns. Optional column: <strong>location</strong>.</p>
                         <p class="mt-2">The capacity value is applied to every level (100/200/300/400) as a starting quota — fine-tune individual levels afterward by editing the school.</p>
                         <p class="mt-2">Re-uploading with the same school name updates that school's details rather than creating a duplicate.</p>
                         <a href="{{ route('partner-schools.import.template') }}" class="inline-flex items-center gap-1 mt-3 text-blue-700 underline">

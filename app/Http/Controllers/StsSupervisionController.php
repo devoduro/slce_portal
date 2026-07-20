@@ -20,7 +20,7 @@ class StsSupervisionController extends Controller
         $lecturer = $this->authLecturerOrAbort();
 
         $placements = StsPlacement::with(['student.programme', 'partnerSchool', 'stsTerm'])
-            ->where('lecturer_id', $lecturer->id)
+            ->where(fn ($q) => $q->where('lecturer_id', $lecturer->id)->orWhere('second_lecturer_id', $lecturer->id))
             ->whereHas('stsTerm', fn ($q) => $q->where('is_current', true))
             ->get();
 
@@ -33,7 +33,7 @@ class StsSupervisionController extends Controller
     public function scoreForm(StsPlacement $stsPlacement)
     {
         $lecturer = $this->authLecturerOrAbort();
-        abort_unless($stsPlacement->lecturer_id === $lecturer->id, 403);
+        abort_unless(in_array($lecturer->id, [$stsPlacement->lecturer_id, $stsPlacement->second_lecturer_id], true), 403);
 
         $stsPlacement->load(['student.programme', 'partnerSchool', 'stsTerm.semester']);
 
@@ -57,7 +57,7 @@ class StsSupervisionController extends Controller
     public function scoreStore(Request $request, StsPlacement $stsPlacement)
     {
         $lecturer = $this->authLecturerOrAbort();
-        abort_unless($stsPlacement->lecturer_id === $lecturer->id, 403);
+        abort_unless(in_array($lecturer->id, [$stsPlacement->lecturer_id, $stsPlacement->second_lecturer_id], true), 403);
 
         $setting = StsScoreSetting::where('level', $stsPlacement->level)->first();
 
@@ -104,7 +104,7 @@ class StsSupervisionController extends Controller
         $lecturer = $this->authLecturerOrAbort();
 
         $placements = StsPlacement::with(['student.programme', 'partnerSchool'])
-            ->where('lecturer_id', $lecturer->id)
+            ->where(fn ($q) => $q->where('lecturer_id', $lecturer->id)->orWhere('second_lecturer_id', $lecturer->id))
             ->whereHas('stsTerm', fn ($q) => $q->where('is_current', true))
             ->get();
 

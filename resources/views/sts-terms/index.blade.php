@@ -70,6 +70,14 @@
                                                                 Activate
                                                             </button>
                                                         </form>
+                                                    @else
+                                                        <form action="{{ route('sts-terms.deactivate', $term) }}" method="POST" class="inline-block">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <button type="submit" class="text-xs text-orange-600 hover:text-orange-900 underline" onclick="return confirm('Deactivate this term? Students will immediately lose access to STS/Internship for this term until it (or another) is activated again.')">
+                                                                Deactivate
+                                                            </button>
+                                                        </form>
                                                     @endif
                                                     <a href="{{ route('sts-terms.edit', $term) }}" class="text-indigo-600 hover:text-indigo-900">
                                                         <i class="fas fa-edit"></i>

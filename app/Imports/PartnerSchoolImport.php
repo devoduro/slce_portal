@@ -18,6 +18,7 @@ class PartnerSchoolImport implements ToCollection, WithHeadingRow, WithValidatio
     protected array $errors = [];
 
     protected const CATEGORIES = ['early_grade', 'upper_primary', 'jhs'];
+    protected const TYPES = ['sts', 'internship'];
 
     /**
      * Handle rows that fail the rules() validation instead of aborting the whole import.
@@ -40,6 +41,7 @@ class PartnerSchoolImport implements ToCollection, WithHeadingRow, WithValidatio
         foreach ($rows as $row) {
             $name = trim((string) ($row['name'] ?? ''));
             $category = strtolower(trim((string) ($row['category'] ?? '')));
+            $type = strtolower(trim((string) ($row['type'] ?? '')));
             $capacity = (int) ($row['capacity'] ?? 0);
             $location = trim((string) ($row['location'] ?? '')) ?: null;
 
@@ -54,10 +56,17 @@ class PartnerSchoolImport implements ToCollection, WithHeadingRow, WithValidatio
                 continue;
             }
 
+            if (!in_array($type, self::TYPES, true)) {
+                $this->errors[] = "Invalid type \"{$row['type']}\" for school {$name}. Must be one of: " . implode(', ', self::TYPES) . '.';
+                $this->skipped++;
+                continue;
+            }
+
             $attributes = [
                 'name' => $name,
                 'location' => $location,
                 'category' => $category,
+                'type' => $type,
                 'capacity_level_100' => $capacity,
                 'capacity_level_200' => $capacity,
                 'capacity_level_300' => $capacity,
@@ -85,6 +94,7 @@ class PartnerSchoolImport implements ToCollection, WithHeadingRow, WithValidatio
         return [
             'name' => 'required',
             'category' => 'required',
+            'type' => 'required',
             'capacity' => 'required|numeric',
         ];
     }
