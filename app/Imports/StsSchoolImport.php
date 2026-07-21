@@ -75,10 +75,10 @@ class StsSchoolImport implements ToCollection, WithHeadingRow, WithValidation, S
                 continue;
             }
 
-            $school = $this->findSchool($schoolName);
+            $school = $this->findSchool($schoolName, $student->programme->sts_category ?? null);
 
             if (!$school) {
-                $this->errors[] = "Row for {$indexNumber}: school \"{$schoolName}\" does not match exactly one partner school.";
+                $this->errors[] = "Row for {$indexNumber}: school \"{$schoolName}\" does not match exactly one partner school for {$student->full_name}'s programme category.";
                 $this->skipped++;
                 continue;
             }
@@ -94,14 +94,28 @@ class StsSchoolImport implements ToCollection, WithHeadingRow, WithValidation, S
     }
 
     /**
-     * Case-insensitive exact match on school name. Returns null if not found or ambiguous
-     * (more than one school sharing that exact name) rather than guessing.
+     * Case-insensitive exact match on school name. A name alone can be ambiguous now that the
+     * same physical school can have multiple partner_schools rows (e.g. one for jhs_le and one
+     * for jhs_he students) - when that happens, disambiguate using the student's own programme
+     * category before giving up. Returns null if still not found, or still ambiguous.
      */
-    protected function findSchool(string $name): ?PartnerSchool
+    protected function findSchool(string $name, ?string $category): ?PartnerSchool
     {
         $matches = PartnerSchool::whereRaw('LOWER(name) = ?', [strtolower($name)])->get();
 
-        return $matches->count() === 1 ? $matches->first() : null;
+        if ($matches->count() === 1) {
+            return $matches->first();
+        }
+
+        if ($matches->count() > 1 && $category) {
+            $categoryMatches = $matches->where('category', $category);
+
+            if ($categoryMatches->count() === 1) {
+                return $categoryMatches->first();
+            }
+        }
+
+        return null;
     }
 
     public function rules(): array
