@@ -47,7 +47,16 @@
                             </div>
 
                             <div>
-                                <x-input id="internship_level_cutoff" name="internship_level_cutoff" type="number" step="100" min="100" max="800" label="Internship Level Cutoff" :value="old('internship_level_cutoff', 400)" required helper="College policy: Levels 100-300 are STS, Level 400 only is Internship - leave this at 400 unless the policy changes." />
+                                <x-input id="internship_level_cutoff" name="internship_level_cutoff" type="number" step="100" min="100" max="800" label="Internship Level Cutoff" :value="old('internship_level_cutoff', 300)" required helper="The level at which Internship begins (see Semester Cutoff alongside). College policy: 300 - leave this unless the policy changes." />
+                            </div>
+
+                            <div>
+                                <label for="internship_semester_cutoff" class="block text-sm font-medium text-gray-700">Internship Semester Cutoff</label>
+                                <select id="internship_semester_cutoff" name="internship_semester_cutoff" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md" required>
+                                    <option value="1" {{ old('internship_semester_cutoff', 2) == 1 ? 'selected' : '' }}>First Semester</option>
+                                    <option value="2" {{ old('internship_semester_cutoff', 2) == 2 ? 'selected' : '' }}>Second Semester</option>
+                                </select>
+                                <p class="mt-1 text-xs text-gray-400">At the cutoff level, placements only become Internship from this semester onward - e.g. Level 300 + Second Semester means Level 300/1st is STS, Level 300/2nd is Internship, Level 400 (either semester) is always Internship. Levels above the cutoff are always Internship regardless of this setting.</p>
                             </div>
                         </div>
 

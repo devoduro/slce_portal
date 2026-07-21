@@ -45,7 +45,7 @@ class ProgrammeController extends Controller
             'duration' => 'required|integer|min:1|max:10', // Form field is 'duration' but DB column is 'duration_years'
             'department' => 'required|string|max:255',
             'faculty' => 'required|string|max:255',
-            'sts_category' => 'nullable|in:early_grade,upper_primary,jhs',
+            'sts_category' => 'nullable|in:early_grade,upper_primary,jhs_le,jhs_he',
         ]);
 
         if ($validator->fails()) {
@@ -113,7 +113,7 @@ class ProgrammeController extends Controller
             'duration' => 'required|integer|min:1|max:10', // Form field is 'duration' but DB column is 'duration_years'
             'department' => 'required|string|max:255',
             'faculty' => 'required|string|max:255',
-            'sts_category' => 'nullable|in:early_grade,upper_primary,jhs',
+            'sts_category' => 'nullable|in:early_grade,upper_primary,jhs_le,jhs_he',
         ]);
 
         if ($validator->fails()) {

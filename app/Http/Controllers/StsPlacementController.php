@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\StsSchoolTemplateExport;
+use App\Exports\StsSupervisorTemplateExport;
+use App\Imports\StsSchoolImport;
+use App\Imports\StsSupervisorImport;
 use App\Models\Lecturer;
 use App\Models\PartnerSchool;
 use App\Models\StsPlacement;
 use App\Models\StsTerm;
 use App\Services\StsPlacementService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use Maatwebsite\Excel\Facades\Excel;
 
 class StsPlacementController extends Controller
 {
@@ -104,5 +110,147 @@ class StsPlacementController extends Controller
         }
 
         return back()->with('success', "School updated for {$stsPlacement->student->full_name}.");
+    }
+
+    /**
+     * Show the bulk supervisor-upload form, scoped to STS or Internship via ?type=.
+     */
+    public function supervisorsUploadForm(Request $request)
+    {
+        $type = $request->input('type') === 'internship' ? 'internship' : 'sts';
+        $term = StsTerm::where('is_current', true)->first();
+
+        return view('sts-placements.supervisors-upload', compact('type', 'term'));
+    }
+
+    /**
+     * Handle the bulk upload of STS/Internship supervisors, matched by student index number
+     * and lecturer name. Only touches placements of the given type in the current term.
+     */
+    public function supervisorsImport(Request $request)
+    {
+        $type = $request->input('type') === 'internship' ? 'internship' : 'sts';
+
+        $term = StsTerm::where('is_current', true)->first();
+
+        if (!$term) {
+            return redirect()->route('sts-placements.supervisors.upload', ['type' => $type])
+                ->with('error', 'No active STS term to import supervisors into.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('sts-placements.supervisors.upload', ['type' => $type])
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $import = new StsSupervisorImport($term->id, $type);
+            Excel::import($import, $request->file('excel_file'));
+
+            $stats = $import->getStats();
+            $message = "Processed {$stats['processed']} " . ucfirst($type) . " supervisor assignment(s), skipped {$stats['skipped']}.";
+
+            if (!empty($stats['errors'])) {
+                $message .= ' Issues: ' . implode(' | ', array_slice($stats['errors'], 0, 5));
+                if (count($stats['errors']) > 5) {
+                    $message .= ' (+' . (count($stats['errors']) - 5) . ' more)';
+                }
+
+                return redirect()->route('sts-placements.index', ['type' => $type])->with('warning', $message);
+            }
+
+            return redirect()->route('sts-placements.index', ['type' => $type])->with('success', $message);
+        } catch (\Exception $e) {
+            return redirect()->route('sts-placements.supervisors.upload', ['type' => $type])
+                ->with('error', 'Error importing supervisors: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download the supervisor upload template, pre-filled with two real lecturer names so
+     * admins can see the exact-match format expected.
+     */
+    public function supervisorsTemplate(Request $request)
+    {
+        $type = $request->input('type') === 'internship' ? 'internship' : 'sts';
+        $sampleNames = Lecturer::orderBy('name')->limit(2)->pluck('name')->all();
+
+        return Excel::download(new StsSupervisorTemplateExport($sampleNames), "{$type}_supervisors_template.xlsx");
+    }
+
+    /**
+     * Show the bulk partner-school-upload form, scoped to STS or Internship via ?type=.
+     */
+    public function schoolsUploadForm(Request $request)
+    {
+        $type = $request->input('type') === 'internship' ? 'internship' : 'sts';
+        $term = StsTerm::where('is_current', true)->first();
+
+        return view('sts-placements.schools-upload', compact('type', 'term'));
+    }
+
+    /**
+     * Handle the bulk upload of STS/Internship partner schools, matched by student index
+     * number and school name. Only touches placements of the given type in the current term.
+     */
+    public function schoolsImport(Request $request)
+    {
+        $type = $request->input('type') === 'internship' ? 'internship' : 'sts';
+
+        $term = StsTerm::where('is_current', true)->first();
+
+        if (!$term) {
+            return redirect()->route('sts-placements.schools.upload', ['type' => $type])
+                ->with('error', 'No active STS term to import schools into.');
+        }
+
+        $validator = Validator::make($request->all(), [
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('sts-placements.schools.upload', ['type' => $type])
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        try {
+            $import = new StsSchoolImport($term->id, $type);
+            Excel::import($import, $request->file('excel_file'));
+
+            $stats = $import->getStats();
+            $message = "Processed {$stats['processed']} " . ucfirst($type) . " school assignment(s), skipped {$stats['skipped']}.";
+
+            if (!empty($stats['errors'])) {
+                $message .= ' Issues: ' . implode(' | ', array_slice($stats['errors'], 0, 5));
+                if (count($stats['errors']) > 5) {
+                    $message .= ' (+' . (count($stats['errors']) - 5) . ' more)';
+                }
+
+                return redirect()->route('sts-placements.index', ['type' => $type])->with('warning', $message);
+            }
+
+            return redirect()->route('sts-placements.index', ['type' => $type])->with('success', $message);
+        } catch (\Exception $e) {
+            return redirect()->route('sts-placements.schools.upload', ['type' => $type])
+                ->with('error', 'Error importing schools: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download the school upload template, pre-filled with two real partner school names so
+     * admins can see the exact-match format expected.
+     */
+    public function schoolsTemplate(Request $request)
+    {
+        $type = $request->input('type') === 'internship' ? 'internship' : 'sts';
+        $sampleNames = PartnerSchool::orderBy('name')->limit(2)->pluck('name')->all();
+
+        return Excel::download(new StsSchoolTemplateExport($sampleNames), "{$type}_schools_template.xlsx");
     }
 }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ config('app.name', 'Transcript System') }}</title>
+    <title>{{ config('app.name', 'College MIS') }}</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -119,7 +119,7 @@
 
             <!-- Logo -->
             <div class="flex items-center justify-center h-16 px-4 border-b border-gray-200 overflow-hidden">
-                <h1 class="text-xl font-bold gradient-text whitespace-nowrap" x-show="!sidebarCollapsed" x-cloak>Transcript System</h1>
+                <h1 class="text-xl font-bold gradient-text whitespace-nowrap" x-show="!sidebarCollapsed" x-cloak>College AIMS</h1>
                 <div class="w-9 h-9 rounded-lg gradient-bg flex items-center justify-center text-white font-bold text-sm flex-shrink-0" x-show="sidebarCollapsed" x-cloak>TS</div>
             </div>
 
@@ -159,6 +159,15 @@
                 </a>
                 @endcan
 
+                @cannot('manage-students')
+                    @can('view-student-directory')
+                    <a href="{{ route('student-directory.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('student-directory.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                        <i class="fas fa-user-graduate w-5"></i>
+                        <span>Students</span>
+                    </a>
+                    @endcan
+                @endcannot
+
                 @can('manage-programmes')
                 <a href="{{ route('programmes.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('programmes.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-graduation-cap w-5"></i>
@@ -190,12 +199,12 @@
                 </a>
                 @endcan
 
-                @can('manage-results')
+                @canany(['manage-results', 'view-results'])
                 <a href="{{ route('results.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('results.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
                     <i class="fas fa-chart-bar w-5"></i>
                     <span>Results</span>
                 </a>
-                @endcan
+                @endcanany
 
                 @can('manage-transcripts')
                 <a href="{{ route('transcripts.index') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('transcripts.*') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">

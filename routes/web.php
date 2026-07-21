@@ -148,6 +148,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/student-halls/print', [\App\Http\Controllers\StudentHallController::class, 'print'])->name('student-halls.print');
     });
 
+    // Student Directory - read-only, no grades (e.g. for Accountant)
+    Route::middleware('permission:view-student-directory')->group(function () {
+        Route::get('/student-directory', [\App\Http\Controllers\StudentDirectoryController::class, 'index'])->name('student-directory.index');
+        Route::get('/student-directory/{student}', [\App\Http\Controllers\StudentDirectoryController::class, 'show'])->name('student-directory.show');
+    });
+
     // Bulk SMS
     Route::middleware('permission:send-sms')->group(function () {
         Route::get('/sms', [\App\Http\Controllers\SmsController::class, 'index'])->name('sms.index');
@@ -184,19 +190,30 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('departments', \App\Http\Controllers\DepartmentController::class)->except(['show']);
     });
 
-    // Results Management
+    // Results Management - creating/editing/deleting a result requires manage-results (Exams
+    // Officer / Admin); a Lecturer only has view-results, so they can see results for their own
+    // courses/students (already scoped in ResultController via ScopesToLecturer) but not add,
+    // edit, delete, or bulk-upload any. This mutation group is registered first, and the
+    // filter/search literal paths in the view group below are registered before that group's
+    // /results/{result} (show) wildcard - otherwise e.g. /results/create or /results/search
+    // would be swallowed by show() with {result}='create'/'search' and 404 via failed model
+    // binding (this was already happening for /results/search before this restructuring).
     Route::middleware('permission:manage-results')->group(function () {
-        Route::resource('results', ResultController::class);
-        Route::get('/results/search', [ResultController::class, 'search'])->name('results.search');
-        Route::get('/results/filter/academic-year', [ResultController::class, 'filterByAcademicYear'])->name('results.filter.academic-year');
-        Route::get('/results/filter/semester', [ResultController::class, 'filterBySemester'])->name('results.filter.semester');
-        Route::get('/results/filter/student', [ResultController::class, 'filterByStudent'])->name('results.filter.student');
-        Route::get('/results/filter/course', [ResultController::class, 'filterByCourse'])->name('results.filter.course');
+        Route::resource('results', ResultController::class)->only(['create', 'store', 'edit', 'update', 'destroy']);
 
         // Bulk Upload Results
         Route::get('/bulkresults/upload', [ResultController::class, 'bulkCreate'])->name('results.bulk-create');
         Route::post('/results/bulk-store', [ResultController::class, 'bulkStore'])->name('results.bulk-store');
         Route::get('/bulkresults/download-template', [ResultController::class, 'downloadTemplate'])->name('results.download-template');
+    });
+
+    Route::middleware('permission:manage-results|view-results')->group(function () {
+        Route::get('/results/search', [ResultController::class, 'search'])->name('results.search');
+        Route::get('/results/filter/academic-year', [ResultController::class, 'filterByAcademicYear'])->name('results.filter.academic-year');
+        Route::get('/results/filter/semester', [ResultController::class, 'filterBySemester'])->name('results.filter.semester');
+        Route::get('/results/filter/student', [ResultController::class, 'filterByStudent'])->name('results.filter.student');
+        Route::get('/results/filter/course', [ResultController::class, 'filterByCourse'])->name('results.filter.course');
+        Route::resource('results', ResultController::class)->only(['index', 'show']);
     });
 
     // Programmes
@@ -308,11 +325,18 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/partner-schools/import', [\App\Http\Controllers\PartnerSchoolController::class, 'import'])->name('partner-schools.import.store');
         Route::get('/partner-schools/import/template', [\App\Http\Controllers\PartnerSchoolController::class, 'downloadTemplate'])->name('partner-schools.import.template');
         Route::get('/partner-schools/print', [\App\Http\Controllers\PartnerSchoolController::class, 'printRoster'])->name('partner-schools.print');
+        Route::post('/partner-schools/bulk-destroy', [\App\Http\Controllers\PartnerSchoolController::class, 'bulkDestroy'])->name('partner-schools.bulk-destroy');
         Route::resource('partner-schools', \App\Http\Controllers\PartnerSchoolController::class)->except(['show']);
 
         Route::resource('sts-score-settings', \App\Http\Controllers\StsScoreSettingController::class)->except(['show']);
 
         Route::get('/sts-placements', [\App\Http\Controllers\StsPlacementController::class, 'index'])->name('sts-placements.index');
+        Route::get('/sts-placements/supervisors/upload', [\App\Http\Controllers\StsPlacementController::class, 'supervisorsUploadForm'])->name('sts-placements.supervisors.upload');
+        Route::post('/sts-placements/supervisors/import', [\App\Http\Controllers\StsPlacementController::class, 'supervisorsImport'])->name('sts-placements.supervisors.import');
+        Route::get('/sts-placements/supervisors/template', [\App\Http\Controllers\StsPlacementController::class, 'supervisorsTemplate'])->name('sts-placements.supervisors.template');
+        Route::get('/sts-placements/schools/upload', [\App\Http\Controllers\StsPlacementController::class, 'schoolsUploadForm'])->name('sts-placements.schools.upload');
+        Route::post('/sts-placements/schools/import', [\App\Http\Controllers\StsPlacementController::class, 'schoolsImport'])->name('sts-placements.schools.import');
+        Route::get('/sts-placements/schools/template', [\App\Http\Controllers\StsPlacementController::class, 'schoolsTemplate'])->name('sts-placements.schools.template');
         Route::put('/sts-placements/{stsPlacement}/assign-supervisor', [\App\Http\Controllers\StsPlacementController::class, 'assignSupervisor'])->name('sts-placements.assign-supervisor');
         Route::put('/sts-placements/{stsPlacement}/undo-school', [\App\Http\Controllers\StsPlacementController::class, 'undoSchool'])->name('sts-placements.undo-school');
         Route::put('/sts-placements/{stsPlacement}/change-school', [\App\Http\Controllers\StsPlacementController::class, 'changeSchool'])->name('sts-placements.change-school');

@@ -25,12 +25,15 @@ class StsSelectionController extends Controller
         $placement = null;
         $eligible = false;
         $percentage = 0;
+        $isBiometricVerified = false;
 
         if ($term) {
             $placement = StsPlacement::with(['partnerSchool', 'lecturer'])
                 ->where('student_id', $student->id)
                 ->where('sts_term_id', $term->id)
                 ->first();
+
+            $isBiometricVerified = $student->hasBiometricVerification($term->semester);
 
             $eligible = $student->meetsRegistrationThreshold($term->semester);
 
@@ -42,7 +45,7 @@ class StsSelectionController extends Controller
             $percentage = $billAmount > 0 ? round((($billAmount - $balanceDue) / $billAmount) * 100, 1) : 0.0;
         }
 
-        return view('student.sts.index', compact('student', 'term', 'placement', 'eligible', 'percentage'));
+        return view('student.sts.index', compact('student', 'term', 'placement', 'eligible', 'percentage', 'isBiometricVerified'));
     }
 
     /**
@@ -57,6 +60,7 @@ class StsSelectionController extends Controller
             ->where('sts_term_id', $term->id)
             ->firstOrFail();
 
+        abort_unless($student->hasBiometricVerification($term->semester), 403, 'You must complete biometric check-in before you can select a school.');
         abort_unless($student->meetsRegistrationThreshold($term->semester), 403, 'You have not met the fee payment threshold required to select a school.');
         abort_if($placement->partner_school_id, 403, 'You have already selected a partner school.');
 
@@ -84,6 +88,7 @@ class StsSelectionController extends Controller
         $student = Auth::user()->student;
         $term = StsTerm::where('is_current', true)->firstOrFail();
 
+        abort_unless($student->hasBiometricVerification($term->semester), 403, 'You must complete biometric check-in before you can select a school.');
         abort_unless($student->meetsRegistrationThreshold($term->semester), 403, 'You have not met the fee payment threshold required to select a school.');
 
         try {
@@ -110,6 +115,7 @@ class StsSelectionController extends Controller
             ->firstOrFail();
 
         abort_unless($placement->partner_school_id && $placement->lecturer_id, 403, 'Your school and supervisor must both be assigned before you can print your letter.');
+        abort_unless($student->hasBiometricVerification($term->semester), 403, 'You must complete biometric check-in before you can print your letter.');
         abort_unless($student->meetsRegistrationThreshold($term->semester), 403, 'You have not met the fee payment threshold required to print your letter.');
 
         if (!$placement->letter_printed_at) {

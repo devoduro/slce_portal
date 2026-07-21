@@ -317,20 +317,22 @@ class ResultController extends Controller
     public function search(Request $request)
     {
         $query = $request->input('query');
-        
+
         $results = Result::with(['student', 'course', 'academicYear', 'semester'])
-            ->whereHas('student', function($q) use ($query) {
-                $q->where('first_name', 'like', "%{$query}%")
-                  ->orWhere('full_name', 'like', "%{$query}%")
-                  ->orWhere('student_id', 'like', "%{$query}%");
-            })
-            ->orWhereHas('course', function($q) use ($query) {
-                $q->where('code', 'like', "%{$query}%")
-                  ->orWhere('title', 'like', "%{$query}%");
+            ->when($this->isScopedLecturer(), fn ($q) => $q->whereIn('course_id', $this->lecturerCourseIds()))
+            ->where(function ($outer) use ($query) {
+                $outer->whereHas('student', function ($q) use ($query) {
+                    $q->where('full_name', 'like', "%{$query}%")
+                        ->orWhere('index_number', 'like', "%{$query}%");
+                })
+                ->orWhereHas('course', function ($q) use ($query) {
+                    $q->where('code', 'like', "%{$query}%")
+                        ->orWhere('title', 'like', "%{$query}%");
+                });
             })
             ->orderBy('created_at', 'desc')
             ->paginate(20);
-            
+
         return view('results.index', compact('results', 'query'));
     }
     

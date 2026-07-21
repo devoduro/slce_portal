@@ -80,11 +80,23 @@ class StsPlacement extends Model
     }
 
     /**
-     * Determine whether a level falls under "STS" or "Internship" for a given term cutoff.
+     * Determine whether a level/semester combination falls under "STS" or "Internship", given
+     * a term's configured cutoff. Any level above $levelCutoff is always Internship; at exactly
+     * $levelCutoff, it only becomes Internship once the term's own semester number reaches
+     * $semesterCutoff (e.g. levelCutoff=300, semesterCutoff=2 means "Level 300 Second Semester
+     * onward - and every level above 300 - is Internship; Level 300 First Semester is STS").
      */
-    public static function determineType(int $level, int $cutoff = 300): string
+    public static function determineType(int $level, int $termSemesterNumber, int $levelCutoff = 300, int $semesterCutoff = 2): string
     {
-        return $level >= $cutoff ? self::TYPE_INTERNSHIP : self::TYPE_STS;
+        if ($level > $levelCutoff) {
+            return self::TYPE_INTERNSHIP;
+        }
+
+        if ($level === $levelCutoff && $termSemesterNumber >= $semesterCutoff) {
+            return self::TYPE_INTERNSHIP;
+        }
+
+        return self::TYPE_STS;
     }
 
     /**

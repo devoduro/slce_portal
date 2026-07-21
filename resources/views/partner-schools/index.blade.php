@@ -49,8 +49,13 @@
                                 <option value="{{ $value }}" {{ request('type') === $value ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
+                        <select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 shadow-sm text-sm">
+                            @foreach([100, 200, 300, 'all'] as $option)
+                                <option value="{{ $option }}" {{ request('per_page', 100) == $option ? 'selected' : '' }}>{{ $option === 'all' ? 'All' : $option . ' per page' }}</option>
+                            @endforeach
+                        </select>
                         <button type="submit" class="px-4 py-2 bg-gray-100 rounded-md text-sm text-gray-700 hover:bg-gray-200">Filter</button>
-                        @if(request()->hasAny(['search', 'category', 'type']))
+                        @if(request()->hasAny(['search', 'category', 'type', 'per_page']))
                             <a href="{{ route('partner-schools.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600">Clear</a>
                         @endif
                     </form>
@@ -61,10 +66,30 @@
                             <h3 class="text-lg font-medium text-gray-500">No partner schools found</h3>
                         </div>
                     @else
+                        <!-- Empty form that the scattered bulk-select checkboxes/button below associate with
+                             via the form="bulk-delete-form" attribute, so it can sit alongside (not wrap)
+                             each row's own independent single-delete form. -->
+                        <form id="bulk-delete-form" method="POST" action="{{ route('partner-schools.bulk-destroy') }}">
+                            @csrf
+                        </form>
+
+                        <div class="flex items-center justify-between mb-3">
+                            <label class="flex items-center gap-2 text-sm text-gray-600">
+                                <input type="checkbox" id="select-all" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                Select All
+                            </label>
+                            <button type="submit" form="bulk-delete-form" id="bulk-delete-btn" disabled
+                                class="bg-red-600 text-white rounded-md px-4 py-2 text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                onclick="return confirm('Delete the selected school(s)? Schools with existing placements will be skipped. This cannot be undone.')">
+                                <i class="fas fa-trash mr-1"></i> Delete Selected (<span id="selected-count">0</span>)
+                            </button>
+                        </div>
+
                         <div class="overflow-x-auto">
                             <table class="min-w-full divide-y divide-gray-200">
                                 <thead class="bg-gray-50">
                                     <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
@@ -82,6 +107,9 @@
                                 <tbody class="bg-white divide-y divide-gray-200">
                                     @foreach($schools as $school)
                                         <tr>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <input type="checkbox" name="school_ids[]" value="{{ $school->id }}" form="bulk-delete-form" class="school-checkbox rounded border-gray-300 text-primary-600 focus:ring-primary-500">
+                                            </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $school->name }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">{{ $school->categoryLabel() }}</span>
@@ -96,6 +124,9 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $school->location ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 {{ $school->capacity_level_100 }} / {{ $school->capacity_level_200 }} / {{ $school->capacity_level_300 }} / {{ $school->capacity_level_400 }}
+                                                @if($school->total_capacity !== null)
+                                                    <div class="text-xs text-gray-400">Total: {{ $school->total_capacity }}</div>
+                                                @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                 @if(!$currentTerm)
@@ -147,4 +178,26 @@
             </div>
         </div>
     </div>
+
+    @push('scripts')
+    <script>
+        const selectAll = document.getElementById('select-all');
+        const checkboxes = document.querySelectorAll('.school-checkbox');
+        const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+        const selectedCount = document.getElementById('selected-count');
+
+        function updateBulkDeleteState() {
+            const checked = document.querySelectorAll('.school-checkbox:checked').length;
+            if (bulkDeleteBtn) bulkDeleteBtn.disabled = checked === 0;
+            if (selectedCount) selectedCount.textContent = checked;
+        }
+
+        selectAll?.addEventListener('change', () => {
+            checkboxes.forEach(cb => cb.checked = selectAll.checked);
+            updateBulkDeleteState();
+        });
+
+        checkboxes.forEach(cb => cb.addEventListener('change', updateBulkDeleteState));
+    </script>
+    @endpush
 </x-app-layout>

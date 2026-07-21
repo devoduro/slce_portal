@@ -24,12 +24,14 @@ class PartnerSchool extends Model
         'capacity_level_200',
         'capacity_level_300',
         'capacity_level_400',
+        'total_capacity',
     ];
 
     public const CATEGORY_LABELS = [
         'early_grade' => 'Early Grade',
         'upper_primary' => 'Upper Primary',
-        'jhs' => 'JHS',
+        'jhs_le' => 'JHS - Languages',
+        'jhs_he' => 'JHS - Home Economics',
     ];
 
     public const TYPE_LABELS = [

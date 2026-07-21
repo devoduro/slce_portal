@@ -5,12 +5,14 @@
                 {{ __('Results Management') }}
             </h2>
             <div class="flex space-x-2">
-                <x-button href="{{ route('results.create') }}" icon="fas fa-plus">
-                    {{ __('Add New Result') }}
-                </x-button>
-                <x-button href="{{ route('bulkresults.upload') }}" variant="secondary" icon="fas fa-upload">
-                    {{ __('Bulk Add Results') }}
-                </x-button>
+                @can('manage-results')
+                    <x-button href="{{ route('results.create') }}" icon="fas fa-plus">
+                        {{ __('Add New Result') }}
+                    </x-button>
+                    <x-button href="{{ route('bulkresults.upload') }}" variant="secondary" icon="fas fa-upload">
+                        {{ __('Bulk Add Results') }}
+                    </x-button>
+                @endcan
             </div>
         </div>
     </x-slot>
@@ -179,16 +181,18 @@
                                             <a href="{{ route('results.show', $result) }}" class="text-blue-600 hover:text-blue-900">
                                                 <i class="fas fa-eye"></i> View
                                             </a>
-                                            <a href="{{ route('results.edit', $result) }}" class="text-primary-600 hover:text-primary-900">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </a>
-                                            <form action="{{ route('results.destroy', $result) }}" method="POST" class="inline-block">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to delete this result?')">
-                                                    <i class="fas fa-trash"></i> Delete
-                                                </button>
-                                            </form>
+                                            @can('manage-results')
+                                                <a href="{{ route('results.edit', $result) }}" class="text-primary-600 hover:text-primary-900">
+                                                    <i class="fas fa-edit"></i> Edit
+                                                </a>
+                                                <form action="{{ route('results.destroy', $result) }}" method="POST" class="inline-block">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="text-red-600 hover:text-red-900" onclick="return confirm('Are you sure you want to delete this result?')">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </button>
+                                                </form>
+                                            @endcan
                                         </div>
                                     </td>
                                 </tr>
@@ -208,6 +212,7 @@
                 </div>
             </div>
             
+            @can('manage-results')
             <!-- Action Buttons -->
             <div class="mt-6 flex justify-end space-x-3">
                 <a href="{{ route('results.create') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
@@ -217,6 +222,7 @@
                     <i class="fas fa-print mr-2"></i> Print List
                 </a>
             </div>
+            @endcan
         </div>
     </div>
 </x-app-layout>

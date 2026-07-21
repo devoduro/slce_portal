@@ -29,7 +29,8 @@ class Programme extends Model
     public const STS_CATEGORY_LABELS = [
         'early_grade' => 'Early Grade',
         'upper_primary' => 'Upper Primary',
-        'jhs' => 'JHS',
+        'jhs_le' => 'JHS - Languages',
+        'jhs_he' => 'JHS - Home Economics',
     ];
 
     /**

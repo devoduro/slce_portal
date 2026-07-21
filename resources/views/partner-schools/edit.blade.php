@@ -62,6 +62,9 @@
                                     <x-input id="capacity_level_{{ $level }}" name="capacity_level_{{ $level }}" type="number" min="0" label="Level {{ $level }}" :value="old('capacity_level_' . $level, $partnerSchool->{'capacity_level_' . $level})" required />
                                 @endforeach
                             </div>
+                            <div class="mt-4 max-w-xs">
+                                <x-input id="total_capacity" name="total_capacity" type="number" min="0" label="Total Capacity (optional)" :value="old('total_capacity', $partnerSchool->total_capacity)" helper="Informational overall figure (e.g. a physical building limit). Leave blank to default to the sum of the levels above." />
+                            </div>
                         </div>
 
                         <div class="mt-6 flex justify-end space-x-3">

@@ -5,9 +5,11 @@
                 View Result
             </h2>
             <div class="flex space-x-2">
-                <x-button href="{{ route('results.edit', $result) }}" icon="fas fa-edit">
-                    Edit Result
-                </x-button>
+                @can('manage-results')
+                    <x-button href="{{ route('results.edit', $result) }}" icon="fas fa-edit">
+                        Edit Result
+                    </x-button>
+                @endcan
                 <x-button href="{{ route('results.index') }}" variant="secondary" icon="fas fa-arrow-left">
                     Back to List
                 </x-button>

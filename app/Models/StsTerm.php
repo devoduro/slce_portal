@@ -22,6 +22,7 @@ class StsTerm extends Model
         'proposed_start_date',
         'proposed_end_date',
         'internship_level_cutoff',
+        'internship_semester_cutoff',
         'is_current',
     ];
 

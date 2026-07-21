@@ -37,7 +37,17 @@ class PartnerSchoolController extends Controller
             });
         }
 
-        $schools = $query->orderBy('name')->paginate(20)->withQueryString();
+        $perPageInput = $request->input('per_page', 100);
+        if ($perPageInput === 'all') {
+            $perPage = max((clone $query)->count(), 1);
+        } else {
+            $perPage = (int) $perPageInput;
+            if (!in_array($perPage, [100, 200, 300], true)) {
+                $perPage = 100;
+            }
+        }
+
+        $schools = $query->orderBy('name')->paginate($perPage)->withQueryString();
 
         $currentTerm = StsTerm::where('is_current', true)->first();
 
@@ -78,10 +88,13 @@ class PartnerSchoolController extends Controller
                 ->withInput();
         }
 
-        PartnerSchool::create($request->only([
+        $data = $request->only([
             'name', 'location', 'category', 'type',
-            'capacity_level_100', 'capacity_level_200', 'capacity_level_300', 'capacity_level_400',
-        ]));
+            'capacity_level_100', 'capacity_level_200', 'capacity_level_300', 'capacity_level_400', 'total_capacity',
+        ]);
+        $data['total_capacity'] = $data['total_capacity'] ?: $this->defaultTotalCapacity($data);
+
+        PartnerSchool::create($data);
 
         return redirect()->route('partner-schools.index')
             ->with('success', 'Partner school added successfully.');
@@ -108,10 +121,13 @@ class PartnerSchoolController extends Controller
                 ->withInput();
         }
 
-        $partnerSchool->update($request->only([
+        $data = $request->only([
             'name', 'location', 'category', 'type',
-            'capacity_level_100', 'capacity_level_200', 'capacity_level_300', 'capacity_level_400',
-        ]));
+            'capacity_level_100', 'capacity_level_200', 'capacity_level_300', 'capacity_level_400', 'total_capacity',
+        ]);
+        $data['total_capacity'] = $data['total_capacity'] ?: $this->defaultTotalCapacity($data);
+
+        $partnerSchool->update($data);
 
         return redirect()->route('partner-schools.index')
             ->with('success', 'Partner school updated successfully.');
@@ -131,6 +147,35 @@ class PartnerSchoolController extends Controller
 
         return redirect()->route('partner-schools.index')
             ->with('success', 'Partner school deleted successfully.');
+    }
+
+    /**
+     * Delete multiple partner schools at once, skipping any that already have placements
+     * (same guard as the single destroy() above) rather than failing the whole batch.
+     */
+    public function bulkDestroy(Request $request)
+    {
+        $request->validate([
+            'school_ids' => 'required|array',
+            'school_ids.*' => 'exists:partner_schools,id',
+        ]);
+
+        $schools = PartnerSchool::whereIn('id', $request->school_ids)->withCount('placements')->get();
+
+        $deletable = $schools->where('placements_count', 0);
+        $blocked = $schools->where('placements_count', '>', 0);
+
+        PartnerSchool::whereIn('id', $deletable->pluck('id'))->delete();
+
+        $message = 'Deleted ' . $deletable->count() . ' school(s).';
+
+        if ($blocked->isNotEmpty()) {
+            $message .= ' Skipped ' . $blocked->count() . ' with existing placements: ' . $blocked->pluck('name')->implode(', ') . '.';
+
+            return redirect()->route('partner-schools.index')->with('warning', $message);
+        }
+
+        return redirect()->route('partner-schools.index')->with('success', $message);
     }
 
     /**
@@ -246,12 +291,25 @@ class PartnerSchoolController extends Controller
         return [
             'name' => 'required|string|max:255',
             'location' => 'nullable|string|max:255',
-            'category' => 'required|in:early_grade,upper_primary,jhs',
+            'category' => 'required|in:early_grade,upper_primary,jhs_le,jhs_he',
             'type' => 'required|in:sts,internship',
             'capacity_level_100' => 'required|integer|min:0',
             'capacity_level_200' => 'required|integer|min:0',
             'capacity_level_300' => 'required|integer|min:0',
             'capacity_level_400' => 'required|integer|min:0',
+            'total_capacity' => 'nullable|integer|min:0',
         ];
+    }
+
+    /**
+     * Informational overall capacity when left blank on the form/upload - the sum of the
+     * per-level quotas, which are what actually gate selection in availableQuota().
+     */
+    protected function defaultTotalCapacity(array $data): int
+    {
+        return (int) ($data['capacity_level_100'] ?? 0)
+            + (int) ($data['capacity_level_200'] ?? 0)
+            + (int) ($data['capacity_level_300'] ?? 0)
+            + (int) ($data['capacity_level_400'] ?? 0);
     }
 }

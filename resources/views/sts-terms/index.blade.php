@@ -51,7 +51,7 @@
                                                 {{ $term->proposed_start_date->format('M d, Y') }} &ndash; {{ $term->proposed_end_date->format('M d, Y') }}
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                &ge; Level {{ $term->internship_level_cutoff }} = Internship
+                                                Level {{ $term->internship_level_cutoff }}/Sem {{ $term->internship_semester_cutoff }}+ = Internship
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 @if($term->is_current)

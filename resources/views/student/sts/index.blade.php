@@ -31,6 +31,19 @@
         <div class="p-4 bg-gray-100 border-l-4 border-gray-400 text-gray-700 rounded">
             You have not been included in this STS term yet. Please contact the STS Unit if you believe this is an error.
         </div>
+    @elseif(!$isBiometricVerified)
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Biometric Check-In</h3>
+            <div class="flex items-center gap-4">
+                <span class="px-3 py-1 inline-flex items-center gap-2 text-sm font-semibold rounded-full bg-red-100 text-red-800">
+                    <i class="fas fa-fingerprint"></i> Not Done
+                </span>
+                <p class="text-sm text-gray-500">Please visit the biometric station on campus to confirm your presence for this semester.</p>
+            </div>
+        </div>
+        <div class="p-4 bg-red-50 border-l-4 border-red-400 text-red-700 rounded">
+            You must complete biometric check-in before STS/Internship is available to you.
+        </div>
     @else
         <!-- Eligibility -->
         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">

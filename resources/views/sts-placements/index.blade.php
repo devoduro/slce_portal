@@ -1,8 +1,24 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('STS/Internship Placements') }}
-        </h2>
+        <div class="flex justify-between items-center">
+            <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                {{ __('STS/Internship Placements') }}
+            </h2>
+            <div class="flex flex-wrap gap-2 justify-end">
+                <x-button href="{{ route('sts-placements.schools.upload', ['type' => 'sts']) }}" variant="secondary" icon="fas fa-upload">
+                    {{ __('Upload STS Schools') }}
+                </x-button>
+                <x-button href="{{ route('sts-placements.schools.upload', ['type' => 'internship']) }}" variant="secondary" icon="fas fa-upload">
+                    {{ __('Upload Internship Schools') }}
+                </x-button>
+                <x-button href="{{ route('sts-placements.supervisors.upload', ['type' => 'sts']) }}" variant="secondary" icon="fas fa-upload">
+                    {{ __('Upload STS Supervisors') }}
+                </x-button>
+                <x-button href="{{ route('sts-placements.supervisors.upload', ['type' => 'internship']) }}" variant="secondary" icon="fas fa-upload">
+                    {{ __('Upload Internship Supervisors') }}
+                </x-button>
+            </div>
+        </div>
     </x-slot>
 
     <div class="py-12">
@@ -11,6 +27,9 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     @if(session('success'))
                         <div class="mb-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 text-sm">{{ session('success') }}</div>
+                    @endif
+                    @if(session('warning'))
+                        <div class="mb-4 p-4 bg-amber-50 border-l-4 border-amber-500 text-amber-700 text-sm">{{ session('warning') }}</div>
                     @endif
                     @if(session('error'))
                         <div class="mb-4 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm">{{ session('error') }}</div>

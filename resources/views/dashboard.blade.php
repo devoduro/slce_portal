@@ -10,7 +10,7 @@
         <div class="gradient-bg rounded-lg shadow-lg p-6 text-white">
             <div class="flex flex-col md:flex-row justify-between items-center">
                 <div>
-                    <h2 class="text-2xl font-bold mb-2">Welcome to Transcript System</h2>
+                    <h2 class="text-2xl font-bold mb-2">Welcome to College AIMS</h2>
                     <p class="opacity-90">Manage student transcripts, courses, and academic records efficiently.</p>
                 </div>
                 <div class="mt-4 md:mt-0">

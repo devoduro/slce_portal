@@ -47,7 +47,7 @@ class StsTermController extends Controller
                 ->withInput();
         }
 
-        StsTerm::create($request->only(['semester_id', 'name', 'proposed_start_date', 'proposed_end_date', 'internship_level_cutoff']));
+        StsTerm::create($request->only(['semester_id', 'name', 'proposed_start_date', 'proposed_end_date', 'internship_level_cutoff', 'internship_semester_cutoff']));
 
         return redirect()->route('sts-terms.index')
             ->with('success', 'STS term created successfully.');
@@ -76,7 +76,7 @@ class StsTermController extends Controller
                 ->withInput();
         }
 
-        $stsTerm->update($request->only(['semester_id', 'name', 'proposed_start_date', 'proposed_end_date', 'internship_level_cutoff']));
+        $stsTerm->update($request->only(['semester_id', 'name', 'proposed_start_date', 'proposed_end_date', 'internship_level_cutoff', 'internship_semester_cutoff']));
 
         return redirect()->route('sts-terms.index')
             ->with('success', 'STS term updated successfully.');
@@ -117,13 +117,19 @@ class StsTermController extends Controller
             $stsCourse = Course::where('code', 'STS')->where('is_sts_course', true)->first();
             $internshipCourse = Course::where('code', 'INTERNSHIP')->where('is_sts_course', true)->first();
             $academicYearId = $stsTerm->semester->academic_year_id;
+            $termSemesterNumber = $stsTerm->semester->semester_number;
 
             Student::where('status', 'active')
                 ->whereNotNull('level')
                 ->whereHas('programme', fn ($q) => $q->whereNotNull('sts_category'))
-                ->chunkById(200, function ($students) use ($stsTerm, $stsCourse, $internshipCourse, $academicYearId) {
+                ->chunkById(200, function ($students) use ($stsTerm, $stsCourse, $internshipCourse, $academicYearId, $termSemesterNumber) {
                     foreach ($students as $student) {
-                        $type = StsPlacement::determineType((int) $student->level, $stsTerm->internship_level_cutoff);
+                        $type = StsPlacement::determineType(
+                            (int) $student->level,
+                            $termSemesterNumber,
+                            $stsTerm->internship_level_cutoff,
+                            $stsTerm->internship_semester_cutoff
+                        );
 
                         StsPlacement::firstOrCreate(
                             ['student_id' => $student->id, 'sts_term_id' => $stsTerm->id],
@@ -179,6 +185,7 @@ class StsTermController extends Controller
             'proposed_start_date' => 'required|date',
             'proposed_end_date' => 'required|date|after:proposed_start_date',
             'internship_level_cutoff' => 'required|integer|min:100|max:800',
+            'internship_semester_cutoff' => 'required|integer|in:1,2',
         ];
     }
 }
