@@ -13,9 +13,12 @@ use Illuminate\Support\Facades\DB;
 class StsSupervisionController extends Controller
 {
     /**
-     * List the authenticated lecturer's assigned STS/Internship students for the current term.
+     * List the authenticated lecturer's assigned STS/Internship students for the current term,
+     * with search/filter/sort - all applied in PHP over the lecturer's own (typically small)
+     * placement set rather than a paginated query, since this is scoped to one lecturer's
+     * assigned students, not the whole student body.
      */
-    public function index()
+    public function index(Request $request)
     {
         $lecturer = $this->authLecturerOrAbort();
 
@@ -24,7 +27,45 @@ class StsSupervisionController extends Controller
             ->whereHas('stsTerm', fn ($q) => $q->where('is_current', true))
             ->get();
 
-        return view('sts-supervision.index', compact('lecturer', 'placements'));
+        // Dropdown options derived from this lecturer's own assigned students only, so the
+        // filters never offer a programme/level/type that would return zero results.
+        $programmes = $placements->pluck('student.programme')->filter()->unique('id')->sortBy('name')->values();
+        $levels = $placements->pluck('level')->unique()->sort()->values();
+
+        // Whether the lecturer has any students at all this term, independent of the filters
+        // below - the "Print Supervisor Letter" button covers all of them, not just the
+        // currently filtered view, so it shouldn't disappear just because a filter matched none.
+        $hasAnyPlacements = $placements->isNotEmpty();
+
+        if ($request->filled('search')) {
+            $search = strtolower($request->search);
+            $placements = $placements->filter(fn ($p) => str_contains(strtolower($p->student->full_name ?? ''), $search)
+                || str_contains(strtolower($p->student->index_number ?? ''), $search));
+        }
+
+        if ($request->filled('type')) {
+            $placements = $placements->where('type', $request->type);
+        }
+
+        if ($request->filled('programme_id')) {
+            $placements = $placements->filter(fn ($p) => (int) ($p->student->programme_id ?? 0) === (int) $request->programme_id);
+        }
+
+        if ($request->filled('level')) {
+            $placements = $placements->where('level', (int) $request->level);
+        }
+
+        $sort = $request->input('sort', 'name');
+        $placements = match ($sort) {
+            'level' => $placements->sortBy('level'),
+            'type' => $placements->sortBy('type'),
+            'school' => $placements->sortBy(fn ($p) => $p->partnerSchool->name ?? ''),
+            default => $placements->sortBy(fn ($p) => $p->student->full_name ?? ''),
+        };
+
+        $placements = $placements->values();
+
+        return view('sts-supervision.index', compact('lecturer', 'placements', 'programmes', 'levels', 'sort', 'hasAnyPlacements'));
     }
 
     /**

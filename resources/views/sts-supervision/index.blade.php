@@ -4,7 +4,7 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('My STS/Internship Students') }}
             </h2>
-            @if($placements->isNotEmpty())
+            @if($hasAnyPlacements)
                 <x-button href="{{ route('sts-supervision.letter') }}" variant="secondary" icon="fas fa-print" target="_blank">
                     {{ __('Print Supervisor Letter') }}
                 </x-button>
@@ -20,9 +20,60 @@
                         <div class="mb-4 p-4 bg-green-50 border-l-4 border-green-500 text-green-700 text-sm">{{ session('success') }}</div>
                     @endif
 
+                    <form method="GET" action="{{ route('sts-supervision.index') }}" class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
+                        <div class="md:col-span-2">
+                            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name or index number" class="block w-full pl-3 pr-3 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                        </div>
+                        <div>
+                            <select name="type" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                <option value="">All Types</option>
+                                <option value="sts" {{ request('type') === 'sts' ? 'selected' : '' }}>STS</option>
+                                <option value="internship" {{ request('type') === 'internship' ? 'selected' : '' }}>Internship</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select name="programme_id" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                <option value="">All Programmes</option>
+                                @foreach($programmes as $programme)
+                                    <option value="{{ $programme->id }}" {{ (string) request('programme_id') === (string) $programme->id ? 'selected' : '' }}>{{ $programme->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <select name="level" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                <option value="">All Levels</option>
+                                @foreach($levels as $level)
+                                    <option value="{{ $level }}" {{ (string) request('level') === (string) $level ? 'selected' : '' }}>Level {{ $level }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <select name="sort" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                <option value="name" {{ $sort === 'name' ? 'selected' : '' }}>Sort: Name</option>
+                                <option value="level" {{ $sort === 'level' ? 'selected' : '' }}>Sort: Level</option>
+                                <option value="type" {{ $sort === 'type' ? 'selected' : '' }}>Sort: Type</option>
+                                <option value="school" {{ $sort === 'school' ? 'selected' : '' }}>Sort: Partner School</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-6 flex gap-2">
+                            <button type="submit" class="bg-primary-600 text-white rounded-md px-4 py-2 text-sm hover:bg-primary-700">
+                                <i class="fas fa-filter mr-1"></i> Filter
+                            </button>
+                            @if(request()->hasAny(['search', 'type', 'programme_id', 'level', 'sort']))
+                                <a href="{{ route('sts-supervision.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600">
+                                    Clear
+                                </a>
+                            @endif
+                        </div>
+                    </form>
+
                     @if($placements->isEmpty())
                         <div class="text-center py-8 text-gray-400">
-                            You have no assigned STS/Internship students for the current term.
+                            @if(request()->hasAny(['search', 'type', 'programme_id', 'level']))
+                                No students match this filter.
+                            @else
+                                You have no assigned STS/Internship students for the current term.
+                            @endif
                         </div>
                     @else
                         <div class="overflow-x-auto">
