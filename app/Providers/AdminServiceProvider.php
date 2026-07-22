@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Middleware\StudentMiddleware;
 
 class AdminServiceProvider extends ServiceProvider
 {
@@ -21,5 +22,6 @@ class AdminServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->app['router']->aliasMiddleware('admin', AdminMiddleware::class);
+        $this->app['router']->aliasMiddleware('student', StudentMiddleware::class);
     }
 }

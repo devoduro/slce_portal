@@ -79,9 +79,11 @@ Route::prefix('student')->name('student.')->group(function () {
 
 // Guest Routes
 Route::middleware(['guest'])->group(function () {
-    Route::get('/', function () {
-        return redirect()->route('login');
-    });
+    // Route::redirect() (not a closure) - closures can't survive route:cache, since
+    // Laravel serializes the route file with var_export() and a Closure has no valid
+    // __set_state() representation, causing "Call to undefined method Closure::__set_state()"
+    // as soon as the cached routes file is loaded.
+    Route::redirect('/', '/login');
 });
 
 // Admin Dashboard and Root Routes
@@ -405,12 +407,11 @@ Route::middleware(['auth'])->group(function () {
 
     // Student Dashboard Routes
     Route::middleware(['auth'])->group(function () {
-        Route::group(['middleware' => function ($request, $next) {
-            if (auth()->check() && auth()->user()->role === 'student') {
-                return $next($request);
-            }
-            return redirect()->route('login');
-        }, 'prefix' => 'student', 'as' => 'student.'], function () {
+        // 'student' alias (StudentMiddleware, registered in AdminServiceProvider), not a raw
+        // closure - closures can't survive route:cache (var_export() has no valid
+        // __set_state() form for a Closure), which crashed production with "Call to undefined
+        // method Closure::__set_state()" as soon as this route file was cached.
+        Route::group(['middleware' => 'student', 'prefix' => 'student', 'as' => 'student.'], function () {
             Route::get('/dashboard', [\App\Http\Controllers\Auth\StudentAuthController::class, 'dashboard'])->name('dashboard');
             Route::get('/results', [\App\Http\Controllers\Auth\StudentAuthController::class, 'results'])->name('results');
             Route::get('/transcript', [\App\Http\Controllers\Auth\StudentAuthController::class, 'transcript'])->name('transcript');
@@ -492,17 +493,7 @@ Route::middleware(['auth'])->group(function () {
 
             // Database Backup
             Route::get('/settings/backup', [SettingController::class, 'backup'])->name('settings.backup');
-            Route::post('/settings/backup/create', function(\Illuminate\Http\Request $request) {
-                \Log::info('Route debug info:', [
-                    'method' => $request->method(),
-                    'url' => $request->url(),
-                    'path' => $request->path(),
-                    'ajax' => $request->ajax(),
-                    'headers' => $request->headers->all(),
-                    'middleware' => Route::current()->middleware()
-                ]);
-                return app()->call([app(SettingController::class), 'backupDatabase'], ['request' => $request]);
-            })->name('settings.backup.create');
+            Route::post('/settings/backup/create', [SettingController::class, 'backupDatabase'])->name('settings.backup.create');
             Route::get('/settings/backup/{filename}/download', [SettingController::class, 'downloadBackup'])->name('settings.backup.download');
             Route::delete('/settings/backup/{filename}', [SettingController::class, 'destroyBackup'])->name('settings.backup.destroy');
 
