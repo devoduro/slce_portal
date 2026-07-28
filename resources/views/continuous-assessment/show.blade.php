@@ -4,9 +4,14 @@
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
                 {{ __('Continuous Assessment') }} - {{ $course->code }}
             </h2>
-            <x-button href="{{ route('continuous-assessment.index') }}" variant="secondary" icon="fas fa-arrow-left">
-                {{ __('Back to Courses') }}
-            </x-button>
+            <div class="flex gap-2">
+                <x-button href="{{ route('continuous-assessment.roster.export', $course) }}" variant="secondary" icon="fas fa-file-excel">
+                    {{ __('Export to Excel') }}
+                </x-button>
+                <x-button href="{{ route('continuous-assessment.index') }}" variant="secondary" icon="fas fa-arrow-left">
+                    {{ __('Back to Courses') }}
+                </x-button>
+            </div>
         </div>
     </x-slot>
 
@@ -56,11 +61,16 @@
                                                     <div class="text-sm font-medium text-gray-900">{{ $row['student']->full_name }}</div>
                                                     <div class="text-sm text-gray-500">{{ $row['student']->index_number }}</div>
                                                 </td>
-                                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                                    {{ number_format($row['attendance_score'], 2) }}
-                                                    @if($row['setting'])
-                                                        <span class="text-xs text-gray-400">/ {{ $row['setting']->attendance_max }}</span>
-                                                    @endif
+                                                <td class="px-6 py-4 whitespace-nowrap">
+                                                    <div class="flex items-center gap-1">
+                                                        <input type="number" step="0.01" min="0" max="{{ $row['setting']->attendance_max ?? '' }}"
+                                                            name="scores[{{ $row['student']->id }}][attendance]"
+                                                            value="{{ old('scores.' . $row['student']->id . '.attendance', $row['ca']->attendance_score ?? '') }}"
+                                                            class="w-24 rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm">
+                                                        @if($row['setting'])
+                                                            <span class="text-xs text-gray-400">/ {{ $row['setting']->attendance_max }}</span>
+                                                        @endif
+                                                    </div>
                                                 </td>
                                                 <td class="px-6 py-4 whitespace-nowrap">
                                                     <div class="flex items-center gap-1">

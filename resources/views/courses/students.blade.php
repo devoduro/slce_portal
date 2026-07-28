@@ -5,6 +5,9 @@
                 {{ __('Students Enrolled in') }}: {{ $course->code }} - {{ $course->title }}
             </h2>
             <div class="flex space-x-2">
+                <x-button href="{{ route('courses.students.export', $course->id) }}" variant="secondary" icon="fas fa-file-excel">
+                    {{ __('Export to Excel') }}
+                </x-button>
                 <x-button href="{{ route('courses.students.attendance', $course->id) }}" target="_blank" variant="secondary" icon="fas fa-print">
                     {{ __('Print Attendance Sheet') }}
                 </x-button>
@@ -96,7 +99,7 @@
                                                         <i class="fas fa-edit"></i>
                                                     </a>
                                                 @else
-                                                    <a href="{{ route('results.create') }}" class="text-gray-600 hover:text-gray-900" title="Add Result">
+                                                    <a href="{{ route('results.create', ['student_id' => $student->id, 'course_id' => $course->id, 'academic_year_id' => $row['academic_year_id'], 'semester_id' => $row['semester_id']]) }}" class="text-gray-600 hover:text-gray-900" title="Add Result">
                                                         <i class="fas fa-plus"></i>
                                                     </a>
                                                 @endif

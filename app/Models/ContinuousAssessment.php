@@ -20,6 +20,7 @@ class ContinuousAssessment extends Model
         'course_id',
         'semester_id',
         'academic_year_id',
+        'attendance_score',
         'project_score',
         'assignment_score',
         'mid_semester_score',
@@ -31,6 +32,7 @@ class ContinuousAssessment extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'attendance_score' => 'decimal:2',
         'project_score' => 'decimal:2',
         'assignment_score' => 'decimal:2',
         'mid_semester_score' => 'decimal:2',

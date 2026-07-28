@@ -42,11 +42,15 @@
                                 <label for="course_id" class="block text-sm font-medium text-gray-700 mb-1">Course</label>
                                 <select id="course_id" name="course_id" class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md @error('course_id') border-red-500 @enderror" required>
                                     <option value="">Select Course</option>
-                                    @foreach($courses ?? [] as $course)
-                                        <option value="{{ $course->id }}" {{ old('course_id') == $course->id ? 'selected' : '' }}>
-                                            {{ $course->code }} - {{ $course->title }}
-                                        </option>
-                                    @endforeach
+                                    @if(isset($course) && $course)
+                                        <option value="{{ $course->id }}" selected>{{ $course->code }} - {{ $course->title }}</option>
+                                    @else
+                                        @foreach($courses ?? [] as $course)
+                                            <option value="{{ $course->id }}" {{ old('course_id') == $course->id ? 'selected' : '' }}>
+                                                {{ $course->code }} - {{ $course->title }}
+                                            </option>
+                                        @endforeach
+                                    @endif
                                 </select>
                                 @error('course_id')
                                     <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
@@ -61,7 +65,7 @@
                                 <select id="academic_year_id" name="academic_year_id" class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md @error('academic_year_id') border-red-500 @enderror" required>
                                     <option value="">Select Academic Year</option>
                                     @foreach($academicYears ?? [] as $academicYear)
-                                        <option value="{{ $academicYear->id }}" {{ old('academic_year_id') == $academicYear->id ? 'selected' : '' }}>
+                                        <option value="{{ $academicYear->id }}" {{ old('academic_year_id', $academicYearId ?? '') == $academicYear->id ? 'selected' : '' }}>
                                             {{ $academicYear->name }}
                                         </option>
                                     @endforeach
@@ -76,7 +80,7 @@
                                 <select id="semester_id" name="semester_id" class="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border-gray-300 rounded-md @error('semester_id') border-red-500 @enderror" required>
                                     <option value="">Select Semester</option>
                                     @foreach($semesters ?? [] as $semester)
-                                        <option value="{{ $semester->id }}" {{ old('semester_id') == $semester->id ? 'selected' : '' }}>
+                                        <option value="{{ $semester->id }}" {{ old('semester_id', $semesterId ?? '') == $semester->id ? 'selected' : '' }}>
                                             {{ $semester->name }}
                                         </option>
                                     @endforeach

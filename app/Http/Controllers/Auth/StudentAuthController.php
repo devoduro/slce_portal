@@ -11,7 +11,6 @@ use App\Models\Semester;
 use App\Models\Student;
 use App\Models\User;
 use App\Models\AcademicYear;
-use App\Services\AttendanceScoreCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -414,7 +413,7 @@ class StudentAuthController extends Controller
                 ->first();
 
             $setting = CaScoreSetting::where('level', $student->level)->first();
-            $attendanceScore = $semester ? AttendanceScoreCalculator::score($student, $course, $semester) : 0;
+            $attendanceScore = (float) ($ca->attendance_score ?? 0);
 
             $total = $attendanceScore
                 + (float) ($ca->project_score ?? 0)

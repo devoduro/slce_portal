@@ -172,6 +172,7 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('permission:manage-courses')->group(function () {
         Route::resource('courses', CourseController::class);
         Route::get('/courses/{course}/students', [CourseController::class, 'students'])->name('courses.students');
+        Route::get('/courses/{course}/students/export', [CourseController::class, 'exportStudents'])->name('courses.students.export');
         Route::get('/courses/{course}/students/attendance', [CourseController::class, 'printAttendance'])->name('courses.students.attendance');
         Route::get('/courses/{course}/students/add', [CourseController::class, 'addStudentsForm'])->name('courses.students.add');
         Route::post('/courses/{course}/students/add', [CourseController::class, 'addStudents'])->name('courses.students.store');
@@ -358,6 +359,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/continuous-assessment/export/pdf', [\App\Http\Controllers\ContinuousAssessmentController::class, 'exportPdf'])->name('continuous-assessment.export.pdf');
         Route::get('/continuous-assessment/{course}', [\App\Http\Controllers\ContinuousAssessmentController::class, 'show'])->name('continuous-assessment.show');
         Route::post('/continuous-assessment/{course}', [\App\Http\Controllers\ContinuousAssessmentController::class, 'store'])->name('continuous-assessment.store');
+        Route::get('/continuous-assessment/{course}/export', [\App\Http\Controllers\ContinuousAssessmentController::class, 'exportRoster'])->name('continuous-assessment.roster.export');
     });
 
     // Transcripts

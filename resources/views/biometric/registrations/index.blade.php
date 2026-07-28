@@ -11,7 +11,7 @@
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <form method="GET" action="{{ route('biometric-verifications.index') }}" class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                    <form method="GET" action="{{ route('biometric-verifications.index') }}" class="grid grid-cols-1 md:grid-cols-6 gap-4 mb-6">
                         <div>
                             <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name or index number" class="block w-full pl-3 pr-3 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
                         </div>
@@ -34,6 +34,13 @@
                             <select name="semester_id" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
                                 @foreach($semesters as $sem)
                                     <option value="{{ $sem->id }}" {{ ($semester?->id) == $sem->id ? 'selected' : '' }}>{{ $sem->name }} ({{ $sem->academicYear->name ?? '' }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div>
+                            <select name="per_page" onchange="this.form.submit()" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                @foreach([20, 50, 100, 200, 300, 500, 5000] as $option)
+                                    <option value="{{ $option }}" {{ (int) request('per_page', 20) === $option ? 'selected' : '' }}>{{ $option }} per page</option>
                                 @endforeach
                             </select>
                         </div>

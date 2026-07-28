@@ -90,7 +90,7 @@ class ResultController extends Controller
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
         $students = $this->scopedStudents()->orderBy('full_name')->get();
         $courses = $this->scopeToLecturer(Course::orderBy('code'))->get();
@@ -98,12 +98,24 @@ class ResultController extends Controller
         $semesters = Semester::all();
         $gradeSchemes = GradeScheme::all();
 
+        // Pre-fill from a specific student/course row (e.g. the "Add Result" link on a
+        // course's roster page) so the saved result lands on exactly that registration's
+        // academic year/semester, rather than requiring the four fields to be picked blind.
+        $student = $request->filled('student_id') ? Student::find($request->student_id) : null;
+        $course = $request->filled('course_id') ? Course::find($request->course_id) : null;
+        $academicYearId = $request->input('academic_year_id');
+        $semesterId = $request->input('semester_id');
+
         return view('results.create', compact(
             'students',
             'courses',
             'academicYears',
             'semesters',
-            'gradeSchemes'
+            'gradeSchemes',
+            'student',
+            'course',
+            'academicYearId',
+            'semesterId'
         ));
     }
 

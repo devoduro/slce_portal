@@ -48,7 +48,8 @@ class BiometricRegistrationController extends Controller
             }
         }
 
-        $students = $query->orderBy('full_name')->paginate(20)->withQueryString();
+        $perPage = (int) $request->input('per_page', 20);
+        $students = $query->orderBy('full_name')->paginate($perPage)->withQueryString();
 
         $registrations = $semester
             ? $semester->biometricRegistrations()->whereIn('student_id', $students->pluck('id'))->get()->keyBy('student_id')

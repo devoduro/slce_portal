@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\CourseStudentsExport;
 use App\Models\Course;
 use App\Models\Lecturer;
 use App\Models\Programme;
@@ -14,6 +15,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class CourseController extends Controller
 {
@@ -247,14 +249,46 @@ class CourseController extends Controller
     public function students(string $id)
     {
         $course = Course::findOrFail($id);
+        $allRows = $this->buildStudentRows($id);
 
+        $perPage = 20;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+
+        $rows = new LengthAwarePaginator(
+            $allRows->forPage($page, $perPage)->values(),
+            $allRows->count(),
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
+
+        return view('courses.students', compact('course', 'rows'));
+    }
+
+    /**
+     * Export every student registered for the course (not just the current page) to Excel.
+     */
+    public function exportStudents(string $id)
+    {
+        $course = Course::findOrFail($id);
+        $rows = $this->buildStudentRows($id);
+
+        return Excel::download(new CourseStudentsExport($rows), $course->code . '-students.xlsx');
+    }
+
+    /**
+     * Build the full (unpaginated) student/result roster for a course, shared by the
+     * on-screen roster and its Excel export.
+     */
+    protected function buildStudentRows(string $id): \Illuminate\Support\Collection
+    {
         $registrations = Registration::where('course_id', $id)
             ->where('status', 'registered')
             ->with('student')
             ->get()
             ->filter(fn ($registration) => $registration->student !== null);
 
-        $rows = $registrations->map(function ($registration) use ($id) {
+        return $registrations->map(function ($registration) use ($id) {
             $result = Result::where('student_id', $registration->student_id)
                 ->where('course_id', $id)
                 ->where('semester_id', $registration->semester_id)
@@ -264,21 +298,10 @@ class CourseController extends Controller
             return [
                 'student' => $registration->student,
                 'result' => $result,
+                'academic_year_id' => $registration->academic_year_id,
+                'semester_id' => $registration->semester_id,
             ];
         })->sortBy(fn ($row) => $row['student']->full_name)->values();
-
-        $perPage = 20;
-        $page = LengthAwarePaginator::resolveCurrentPage();
-
-        $rows = new LengthAwarePaginator(
-            $rows->forPage($page, $perPage)->values(),
-            $rows->count(),
-            $perPage,
-            $page,
-            ['path' => request()->url(), 'query' => request()->query()]
-        );
-
-        return view('courses.students', compact('course', 'rows'));
     }
 
     /**

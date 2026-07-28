@@ -30,11 +30,6 @@
                         <div><span class="text-gray-500">Partner School:</span> <span class="font-medium">{{ $stsPlacement->partnerSchool->name ?? 'Not selected yet' }}</span></div>
                     </div>
 
-                    <div class="mb-6 p-4 bg-gray-50 rounded-lg">
-                        <p class="text-sm text-gray-500">Attendance (Mentor) Score &mdash; computed automatically from biometric attendance</p>
-                        <p class="text-2xl font-semibold text-gray-900">{{ $attendanceScore }} @if($setting) / {{ $setting->attendance_max }} @endif</p>
-                    </div>
-
                     @if(!$setting)
                         <div class="mb-6 p-4 bg-amber-50 border-l-4 border-amber-400 text-amber-700 text-sm">
                             No STS score setting has been configured for Level {{ $stsPlacement->level }} yet. Ask the STS Coordinator to add one before scoring.
@@ -43,6 +38,8 @@
 
                     <form method="POST" action="{{ route('sts-supervision.score.store', $stsPlacement) }}" class="space-y-6">
                         @csrf
+
+                        <x-input id="attendance_score" name="scores[attendance]" type="number" step="0.01" min="0" :max="$setting?->attendance_max" label="Attendance (Mentor) Score" :value="old('scores.attendance', $ca->attendance_score ?? '')" :helper="$setting ? 'Max: ' . $setting->attendance_max : null" />
 
                         <x-input id="project_score" name="scores[project]" type="number" step="0.01" min="0" :max="$setting?->project_max" label="Project Work Score" :value="old('scores.project', $ca->project_score ?? '')" :helper="$setting ? 'Max: ' . $setting->project_max : null" />
 

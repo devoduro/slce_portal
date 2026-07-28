@@ -20,6 +20,8 @@ class StsAttendance extends Model
         'student_id',
         'attendance_date',
         'biometric_log_id',
+        'source',
+        'recorded_by',
     ];
 
     /**
@@ -44,5 +46,13 @@ class StsAttendance extends Model
     public function biometricLog(): BelongsTo
     {
         return $this->belongsTo(BiometricLog::class);
+    }
+
+    /**
+     * Get the user who manually recorded this attendance, if it wasn't biometric-derived.
+     */
+    public function recordedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
     }
 }

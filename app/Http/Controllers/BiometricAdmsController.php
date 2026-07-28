@@ -5,13 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\BiometricDevice;
 use App\Models\BiometricLog;
 use App\Models\BiometricRegistration;
-use App\Models\LessonAttendance;
 use App\Models\Semester;
 use App\Models\Student;
-use App\Models\StsAttendance;
-use App\Models\StsPlacement;
-use App\Models\TimetableEntry;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -103,7 +98,9 @@ class BiometricAdmsController extends Controller
     /**
      * Parse a single ATTLOG line, record the raw log, and mark biometric
      * registration for the matched student if their current semester's
-     * biometric window is open.
+     * biometric window is open. Attendance itself (lesson and STS/Internship) is entered
+     * manually by lecturers/admins via the CA and STS score forms, not derived from device
+     * punches - this only feeds the separate semester check-in gate.
      */
     protected function ingestAttendanceLine(string $line, ?BiometricDevice $device): int
     {
@@ -150,90 +147,8 @@ class BiometricAdmsController extends Controller
                     ]
                 );
             }
-
-            $this->matchLessonAttendance($student, $log, $device);
-            $this->matchStsAttendance($student, $log);
         }
 
         return 1;
-    }
-
-    /**
-     * If this punch falls within a scheduled lesson's day/time window at the
-     * punching device's venue, record it as attendance for that lesson.
-     */
-    protected function matchLessonAttendance(Student $student, BiometricLog $log, ?BiometricDevice $device): void
-    {
-        if (!$device || !$device->location) {
-            return;
-        }
-
-        $punchedAt = Carbon::parse($log->punched_at);
-        $dayOfWeek = $punchedAt->dayOfWeek;
-        $time = $punchedAt->format('H:i:s');
-        $date = $punchedAt->toDateString();
-        $venue = strtolower(trim($device->location));
-
-        $entry = TimetableEntry::with('venue')
-            ->where('day_of_week', $dayOfWeek)
-            ->whereTime('start_time', '<=', $time)
-            ->whereTime('end_time', '>=', $time)
-            ->whereHas('semester', function ($query) use ($date) {
-                $query->whereDate('start_date', '<=', $date)
-                    ->whereDate('end_date', '>=', $date);
-            })
-            ->get()
-            ->first(fn ($candidate) => $candidate->venue && strtolower(trim($candidate->venue->name)) === $venue);
-
-        if (!$entry) {
-            return;
-        }
-
-        LessonAttendance::firstOrCreate(
-            [
-                'timetable_entry_id' => $entry->id,
-                'student_id' => $student->id,
-                'attendance_date' => $date,
-            ],
-            [
-                'biometric_log_id' => $log->id,
-            ]
-        );
-
-        $log->update(['timetable_entry_id' => $entry->id]);
-    }
-
-    /**
-     * If this punch falls within an active STS/Internship placement's term date window,
-     * record it as a day present for that placement's mentor/attendance score. Unlike lesson
-     * attendance, no venue/device-location matching is required - any punch during the
-     * window counts, since STS attendance isn't tied to a specific timetable slot.
-     */
-    protected function matchStsAttendance(Student $student, BiometricLog $log): void
-    {
-        $date = Carbon::parse($log->punched_at)->toDateString();
-
-        $placement = StsPlacement::whereNotNull('partner_school_id')
-            ->where('student_id', $student->id)
-            ->whereHas('stsTerm', function ($query) use ($date) {
-                $query->whereDate('proposed_start_date', '<=', $date)
-                    ->whereDate('proposed_end_date', '>=', $date);
-            })
-            ->first();
-
-        if (!$placement) {
-            return;
-        }
-
-        StsAttendance::firstOrCreate(
-            [
-                'sts_placement_id' => $placement->id,
-                'attendance_date' => $date,
-            ],
-            [
-                'student_id' => $student->id,
-                'biometric_log_id' => $log->id,
-            ]
-        );
     }
 }

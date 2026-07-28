@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\ContinuousAssessment;
 use App\Models\StsPlacement;
 use App\Models\StsScoreSetting;
-use App\Services\StsAttendanceScoreCalculator;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -87,9 +86,7 @@ class StsSupervisionController extends Controller
             ->where('academic_year_id', $term->semester->academic_year_id)
             ->first();
 
-        $attendanceScore = StsAttendanceScoreCalculator::score($stsPlacement);
-
-        return view('sts-supervision.score', compact('stsPlacement', 'setting', 'ca', 'attendanceScore'));
+        return view('sts-supervision.score', compact('stsPlacement', 'setting', 'ca'));
     }
 
     /**
@@ -104,12 +101,13 @@ class StsSupervisionController extends Controller
 
         $data = [];
         $componentMax = [
+            'attendance' => $setting?->attendance_max,
             'project' => $setting?->project_max,
             'assignment' => $setting?->assignment_max,
             'mid_semester' => $setting?->mid_semester_max,
         ];
 
-        foreach (['project' => 'project_score', 'assignment' => 'assignment_score', 'mid_semester' => 'mid_semester_score'] as $key => $column) {
+        foreach (['attendance' => 'attendance_score', 'project' => 'project_score', 'assignment' => 'assignment_score', 'mid_semester' => 'mid_semester_score'] as $key => $column) {
             if (!$request->filled("scores.{$key}")) {
                 continue;
             }

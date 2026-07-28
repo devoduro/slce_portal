@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Exports\CaCoursesExport;
+use App\Exports\CaRosterExport;
 use App\Models\CaScoreSetting;
 use App\Models\Course;
 use App\Models\ContinuousAssessment;
@@ -10,7 +11,6 @@ use App\Models\Programme;
 use App\Models\Registration;
 use App\Models\Semester;
 use App\Models\Student;
-use App\Services\AttendanceScoreCalculator;
 use App\Traits\ScopesToLecturer;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Facades\Excel;
@@ -97,14 +97,39 @@ class ContinuousAssessmentController extends Controller
         }
 
         $semester = $course->semester;
+        $rows = $this->buildRosterRows($course, $semester);
 
+        return view('continuous-assessment.show', compact('course', 'semester', 'rows'));
+    }
+
+    /**
+     * Export a course's full CA roster (attendance, project, assignment, mid-semester, total)
+     * to Excel.
+     */
+    public function exportRoster(Course $course)
+    {
+        if ($this->isScopedLecturer() && !$course->lecturers()->where('lecturers.id', $this->authLecturerId())->exists()) {
+            abort(403);
+        }
+
+        $rows = $this->buildRosterRows($course, $course->semester);
+
+        return Excel::download(new CaRosterExport($rows), $course->code . '-continuous-assessment.xlsx');
+    }
+
+    /**
+     * Build the CA roster rows (student, scores, total) shared by the on-screen page and
+     * its Excel export.
+     */
+    protected function buildRosterRows(Course $course, ?Semester $semester)
+    {
         $registrations = Registration::where('course_id', $course->id)
             ->where('status', 'registered')
             ->with('student')
             ->get()
             ->filter(fn ($registration) => $registration->student !== null);
 
-        $rows = $registrations->map(function ($registration) use ($course, $semester) {
+        return $registrations->map(function ($registration) use ($course, $semester) {
             $student = $registration->student;
             $setting = CaScoreSetting::where('level', $student->level)->first();
 
@@ -114,7 +139,7 @@ class ContinuousAssessmentController extends Controller
                 ->where('academic_year_id', $registration->academic_year_id)
                 ->first();
 
-            $attendanceScore = $semester ? AttendanceScoreCalculator::score($student, $course, $semester) : 0;
+            $attendanceScore = (float) ($ca->attendance_score ?? 0);
 
             $total = $attendanceScore
                 + (float) ($ca->project_score ?? 0)
@@ -128,9 +153,7 @@ class ContinuousAssessmentController extends Controller
                 'attendance_score' => $attendanceScore,
                 'total' => $total,
             ];
-        })->sortBy(fn ($row) => $row['student']->full_name);
-
-        return view('continuous-assessment.show', compact('course', 'semester', 'rows'));
+        })->sortBy(fn ($row) => $row['student']->full_name)->values();
     }
 
     /**
@@ -161,6 +184,7 @@ class ContinuousAssessmentController extends Controller
             $data = [];
 
             foreach ([
+                'attendance' => 'attendance_score',
                 'project' => 'project_score',
                 'assignment' => 'assignment_score',
                 'mid_semester' => 'mid_semester_score',
