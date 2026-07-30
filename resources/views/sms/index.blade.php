@@ -65,11 +65,18 @@
                                 <option value="Other" {{ request('gender') == 'Other' ? 'selected' : '' }}>Other</option>
                             </select>
 
+                            <select name="level" class="border border-gray-300 rounded-md px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500">
+                                <option value="">All Levels</option>
+                                @foreach([100, 200, 300, 400] as $levelOption)
+                                    <option value="{{ $levelOption }}" {{ (string) request('level') === (string) $levelOption ? 'selected' : '' }}>Level {{ $levelOption }}</option>
+                                @endforeach
+                            </select>
+
                             <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
                                 <i class="fas fa-filter mr-2"></i>Apply
                             </button>
 
-                            @if(request('search') || request('programme_id') || request('gender'))
+                            @if(request('search') || request('programme_id') || request('gender') || request('level'))
                                 <a href="{{ route('sms.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300">
                                     <i class="fas fa-times mr-2"></i>Clear
                                 </a>
@@ -88,6 +95,7 @@
                         @csrf
                         <input type="hidden" name="programme_id" value="{{ request('programme_id') }}">
                         <input type="hidden" name="gender" value="{{ request('gender') }}">
+                        <input type="hidden" name="level" value="{{ request('level') }}">
                         <input type="hidden" name="search" value="{{ request('search') }}">
 
                         <div class="mb-4">

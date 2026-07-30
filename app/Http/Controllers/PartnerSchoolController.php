@@ -253,12 +253,37 @@ class PartnerSchoolController extends Controller
             $query->where('type', $request->type);
             $reportTitle = ($request->type === 'internship' ? 'Internship' : 'STS') . ' Schools - Student Rosters';
 
-            // How many students are eligible for this type this term (i.e. their level/term
-            // cutoff puts them in this type) vs how many have actually picked a school yet -
-            // distinct from the per-school rosters below, which only show the latter.
+            // How many students are eligible for this type THIS TERM (i.e. their CURRENT level
+            // against the term's own semester/cutoff) vs how many have actually picked a school
+            // yet - distinct from the per-school rosters below, which only show the latter.
+            // Recomputed live rather than trusting each placement's stored `type` column, since
+            // that value is only set once (StsTermController::activate()'s firstOrCreate) and
+            // goes stale if the student's level changes afterward, or if a later semester's
+            // rules (e.g. Level 400 only continues Internship in its first semester) changed
+            // after this term's placements were originally seeded.
             if ($term) {
-                $eligibleCount = StsPlacement::where('sts_term_id', $term->id)->where('type', $request->type)->count();
-                $selectedCount = StsPlacement::where('sts_term_id', $term->id)->where('type', $request->type)->whereNotNull('partner_school_id')->count();
+                $termSemesterNumber = $term->semester->semester_number;
+
+                $eligibleCount = 0;
+                $selectedCount = 0;
+
+                StsPlacement::where('sts_term_id', $term->id)->with('student')->chunk(500, function ($placements) use ($term, $termSemesterNumber, $request, &$eligibleCount, &$selectedCount) {
+                    foreach ($placements as $placement) {
+                        $level = $placement->student->level ?? $placement->level;
+                        $liveType = StsPlacement::determineType((int) $level, $termSemesterNumber, $term->internship_level_cutoff, $term->internship_semester_cutoff);
+
+                        if ($liveType !== $request->type) {
+                            continue;
+                        }
+
+                        $eligibleCount++;
+
+                        if ($placement->partner_school_id) {
+                            $selectedCount++;
+                        }
+                    }
+                });
+
                 $eligibilitySummary = [
                     'eligible' => $eligibleCount,
                     'selected' => $selectedCount,
@@ -278,9 +303,11 @@ class PartnerSchoolController extends Controller
                 ->groupBy('partner_school_id');
         }
 
+        $totalStudents = $placementsBySchool->sum(fn ($roster) => $roster->count());
+
         $settings = DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
 
-        return view('sts.letters.school-roster', compact('schools', 'placementsBySchool', 'term', 'settings', 'reportTitle', 'eligibilitySummary'));
+        return view('sts.letters.school-roster', compact('schools', 'placementsBySchool', 'term', 'settings', 'reportTitle', 'eligibilitySummary', 'totalStudents'));
     }
 
     /**

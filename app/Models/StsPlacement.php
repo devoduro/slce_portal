@@ -81,15 +81,20 @@ class StsPlacement extends Model
 
     /**
      * Determine whether a level/semester combination falls under "STS" or "Internship", given
-     * a term's configured cutoff. Any level above $levelCutoff is always Internship; at exactly
-     * $levelCutoff, it only becomes Internship once the term's own semester number reaches
-     * $semesterCutoff (e.g. levelCutoff=300, semesterCutoff=2 means "Level 300 Second Semester
-     * onward - and every level above 300 - is Internship; Level 300 First Semester is STS").
+     * a term's configured cutoff, or null if the combination is outside the placement system
+     * entirely.
+     *
+     * At exactly $levelCutoff (e.g. 300), it becomes Internship once the term's own semester
+     * number reaches $semesterCutoff (e.g. 300/2 means "Level 300 Second Semester is Internship;
+     * Level 300 First Semester is STS"). Above $levelCutoff (e.g. 400), only the first semester
+     * continues as Internship - scored against the same placement/school/supervisor carried
+     * over from the student's Level 300 internship term (see StsTermController::activate()) -
+     * every semester after that is beyond this placement system (null).
      */
-    public static function determineType(int $level, int $termSemesterNumber, int $levelCutoff = 300, int $semesterCutoff = 2): string
+    public static function determineType(int $level, int $termSemesterNumber, int $levelCutoff = 300, int $semesterCutoff = 2): ?string
     {
         if ($level > $levelCutoff) {
-            return self::TYPE_INTERNSHIP;
+            return $termSemesterNumber === 1 ? self::TYPE_INTERNSHIP : null;
         }
 
         if ($level === $levelCutoff && $termSemesterNumber >= $semesterCutoff) {

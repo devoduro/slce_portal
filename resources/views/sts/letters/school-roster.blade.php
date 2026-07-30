@@ -61,6 +61,31 @@
                     <div class="text-xs text-gray-500 mt-1">Not Yet Placed</div>
                 </div>
             </div>
+        @elseif($term && $schools->count() === 1)
+            @php
+                $singleSchool = $schools->first();
+                $singleCapacity = (int) $singleSchool->total_capacity;
+                $singleVacant = max(0, $singleCapacity - $totalStudents);
+            @endphp
+            <div class="grid grid-cols-3 gap-4 mb-8 text-center">
+                <div class="border border-gray-300 rounded-lg py-3">
+                    <div class="text-2xl font-bold text-gray-900">{{ $singleCapacity }}</div>
+                    <div class="text-xs text-gray-500 mt-1">Quota</div>
+                </div>
+                <div class="border border-gray-300 rounded-lg py-3">
+                    <div class="text-2xl font-bold text-green-700">{{ $totalStudents }}</div>
+                    <div class="text-xs text-gray-500 mt-1">Total Placed</div>
+                </div>
+                <div class="border border-gray-300 rounded-lg py-3">
+                    <div class="text-2xl font-bold {{ $singleVacant > 0 ? 'text-red-600' : 'text-gray-900' }}">{{ $singleVacant }}</div>
+                    <div class="text-xs text-gray-500 mt-1">Vacant</div>
+                </div>
+            </div>
+        @elseif($term && $schools->isNotEmpty())
+            <div class="border border-gray-300 rounded-lg py-3 text-center mb-8">
+                <div class="text-2xl font-bold text-gray-900">{{ $totalStudents }}</div>
+                <div class="text-xs text-gray-500 mt-1">Total Student{{ $totalStudents === 1 ? '' : 's' }}</div>
+            </div>
         @endif
 
         @if(!$term)
@@ -69,7 +94,7 @@
             <p class="text-center text-gray-400 py-8">No partner schools match this filter.</p>
         @else
             @foreach($schools as $school)
-                @php $roster = $placementsBySchool->get($school->id, collect())->sortBy('student.full_name'); @endphp
+                @php $roster = $placementsBySchool->get($school->id, collect())->sortBy('student.full_name')->values(); @endphp
                 <div class="school-section mb-10">
                     <div class="flex items-center justify-between mb-2 border-b border-gray-300 pb-2">
                         <div>
@@ -80,7 +105,16 @@
                                 @if($school->location) &bull; {{ $school->location }} @endif
                             </p>
                         </div>
-                        <span class="text-xs font-medium text-gray-500">{{ $roster->count() }} student{{ $roster->count() === 1 ? '' : 's' }}</span>
+                        @if($schools->count() > 1)
+                            @php
+                                $schoolCapacity = (int) $school->total_capacity;
+                                $schoolVacant = max(0, $schoolCapacity - $roster->count());
+                            @endphp
+                            <span class="text-xs font-medium text-gray-500">
+                                {{ $roster->count() }} placed / {{ $schoolCapacity }} quota
+                                &bull; <span class="{{ $schoolVacant > 0 ? 'text-red-600 font-semibold' : '' }}">{{ $schoolVacant }} vacant</span>
+                            </span>
+                        @endif
                     </div>
 
                     <table class="w-full text-sm border-collapse">

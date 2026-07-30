@@ -31,6 +31,10 @@ class SmsController extends Controller
             $query->where('gender', $request->gender);
         }
 
+        if ($request->filled('level')) {
+            $query->where('level', $request->level);
+        }
+
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -56,10 +60,11 @@ class SmsController extends Controller
             'message'      => ['required', 'string', 'max:459'],
             'programme_id' => ['nullable', 'exists:programmes,id'],
             'gender'       => ['nullable', 'in:Male,Female,Other'],
+            'level'        => ['nullable', 'integer', 'min:100', 'max:800'],
             'search'       => ['nullable', 'string'],
         ]);
 
-        $filters = $request->only(['programme_id', 'gender', 'search']);
+        $filters = $request->only(['programme_id', 'gender', 'level', 'search']);
 
         $query = Student::query();
 
@@ -69,6 +74,10 @@ class SmsController extends Controller
 
         if (!empty($filters['gender'])) {
             $query->where('gender', $filters['gender']);
+        }
+
+        if (!empty($filters['level'])) {
+            $query->where('level', $filters['level']);
         }
 
         if (!empty($filters['search'])) {

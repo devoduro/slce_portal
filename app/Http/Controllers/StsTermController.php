@@ -131,9 +131,25 @@ class StsTermController extends Controller
                             $stsTerm->internship_semester_cutoff
                         );
 
+                        // null = beyond the placement system entirely (e.g. Level 400 Second
+                        // Semester onward, once their one continuing internship semester is over).
+                        if ($type === null) {
+                            continue;
+                        }
+
+                        $attributes = ['level' => $student->level, 'type' => $type];
+
+                        // Level above the cutoff (e.g. 400) continuing an internship: carry over
+                        // the school/supervisor(s) from their Level-300 internship placement
+                        // rather than making them (or an admin) select again - it's the same
+                        // placement, just being scored for one more semester.
+                        if ($type === StsPlacement::TYPE_INTERNSHIP && (int) $student->level > $stsTerm->internship_level_cutoff) {
+                            $attributes += $this->carryOverInternshipPlacement($student, $stsTerm);
+                        }
+
                         StsPlacement::firstOrCreate(
                             ['student_id' => $student->id, 'sts_term_id' => $stsTerm->id],
-                            ['level' => $student->level, 'type' => $type]
+                            $attributes
                         );
 
                         $course = $type === StsPlacement::TYPE_INTERNSHIP ? $internshipCourse : $stsCourse;
@@ -152,6 +168,33 @@ class StsTermController extends Controller
 
         return redirect()->route('sts-terms.index')
             ->with('success', "\"{$stsTerm->name}\" activated and placements seeded for eligible students.");
+    }
+
+    /**
+     * Find the student's most recent Level-cutoff (e.g. 300) internship placement with a school
+     * already assigned, and return its school/supervisor(s) to seed the continuation placement
+     * with - so the Level 400 First Semester "same data" scoring term starts pre-filled instead
+     * of requiring a fresh selection.
+     */
+    protected function carryOverInternshipPlacement(Student $student, StsTerm $stsTerm): array
+    {
+        $previous = StsPlacement::where('student_id', $student->id)
+            ->where('level', $stsTerm->internship_level_cutoff)
+            ->where('type', StsPlacement::TYPE_INTERNSHIP)
+            ->whereNotNull('partner_school_id')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$previous) {
+            return [];
+        }
+
+        return [
+            'partner_school_id' => $previous->partner_school_id,
+            'lecturer_id' => $previous->lecturer_id,
+            'second_lecturer_id' => $previous->second_lecturer_id,
+            'supervisor_assigned_at' => $previous->supervisor_assigned_at,
+        ];
     }
 
     /**
