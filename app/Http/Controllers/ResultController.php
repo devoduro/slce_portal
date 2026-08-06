@@ -429,6 +429,81 @@ class ResultController extends Controller
     }
     
     /**
+     * Build the filtered query of resit-required results (grade E) shared by
+     * the on-screen resit list and its print view.
+     */
+    protected function resitResultsQuery(Request $request)
+    {
+        $query = Result::with(['student.programme', 'course', 'academicYear', 'semester'])
+            ->where('grade', 'E')
+            ->when($this->isScopedLecturer(), fn ($q) => $q->whereIn('course_id', $this->lecturerCourseIds()));
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('student', function ($q) use ($search) {
+                $q->where('full_name', 'like', "%{$search}%")
+                    ->orWhere('index_number', 'like', "%{$search}%");
+            });
+        }
+
+        if ($request->filled('academic_year_id')) {
+            $query->where('academic_year_id', $request->academic_year_id);
+        }
+
+        if ($request->filled('semester_id')) {
+            $query->where('semester_id', $request->semester_id);
+        }
+
+        if ($request->filled('course_id')) {
+            $query->where('course_id', $request->course_id);
+        }
+
+        if ($request->filled('programme_id')) {
+            $query->whereHas('student', function ($q) use ($request) {
+                $q->where('programme_id', $request->programme_id);
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Display the list of students who currently have a resit (grade E) result.
+     */
+    public function resitList(Request $request)
+    {
+        $results = $this->resitResultsQuery($request)
+            ->join('students', 'students.id', '=', 'results.student_id')
+            ->orderBy('students.full_name')
+            ->select('results.*')
+            ->paginate(20)
+            ->withQueryString();
+
+        $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
+        $semesters = Semester::all();
+        $programmes = Programme::all();
+        $courses = $this->scopeToLecturer(Course::query())->orderBy('code')->get();
+
+        return view('results.resit_list', compact('results', 'academicYears', 'semesters', 'programmes', 'courses'));
+    }
+
+    /**
+     * Print-friendly version of the resit list (unpaginated, same filters).
+     */
+    public function resitListPrint(Request $request)
+    {
+        $results = $this->resitResultsQuery($request)
+            ->join('students', 'students.id', '=', 'results.student_id')
+            ->orderBy('students.full_name')
+            ->select('results.*')
+            ->get();
+
+        $settings = DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
+
+        return view('results.resit_list_print', compact('results', 'settings'));
+    }
+
+    /**
      * Bulk create results.
      */
     public function bulkCreate()

@@ -12,7 +12,13 @@
                     <x-button href="{{ route('bulkresults.upload') }}" variant="secondary" icon="fas fa-upload">
                         {{ __('Bulk Add Results') }}
                     </x-button>
+                    <x-button href="{{ route('results.resit.upload') }}" variant="secondary" icon="fas fa-file-upload">
+                        {{ __('Upload Resit Results') }}
+                    </x-button>
                 @endcan
+                <x-button href="{{ route('results.resit-list') }}" variant="secondary" icon="fas fa-list">
+                    {{ __('Resit List') }}
+                </x-button>
             </div>
         </div>
     </x-slot>

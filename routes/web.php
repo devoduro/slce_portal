@@ -208,6 +208,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/bulkresults/upload', [ResultController::class, 'bulkCreate'])->name('results.bulk-create');
         Route::post('/results/bulk-store', [ResultController::class, 'bulkStore'])->name('results.bulk-store');
         Route::get('/bulkresults/download-template', [ResultController::class, 'downloadTemplate'])->name('results.download-template');
+
+        // Resit Results Upload
+        Route::get('/results/resit/upload', [\App\Http\Controllers\ResitResultController::class, 'uploadForm'])->name('results.resit.upload');
+        Route::post('/results/resit/import', [\App\Http\Controllers\ResitResultController::class, 'import'])->name('results.resit.import');
+        Route::get('/results/resit/template', [\App\Http\Controllers\ResitResultController::class, 'downloadTemplate'])->name('results.resit.template');
     });
 
     Route::middleware('permission:manage-results|view-results')->group(function () {
@@ -216,6 +221,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/results/filter/semester', [ResultController::class, 'filterBySemester'])->name('results.filter.semester');
         Route::get('/results/filter/student', [ResultController::class, 'filterByStudent'])->name('results.filter.student');
         Route::get('/results/filter/course', [ResultController::class, 'filterByCourse'])->name('results.filter.course');
+        Route::get('/results/resit-list', [ResultController::class, 'resitList'])->name('results.resit-list');
+        Route::get('/results/resit-list/print', [ResultController::class, 'resitListPrint'])->name('results.resit-list.print');
         Route::resource('results', ResultController::class)->only(['index', 'show']);
     });
 
