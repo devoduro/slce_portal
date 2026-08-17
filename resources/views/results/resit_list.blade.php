@@ -5,6 +5,9 @@
                 {{ __('Resit List') }}
             </h2>
             <div class="flex space-x-2">
+                <a href="{{ route('results.resit-list.export', request()->query()) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                    <i class="fas fa-file-excel mr-2"></i> Export
+                </a>
                 <a href="{{ route('results.resit-list.print', request()->query()) }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                     <i class="fas fa-print mr-2"></i> Print
                 </a>

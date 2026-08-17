@@ -258,24 +258,29 @@ class StudentAuthController extends Controller
             
             if (!$result->course || !isset($result->grade_point)) continue; // Skip if course or grade is missing
 
-            // Calculate credit points and hours
-            $creditHours = $result->course->credit_hours ?? 0;
-            if ($creditHours <= 0) continue; // Skip if invalid credit hours
-
-            $creditPoints = $creditHours * ($result->grade_point ?? 0);
-            
-            // Add result to appropriate semester
+            // Add result to appropriate semester (always shown, even if it doesn't count toward GPA)
             if (isset($groupedResults[$academicYearId]['semesters'][$semesterId])) {
                 $groupedResults[$academicYearId]['semesters'][$semesterId]['results'][] = $result;
-                
+
+                // A superseded original (one with a resit on record) is shown above but excluded from the totals
+                if (!$result->counts_for_gpa) {
+                    continue;
+                }
+
+                // Calculate credit points and hours
+                $creditHours = $result->course->credit_hours ?? 0;
+                if ($creditHours <= 0) continue; // Skip if invalid credit hours
+
+                $creditPoints = $creditHours * ($result->grade_point ?? 0);
+
                 // Update semester totals
                 $groupedResults[$academicYearId]['semesters'][$semesterId]['total_credit_points'] += $creditPoints;
                 $groupedResults[$academicYearId]['semesters'][$semesterId]['total_credit_hours'] += $creditHours;
-                
+
                 // Update year totals
                 $groupedResults[$academicYearId]['year_credit_points'] += $creditPoints;
                 $groupedResults[$academicYearId]['year_credit_hours'] += $creditHours;
-                
+
                 // Update running totals for CGPA
                 $runningCreditPoints += $creditPoints;
                 $runningCreditHours += $creditHours;

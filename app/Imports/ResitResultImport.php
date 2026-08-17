@@ -21,6 +21,12 @@ use Maatwebsite\Excel\Validators\Failure;
  * semester, course code, Course Title, grade, is resit (Y/N) - one row per
  * student/course, with the academic year/semester/course all varying per row
  * rather than being fixed for the whole upload.
+ *
+ * "is resit" = Y adds a separate resit record alongside the original grade for
+ * that student/course/semester/year (both remain on file; re-uploading the same
+ * resit combination updates that resit record rather than duplicating it).
+ * "is resit" = N overwrites the original (non-resit) record for that
+ * student/course/semester/year, e.g. to correct a wrongly entered grade.
  */
 class ResitResultImport implements ToCollection, WithHeadingRow, WithValidation, SkipsOnFailure, SkipsEmptyRows
 {
@@ -120,17 +126,20 @@ class ResitResultImport implements ToCollection, WithHeadingRow, WithValidation,
                 continue;
             }
 
+            // is_repeated is part of the match key: a "Y" (resit) row is created/updated
+            // alongside the original "N" row rather than overwriting it, so both the
+            // original failing grade and the resit grade remain on record.
             Result::updateOrCreate(
                 [
                     'student_id' => $student->id,
                     'course_id' => $course->id,
                     'academic_year_id' => $academicYear->id,
                     'semester_id' => $semester->id,
+                    'is_repeated' => $isRepeated,
                 ],
                 [
                     'grade' => $gradeLetter,
                     'grade_point' => $gradePoint,
-                    'is_repeated' => $isRepeated,
                 ]
             );
 

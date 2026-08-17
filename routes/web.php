@@ -223,6 +223,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/results/filter/course', [ResultController::class, 'filterByCourse'])->name('results.filter.course');
         Route::get('/results/resit-list', [ResultController::class, 'resitList'])->name('results.resit-list');
         Route::get('/results/resit-list/print', [ResultController::class, 'resitListPrint'])->name('results.resit-list.print');
+        Route::get('/results/resit-list/export', [ResultController::class, 'resitListExport'])->name('results.resit-list.export');
         Route::resource('results', ResultController::class)->only(['index', 'show']);
     });
 

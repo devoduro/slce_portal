@@ -289,10 +289,13 @@ class CourseController extends Controller
             ->filter(fn ($registration) => $registration->student !== null);
 
         return $registrations->map(function ($registration) use ($id) {
+            // Prefer the resit row over the original when a student has both, so the roster
+            // shows their latest attempt rather than an arbitrary one of the two.
             $result = Result::where('student_id', $registration->student_id)
                 ->where('course_id', $id)
                 ->where('semester_id', $registration->semester_id)
                 ->where('academic_year_id', $registration->academic_year_id)
+                ->orderByDesc('is_repeated')
                 ->first();
 
             return [

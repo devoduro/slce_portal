@@ -181,6 +181,9 @@
                                             @else bg-red-100 text-red-800 @endif">
                                             {{ $result->grade }}
                                         </span>
+                                        @if($result->is_repeated)
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800">Resit</span>
+                                        @endif
                                     </td>
                                     <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                         <div class="flex justify-end space-x-2">

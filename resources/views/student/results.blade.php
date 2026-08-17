@@ -89,6 +89,7 @@
                                 $yearTotalHours = 0;
                                 foreach ($yearData['semesters'] as $semData) {
                                     foreach ($semData['results'] as $result) {
+                                        if (!$result->counts_for_gpa) continue;
                                         $yearTotalPoints += $result->grade_point * $result->course->credit_hours;
                                         $yearTotalHours += $result->course->credit_hours;
                                     }
@@ -139,13 +140,15 @@
 
                                 <!-- Semester Results -->
                                 @php
+                                    $gpaEligible = array_filter($semesterData['results'], fn($result) => $result->counts_for_gpa);
+
                                     $totalCreditHours = array_sum(array_map(function($result) {
                                         return $result->course->credit_hours;
-                                    }, $semesterData['results']));
-                                    
+                                    }, $gpaEligible));
+
                                     $totalCreditPoints = array_sum(array_map(function($result) {
                                         return $result->course->credit_hours * $result->grade_point;
-                                    }, $semesterData['results']));
+                                    }, $gpaEligible));
                                     
                                     $semesterGPA = $totalCreditHours > 0 ? $totalCreditPoints / $totalCreditHours : 0;
                                 @endphp
@@ -181,7 +184,12 @@
                                                     <tr class="hover:bg-gray-50 transition-colors duration-150">
                                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">{{ $result->course->code }}</td>
                                                         <td class="px-6 py-4 text-sm text-gray-900">{{ $result->course->title }}</td>
-                                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium {{ $result->grade == 'F' ? 'text-red-600' : 'text-green-600' }}">{{ $result->grade }}</td>
+                                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium {{ $result->grade == 'F' ? 'text-red-600' : 'text-green-600' }}">
+                                                            {{ $result->grade }}
+                                                            @if($result->is_repeated)
+                                                                <span class="ml-1 px-1.5 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-800">Resit</span>
+                                                            @endif
+                                                        </td>
                                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ $result->course->credit_hours }}</td>
                                                         <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ number_format($result->grade_point * $result->course->credit_hours, 2) }}</td>
                                                     </tr>
@@ -198,6 +206,7 @@
                             $yearCreditPoints = 0;
                             foreach ($yearData['semesters'] as $sem) {
                                 foreach ($sem['results'] as $res) {
+                                    if (!$res->counts_for_gpa) continue;
                                     $yearCreditHours += $res->course->credit_hours;
                                     $yearCreditPoints += $res->grade_point * $res->course->credit_hours;
                                 }

@@ -18,7 +18,7 @@
                         <p class="font-medium mb-2">File format</p>
                         <p>The file must have these columns: <strong>index number</strong> (must match an existing student), <strong>academic year</strong> (must match an existing academic year, e.g. "2022/2023"), <strong>semester</strong> (e.g. "Semester 2" or the semester's full name), <strong>course code</strong> (must match an existing course), <strong>Course Title</strong> (for reference only, not used to look up the course), <strong>grade</strong> (a letter grade, e.g. "A"), and <strong>is resit</strong> (Y/N).</p>
                         <p class="mt-2">Each row can be for a different student, course, academic year and semester - unlike the regular bulk upload, you don't need to pick one course/year/semester up front.</p>
-                        <p class="mt-2">Re-uploading the same student + course + academic year + semester combination updates that result rather than creating a duplicate.</p>
+                        <p class="mt-2"><strong>Y</strong> (resit) adds a resit record alongside the student's original grade for that course/semester - both stay on record, and the resit grade is the one used for GPA. <strong>N</strong> overwrites the original (non-resit) grade for that course/semester, e.g. to correct a mistake. Re-uploading the same row again (same student + course + academic year + semester + Y/N) updates that same record rather than creating a duplicate.</p>
                         <a href="{{ route('results.resit.template') }}" class="inline-flex items-center gap-1 mt-3 text-blue-700 underline">
                             <i class="fas fa-download"></i> Download Template
                         </a>

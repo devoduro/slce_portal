@@ -280,21 +280,21 @@ class Student extends Model
      */
     public function calculateCGPA(): float
     {
-        $results = $this->results;
-        
+        $results = $this->results->filter(fn ($result) => $result->counts_for_gpa);
+
         if ($results->isEmpty()) {
             return 0.0;
         }
-        
+
         $totalCreditHours = 0;
         $totalGradePoints = 0;
-        
+
         foreach ($results as $result) {
             $course = $result->course;
             $totalCreditHours += $course->credit_hours;
             $totalGradePoints += ($result->grade_point * $course->credit_hours);
         }
-        
+
         return $totalCreditHours > 0 ? round($totalGradePoints / $totalCreditHours, 2) : 0.0;
     }
     
@@ -317,24 +317,24 @@ class Student extends Model
             $query->where('academic_year_id', $academicYearId);
         }
         
-        $results = $query->get();
-        
+        $results = $query->get()->filter(fn ($result) => $result->counts_for_gpa);
+
         if ($results->isEmpty()) {
             return 0.0;
         }
-        
+
         $totalCreditHours = 0;
         $totalGradePoints = 0;
-        
+
         foreach ($results as $result) {
             $course = $result->course;
             $totalCreditHours += $course->credit_hours;
             $totalGradePoints += ($result->grade_point * $course->credit_hours);
         }
-        
+
         return $totalCreditHours > 0 ? round($totalGradePoints / $totalCreditHours, 2) : 0.0;
     }
-    
+
     /**
      * Get the student's classification based on CGPA.
      *

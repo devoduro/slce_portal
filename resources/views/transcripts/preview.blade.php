@@ -355,14 +355,16 @@
                                                 @php
                                                     $creditHours = $result->course->credit_hours;
                                                     $gradePoint = $result->grade_point;
-                                                    $totalCreditHours += $creditHours;
-                                                    $totalGradePoints += ($gradePoint * $creditHours);
+                                                    if ($result->counts_for_gpa) {
+                                                        $totalCreditHours += $creditHours;
+                                                        $totalGradePoints += ($gradePoint * $creditHours);
+                                                    }
                                                 @endphp
                                                 <tr>
                                                     <td>{{ $result->course->code }}</td>
                                                     <td>{{ $result->course->title }}</td>
                                                     <td>{{ $creditHours }}</td>
-                                                    <td>{{ $result->grade }}</td>
+                                                    <td>{{ $result->grade }}{{ $result->is_repeated ? ' (Resit)' : '' }}</td>
                                                     <td>{{ $gradePoint }}</td>
                                                 </tr>
                                             @endforeach

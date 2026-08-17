@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\ResitListExport;
 use App\Models\AcademicYear;
 use App\Models\Course;
 use App\Models\GradeScheme;
@@ -13,6 +14,7 @@ use App\Traits\ScopesToLecturer;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ResultController extends Controller
 {
@@ -436,6 +438,18 @@ class ResultController extends Controller
     {
         $query = Result::with(['student.programme', 'course', 'academicYear', 'semester'])
             ->where('grade', 'E')
+            // Drop a student once a passing result (e.g. from an uploaded resit) exists for
+            // the same student/course/semester/year - they no longer need to sit the resit.
+            ->whereNotExists(function ($sub) {
+                $sub->selectRaw('1')
+                    ->from('results as r2')
+                    ->whereColumn('r2.student_id', 'results.student_id')
+                    ->whereColumn('r2.course_id', 'results.course_id')
+                    ->whereColumn('r2.semester_id', 'results.semester_id')
+                    ->whereColumn('r2.academic_year_id', 'results.academic_year_id')
+                    ->whereColumn('r2.id', '!=', 'results.id')
+                    ->where('r2.grade', '!=', 'E');
+            })
             ->when($this->isScopedLecturer(), fn ($q) => $q->whereIn('course_id', $this->lecturerCourseIds()));
 
         if ($request->filled('search')) {
@@ -501,6 +515,20 @@ class ResultController extends Controller
         $settings = DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
 
         return view('results.resit_list_print', compact('results', 'settings'));
+    }
+
+    /**
+     * Export the resit list (unpaginated, same filters) to an Excel file.
+     */
+    public function resitListExport(Request $request)
+    {
+        $results = $this->resitResultsQuery($request)
+            ->join('students', 'students.id', '=', 'results.student_id')
+            ->orderBy('students.full_name')
+            ->select('results.*')
+            ->get();
+
+        return Excel::download(new ResitListExport($results), 'resit_list.xlsx');
     }
 
     /**
