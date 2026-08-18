@@ -594,8 +594,10 @@ class StudentController extends Controller
                 : 0;
         }
 
-        // Sort academic years by start year
-        ksort($groupedResults);
+        // Sort academic years chronologically, oldest first
+        uasort($groupedResults, function ($a, $b) {
+            return $a['academic_year']->start_date <=> $b['academic_year']->start_date;
+        });
 
         return view('student.results', compact(
             'student',

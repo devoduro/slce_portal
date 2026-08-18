@@ -287,9 +287,9 @@ class StudentAuthController extends Controller
             }
         }
 
-        // Convert to array and ensure it's sorted by academic year name
-        $groupedResults = array_values(array_filter(collect($groupedResults)->sortByDesc(function($group) {
-            return (int)explode('/', $group['academic_year']->name)[0];
+        // Convert to array and ensure it's sorted chronologically, oldest first
+        $groupedResults = array_values(array_filter(collect($groupedResults)->sortBy(function($group) {
+            return $group['academic_year']->start_date;
         })->toArray()));
         
         // Calculate GPAs and sort results

@@ -81,6 +81,13 @@
                     @endif
                 </div>
                 <!-- Results -->
+                @php
+                    // Running totals used to derive the CGPA as at each semester below.
+                    // Relies on $groupedResults being in chronological order (oldest year first,
+                    // semesters ascending within a year) so each snapshot reflects everything up to that point.
+                    $runningCreditHours = 0;
+                    $runningCreditPoints = 0;
+                @endphp
                 @forelse($groupedResults as $academicYearId => $yearData)
                     <div class="mb-8">
                         <div class="bg-blue-50 p-6 rounded-lg mb-6 border border-blue-100">
@@ -151,12 +158,21 @@
                                     }, $gpaEligible));
                                     
                                     $semesterGPA = $totalCreditHours > 0 ? $totalCreditPoints / $totalCreditHours : 0;
+
+                                    // CGPA as at this semester: running total through all prior semesters plus this one.
+                                    $runningCreditHours += $totalCreditHours;
+                                    $runningCreditPoints += $totalCreditPoints;
+                                    $cgpaAsAtSemester = $runningCreditHours > 0 ? $runningCreditPoints / $runningCreditHours : 0;
                                 @endphp
                                 <div class="p-6 bg-white">
-                                    <div class="grid grid-cols-3 gap-4 mb-6">
+                                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                         <div class="p-4 bg-blue-50 rounded-lg">
                                             <span class="text-sm text-blue-600 block mb-1">Semester GPA</span>
                                             <span class="text-2xl font-bold text-blue-700">{{ number_format($semesterGPA, 2) }}</span>
+                                        </div>
+                                        <div class="p-4 bg-indigo-50 rounded-lg">
+                                            <span class="text-sm text-indigo-600 block mb-1">CGPA (as at this semester)</span>
+                                            <span class="text-2xl font-bold text-indigo-700">{{ number_format($cgpaAsAtSemester, 2) }}</span>
                                         </div>
                                         <div class="p-4 bg-gray-50 rounded-lg">
                                             <span class="text-sm text-gray-600 block mb-1">Credit Hours</span>
@@ -224,7 +240,7 @@
                                     <p class="text-2xl font-bold text-gray-900">{{ $yearCreditPoints }}</p>
                                 </div>
                                 <div class="bg-white p-4 rounded-lg shadow-sm">
-                                    <h6 class="text-sm font-medium text-gray-600 mb-2">Semester GPA</h6>
+                                    <h6 class="text-sm font-medium text-gray-600 mb-2">Academic Year GPA</h6>
                                     <p class="text-2xl font-bold text-gray-900">{{ number_format($yearGPA, 2) }}</p>
                                 </div>
                             </div>
@@ -258,6 +274,7 @@
                             foreach ($groupedResults as $year) {
                                 foreach ($year['semesters'] as $sem) {
                                     foreach ($sem['results'] as $res) {
+                                        if (!$res->counts_for_gpa) continue;
                                         $totalCreditHours += $res->course->credit_hours;
                                         $totalCreditPoints += $res->grade_point * $res->course->credit_hours;
                                     }
