@@ -224,6 +224,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/results/resit-list', [ResultController::class, 'resitList'])->name('results.resit-list');
         Route::get('/results/resit-list/print', [ResultController::class, 'resitListPrint'])->name('results.resit-list.print');
         Route::get('/results/resit-list/export', [ResultController::class, 'resitListExport'])->name('results.resit-list.export');
+        Route::get('/results/incomplete-list', [ResultController::class, 'incompleteList'])->name('results.incomplete-list');
+        Route::get('/results/incomplete-list/print', [ResultController::class, 'incompleteListPrint'])->name('results.incomplete-list.print');
+        Route::get('/results/incomplete-list/export', [ResultController::class, 'incompleteListExport'])->name('results.incomplete-list.export');
         Route::resource('results', ResultController::class)->only(['index', 'show']);
     });
 

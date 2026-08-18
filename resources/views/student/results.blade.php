@@ -223,10 +223,9 @@
                                     $yearCreditPoints += $res->grade_point * $res->course->credit_hours;
                                 }
                             }
-                            $yearGPA = $yearCreditHours > 0 ? $yearCreditPoints / $yearCreditHours : 0;
                         @endphp
                         <div class="bg-gray-50 p-6 rounded-lg mt-6">
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div class="bg-white p-4 rounded-lg shadow-sm">
                                     <h6 class="text-sm font-medium text-gray-600 mb-2">Credit Hours</h6>
                                     <p class="text-2xl font-bold text-gray-900">{{ $yearCreditHours }}</p>
@@ -234,10 +233,6 @@
                                 <div class="bg-white p-4 rounded-lg shadow-sm">
                                     <h6 class="text-sm font-medium text-gray-600 mb-2">Credit Points</h6>
                                     <p class="text-2xl font-bold text-gray-900">{{ $yearCreditPoints }}</p>
-                                </div>
-                                <div class="bg-white p-4 rounded-lg shadow-sm">
-                                    <h6 class="text-sm font-medium text-gray-600 mb-2">Academic Year GPA</h6>
-                                    <p class="text-2xl font-bold text-gray-900">{{ number_format($yearGPA, 2) }}</p>
                                 </div>
                             </div>
                         </div>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Resit List</title>
+    <title>Incomplete List</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -18,8 +18,8 @@
 </head>
 <body class="bg-gray-100 font-sans">
     <div class="no-print bg-white border-b border-gray-200 px-6 py-3 flex justify-between items-center sticky top-0 z-20 shadow-sm">
-        <a href="{{ route('results.resit-list', request()->query()) }}" class="text-sm text-gray-600 hover:text-primary-600">
-            <i class="fas fa-arrow-left mr-1"></i> Back to Resit List
+        <a href="{{ route('results.incomplete-list', request()->query()) }}" class="text-sm text-gray-600 hover:text-primary-600">
+            <i class="fas fa-arrow-left mr-1"></i> Back to Incomplete List
         </a>
         <button onclick="window.print()" class="bg-primary-600 text-white rounded-md px-4 py-2 text-sm hover:bg-primary-700">
             <i class="fas fa-print mr-1"></i> Print
@@ -40,13 +40,9 @@
             @if(!empty($settings['institution_address']))
                 <p class="text-xs text-gray-500 mt-1">{{ $settings['institution_address'] }}</p>
             @endif
-            <h2 class="text-lg font-semibold text-primary-700 mt-3">Resit List &mdash; {{ $status === 'written' ? 'Written' : 'Not Written' }}</h2>
+            <h2 class="text-lg font-semibold text-primary-700 mt-3">Incomplete List</h2>
             <p class="text-sm text-gray-600 mt-1">
-                @if($status === 'written')
-                    Students with grade E who have had a resit uploaded
-                @else
-                    Students with grade E who do not yet have a resit uploaded
-                @endif
+                Students with an Incomplete (IC) result
                 @if(request('academic_year_id')) &bull; Academic Year: <span class="font-semibold">{{ \App\Models\AcademicYear::find(request('academic_year_id'))?->name }}</span> @endif
                 @if(request('semester_id')) &bull; Semester: <span class="font-semibold">{{ \App\Models\Semester::find(request('semester_id'))?->name }}</span> @endif
                 @if(request('course_id')) &bull; Course: <span class="font-semibold">{{ \App\Models\Course::find(request('course_id'))?->code }}</span> @endif
@@ -82,7 +78,7 @@
                 @empty
                     <tr>
                         <td colspan="8" class="border border-gray-300 px-3 py-6 text-center text-gray-400">
-                            {{ $status === 'written' ? 'No students have an uploaded resit yet.' : 'No students currently need a resit.' }}
+                            No students currently have an incomplete result.
                         </td>
                     </tr>
                 @endforelse

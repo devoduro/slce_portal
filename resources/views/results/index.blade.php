@@ -19,6 +19,9 @@
                 <x-button href="{{ route('results.resit-list') }}" variant="secondary" icon="fas fa-list">
                     {{ __('Resit List') }}
                 </x-button>
+                <x-button href="{{ route('results.incomplete-list') }}" variant="secondary" icon="fas fa-hourglass-half">
+                    {{ __('Incomplete List') }}
+                </x-button>
             </div>
         </div>
     </x-slot>

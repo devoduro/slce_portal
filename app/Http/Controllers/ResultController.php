@@ -462,25 +462,64 @@ class ResultController extends Controller
     /**
      * Build the filtered query of resit-required results (grade E) shared by
      * the on-screen resit list and its print view.
+     *
+     * $request's "status" param selects which half of the E-graded roster to
+     * return: "written" (a resit record, is_repeated = true, has been uploaded
+     * for that student/course/semester/year) or "not_written" (no such record
+     * yet) - the default.
      */
-    protected function resitResultsQuery(Request $request)
+    protected function resitResultsQuery(Request $request, string $status = 'not_written')
     {
         $query = Result::with(['student.programme', 'course', 'academicYear', 'semester'])
             ->where('grade', 'E')
-            // Drop a student once a passing result (e.g. from an uploaded resit) exists for
-            // the same student/course/semester/year - they no longer need to sit the resit.
-            ->whereNotExists(function ($sub) {
-                $sub->selectRaw('1')
-                    ->from('results as r2')
-                    ->whereColumn('r2.student_id', 'results.student_id')
-                    ->whereColumn('r2.course_id', 'results.course_id')
-                    ->whereColumn('r2.semester_id', 'results.semester_id')
-                    ->whereColumn('r2.academic_year_id', 'results.academic_year_id')
-                    ->whereColumn('r2.id', '!=', 'results.id')
-                    ->where('r2.grade', '!=', 'E');
+            ->where('is_repeated', false)
+            ->when($status === 'written', function ($q) {
+                // A resit has been uploaded for this student/course/semester/year.
+                $q->whereExists(function ($sub) {
+                    $sub->selectRaw('1')
+                        ->from('results as r2')
+                        ->whereColumn('r2.student_id', 'results.student_id')
+                        ->whereColumn('r2.course_id', 'results.course_id')
+                        ->whereColumn('r2.semester_id', 'results.semester_id')
+                        ->whereColumn('r2.academic_year_id', 'results.academic_year_id')
+                        ->where('r2.is_repeated', true);
+                });
+            }, function ($q) {
+                // No resit has been uploaded yet for this student/course/semester/year.
+                $q->whereNotExists(function ($sub) {
+                    $sub->selectRaw('1')
+                        ->from('results as r2')
+                        ->whereColumn('r2.student_id', 'results.student_id')
+                        ->whereColumn('r2.course_id', 'results.course_id')
+                        ->whereColumn('r2.semester_id', 'results.semester_id')
+                        ->whereColumn('r2.academic_year_id', 'results.academic_year_id')
+                        ->where('r2.is_repeated', true);
+                });
             })
             ->when($this->isScopedLecturer(), fn ($q) => $q->whereIn('course_id', $this->lecturerCourseIds()));
 
+        return $this->applyRosterFilters($query, $request);
+    }
+
+    /**
+     * Build the filtered query of outstanding Incomplete (grade IC) results,
+     * shared by the on-screen incomplete list, its print view, and export.
+     */
+    protected function incompleteResultsQuery(Request $request)
+    {
+        $query = Result::with(['student.programme', 'course', 'academicYear', 'semester'])
+            ->where('grade', 'IC')
+            ->when($this->isScopedLecturer(), fn ($q) => $q->whereIn('course_id', $this->lecturerCourseIds()));
+
+        return $this->applyRosterFilters($query, $request);
+    }
+
+    /**
+     * Apply the search/academic-year/semester/course/programme filters shared by
+     * the resit list and the incomplete list to a Result query.
+     */
+    protected function applyRosterFilters($query, Request $request)
+    {
         if ($request->filled('search')) {
             $search = $request->search;
             $query->whereHas('student', function ($q) use ($search) {
@@ -511,11 +550,14 @@ class ResultController extends Controller
     }
 
     /**
-     * Display the list of students who currently have a resit (grade E) result.
+     * Display the list of students who currently have a resit (grade E) result,
+     * split by whether a resit has been uploaded for them yet.
      */
     public function resitList(Request $request)
     {
-        $results = $this->resitResultsQuery($request)
+        $status = $request->get('status') === 'written' ? 'written' : 'not_written';
+
+        $results = $this->resitResultsQuery($request, $status)
             ->join('students', 'students.id', '=', 'results.student_id')
             ->orderBy('students.full_name')
             ->select('results.*')
@@ -527,7 +569,7 @@ class ResultController extends Controller
         $programmes = Programme::all();
         $courses = $this->scopeToLecturer(Course::query())->orderBy('code')->get();
 
-        return view('results.resit_list', compact('results', 'academicYears', 'semesters', 'programmes', 'courses'));
+        return view('results.resit_list', compact('results', 'academicYears', 'semesters', 'programmes', 'courses', 'status'));
     }
 
     /**
@@ -535,7 +577,9 @@ class ResultController extends Controller
      */
     public function resitListPrint(Request $request)
     {
-        $results = $this->resitResultsQuery($request)
+        $status = $request->get('status') === 'written' ? 'written' : 'not_written';
+
+        $results = $this->resitResultsQuery($request, $status)
             ->join('students', 'students.id', '=', 'results.student_id')
             ->orderBy('students.full_name')
             ->select('results.*')
@@ -543,7 +587,7 @@ class ResultController extends Controller
 
         $settings = DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
 
-        return view('results.resit_list_print', compact('results', 'settings'));
+        return view('results.resit_list_print', compact('results', 'settings', 'status'));
     }
 
     /**
@@ -551,13 +595,67 @@ class ResultController extends Controller
      */
     public function resitListExport(Request $request)
     {
-        $results = $this->resitResultsQuery($request)
+        $status = $request->get('status') === 'written' ? 'written' : 'not_written';
+
+        $results = $this->resitResultsQuery($request, $status)
             ->join('students', 'students.id', '=', 'results.student_id')
             ->orderBy('students.full_name')
             ->select('results.*')
             ->get();
 
-        return Excel::download(new ResitListExport($results), 'resit_list.xlsx');
+        $filename = $status === 'written' ? 'resit_list_written.xlsx' : 'resit_list_not_written.xlsx';
+
+        return Excel::download(new ResitListExport($results), $filename);
+    }
+
+    /**
+     * Display the list of students who currently have an Incomplete (grade IC) result.
+     */
+    public function incompleteList(Request $request)
+    {
+        $results = $this->incompleteResultsQuery($request)
+            ->join('students', 'students.id', '=', 'results.student_id')
+            ->orderBy('students.full_name')
+            ->select('results.*')
+            ->paginate(20)
+            ->withQueryString();
+
+        $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
+        $semesters = Semester::all();
+        $programmes = Programme::all();
+        $courses = $this->scopeToLecturer(Course::query())->orderBy('code')->get();
+
+        return view('results.incomplete_list', compact('results', 'academicYears', 'semesters', 'programmes', 'courses'));
+    }
+
+    /**
+     * Print-friendly version of the incomplete list (unpaginated, same filters).
+     */
+    public function incompleteListPrint(Request $request)
+    {
+        $results = $this->incompleteResultsQuery($request)
+            ->join('students', 'students.id', '=', 'results.student_id')
+            ->orderBy('students.full_name')
+            ->select('results.*')
+            ->get();
+
+        $settings = DB::table('settings')->where('category', 'institution')->pluck('value', 'key')->toArray();
+
+        return view('results.incomplete_list_print', compact('results', 'settings'));
+    }
+
+    /**
+     * Export the incomplete list (unpaginated, same filters) to an Excel file.
+     */
+    public function incompleteListExport(Request $request)
+    {
+        $results = $this->incompleteResultsQuery($request)
+            ->join('students', 'students.id', '=', 'results.student_id')
+            ->orderBy('students.full_name')
+            ->select('results.*')
+            ->get();
+
+        return Excel::download(new ResitListExport($results), 'incomplete_list.xlsx');
     }
 
     /**

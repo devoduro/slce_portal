@@ -2,13 +2,13 @@
     <x-slot name="header">
         <div class="flex justify-between items-center">
             <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-                {{ __('Resit List') }}
+                {{ __('Incomplete List') }}
             </h2>
             <div class="flex space-x-2">
-                <a href="{{ route('results.resit-list.export', request()->query()) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                <a href="{{ route('results.incomplete-list.export', request()->query()) }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                     <i class="fas fa-file-excel mr-2"></i> Export
                 </a>
-                <a href="{{ route('results.resit-list.print', request()->query()) }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                <a href="{{ route('results.incomplete-list.print', request()->query()) }}" target="_blank" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                     <i class="fas fa-print mr-2"></i> Print
                 </a>
                 <x-button href="{{ route('results.index') }}" variant="secondary" icon="fas fa-arrow-left">
@@ -20,31 +20,14 @@
 
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-700 text-sm rounded-md">
-                @if($status === 'written')
-                    Students below scored grade <strong>E</strong> and have had a resit result uploaded for the listed course.
-                @else
-                    Students below scored grade <strong>E</strong> and do not yet have a resit result uploaded for the listed course.
-                @endif
-            </div>
-
-            <!-- Written / Not Written toggle -->
-            <div class="mb-6 inline-flex rounded-md shadow-sm" role="group">
-                <a href="{{ route('results.resit-list', array_merge(request()->except('page'), ['status' => 'not_written'])) }}"
-                   class="px-4 py-2 text-sm font-medium border rounded-l-md {{ $status === 'not_written' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">
-                    <i class="fas fa-hourglass-half mr-1"></i> Not Written
-                </a>
-                <a href="{{ route('results.resit-list', array_merge(request()->except('page'), ['status' => 'written'])) }}"
-                   class="px-4 py-2 text-sm font-medium border-t border-b border-r rounded-r-md {{ $status === 'written' ? 'bg-primary-600 text-white border-primary-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50' }}">
-                    <i class="fas fa-check mr-1"></i> Written
-                </a>
+            <div class="mb-6 p-4 bg-amber-50 border-l-4 border-amber-400 text-amber-700 text-sm rounded-md">
+                Students below have an <strong>Incomplete (IC)</strong> result recorded for the listed course.
             </div>
 
             <!-- Filters -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <form action="{{ route('results.resit-list') }}" method="GET" class="space-y-4">
-                        <input type="hidden" name="status" value="{{ $status }}">
+                    <form action="{{ route('results.incomplete-list') }}" method="GET" class="space-y-4">
                         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                             <div>
                                 <label for="search" class="block text-sm font-medium text-gray-700 mb-1">Search</label>
@@ -110,7 +93,7 @@
                                 <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                                     <i class="fas fa-search mr-2"></i> Filter
                                 </button>
-                                <a href="{{ route('results.resit-list', ['status' => $status]) }}" class="ml-2 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                                <a href="{{ route('results.incomplete-list') }}" class="ml-2 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
                                     <i class="fas fa-times mr-2"></i> Clear
                                 </a>
                             </div>
@@ -119,12 +102,10 @@
                 </div>
             </div>
 
-            <!-- Resit Table -->
+            <!-- Incomplete Table -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 bg-white border-b border-gray-200">
-                    <h3 class="text-lg font-medium text-gray-900 mb-4">
-                        {{ $status === 'written' ? 'Resit Written' : 'Resit Not Written' }} ({{ $results->total() }})
-                    </h3>
+                    <h3 class="text-lg font-medium text-gray-900 mb-4">Students with Incomplete Results ({{ $results->total() }})</h3>
 
                     @if($results->count() > 0)
                     <div class="overflow-x-auto">
@@ -156,7 +137,7 @@
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $result->academicYear->name }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $result->semester->name }}</td>
                                     <td class="px-6 py-4 whitespace-nowrap">
-                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-amber-100 text-amber-800">
                                             {{ $result->grade }}
                                         </span>
                                     </td>
@@ -171,9 +152,7 @@
                     </div>
                     @else
                     <div class="bg-gray-50 p-4 rounded-lg text-center">
-                        <p class="text-sm text-gray-500">
-                            {{ $status === 'written' ? 'No students have an uploaded resit yet.' : 'No students currently need a resit.' }}
-                        </p>
+                        <p class="text-sm text-gray-500">No students currently have an incomplete result.</p>
                     </div>
                     @endif
                 </div>
