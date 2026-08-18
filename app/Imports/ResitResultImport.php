@@ -96,13 +96,22 @@ class ResitResultImport implements ToCollection, WithHeadingRow, WithValidation,
                 continue;
             }
 
-            $course = Course::whereRaw('UPPER(code) = ?', [strtoupper($courseCode)])->first();
+            // A course code is offered once per semester (each Course row is scoped to a
+            // specific semester_id), and the same code recurs across academic years/cohorts
+            // as a separate Course row each time. Matching on code alone can therefore land
+            // on the wrong year's course row; matching on code + the semester already
+            // resolved above picks the exact offering this result belongs to.
+            $course = Course::whereRaw('UPPER(code) = ?', [strtoupper($courseCode)])
+                ->where('semester_id', $semester->id)
+                ->first();
 
             if (!$course) {
-                $this->errors[] = "Course with code \"{$courseCode}\" not found (student {$indexNumber}).";
+                $this->errors[] = "Course with code \"{$courseCode}\" not found for {$semesterName} {$academicYearName} (student {$indexNumber}).";
                 $this->skipped++;
                 continue;
             }
+
+            $courseId = $course->id;
 
             if (!$this->gradeScheme) {
                 $this->errors[] = 'No default grade scheme configured in the system.';
@@ -132,7 +141,7 @@ class ResitResultImport implements ToCollection, WithHeadingRow, WithValidation,
             Result::updateOrCreate(
                 [
                     'student_id' => $student->id,
-                    'course_id' => $course->id,
+                    'course_id' => $courseId,
                     'academic_year_id' => $academicYear->id,
                     'semester_id' => $semester->id,
                     'is_repeated' => $isRepeated,

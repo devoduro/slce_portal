@@ -69,14 +69,43 @@ class ResultController extends Controller
         if ($request->has('max_score') && $request->max_score) {
             $query->where('total_score', '<=', $request->max_score);
         }
-        
-        $results = $query->orderBy('created_at', 'desc')
-                        ->paginate(20)
-                        ->withQueryString();
+
+        // Sorting: course, academic year, and semester need a join since they're on
+        // related tables; select results.* afterwards to avoid ambiguous/duplicate columns.
+        $sort = $request->get('sort');
+        $direction = $request->get('direction') === 'desc' ? 'desc' : 'asc';
+
+        switch ($sort) {
+            case 'course':
+                $query->join('courses', 'courses.id', '=', 'results.course_id')
+                    ->select('results.*')
+                    ->orderBy('courses.code', $direction);
+                break;
+            case 'academic_year':
+                $query->join('academic_years', 'academic_years.id', '=', 'results.academic_year_id')
+                    ->select('results.*')
+                    ->orderBy('academic_years.start_date', $direction);
+                break;
+            case 'semester':
+                $query->join('semesters', 'semesters.id', '=', 'results.semester_id')
+                    ->select('results.*')
+                    ->orderBy('semesters.semester_number', $direction);
+                break;
+            default:
+                $query->orderBy('results.created_at', 'desc');
+                break;
+        }
+
+        $results = $query->paginate(20)->withQueryString();
         
         // Get data for filter dropdowns
         $academicYears = AcademicYear::all();
-        $semesters = Semester::all();
+        $semesters = Semester::with('academicYear')
+            ->join('academic_years', 'academic_years.id', '=', 'semesters.academic_year_id')
+            ->orderBy('academic_years.start_date', 'desc')
+            ->orderBy('semesters.semester_number')
+            ->select('semesters.*')
+            ->get();
         $programmes = Programme::all();
         $courses = $this->scopeToLecturer(Course::query())->get();
 

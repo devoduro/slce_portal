@@ -58,7 +58,7 @@
                                     <option value="">All Semesters</option>
                                     @foreach($semesters ?? [] as $semester)
                                         <option value="{{ $semester->id }}" {{ request('semester_id') == $semester->id ? 'selected' : '' }}>
-                                            {{ $semester->name }}
+                                            {{ $semester->name }} ({{ $semester->academicYear->name ?? 'N/A' }})
                                         </option>
                                     @endforeach
                                 </select>
@@ -131,13 +131,13 @@
                                     </th>
                             
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Course
+                                        @include('results.partials.sort-link', ['field' => 'course', 'label' => 'Course'])
                                     </th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Academic Year
+                                        @include('results.partials.sort-link', ['field' => 'academic_year', 'label' => 'Academic Year'])
                                     </th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Semester
+                                        @include('results.partials.sort-link', ['field' => 'semester', 'label' => 'Semester'])
                                     </th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Grade
