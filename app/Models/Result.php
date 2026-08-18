@@ -70,24 +70,4 @@ class Result extends Model
         return $this->belongsTo(AcademicYear::class);
     }
 
-    /**
-     * Whether this row should be summed into GPA/CGPA for its student/course/semester/year.
-     *
-     * A resit row (is_repeated = true) always counts - it's the latest attempt. An
-     * original row only counts if no resit sibling exists yet, so a resit supersedes
-     * the original for GPA purposes while both rows stay on the transcript.
-     */
-    public function getCountsForGpaAttribute(): bool
-    {
-        if ($this->is_repeated) {
-            return true;
-        }
-
-        return !self::where('student_id', $this->student_id)
-            ->where('course_id', $this->course_id)
-            ->where('semester_id', $this->semester_id)
-            ->where('academic_year_id', $this->academic_year_id)
-            ->where('is_repeated', true)
-            ->exists();
-    }
 }

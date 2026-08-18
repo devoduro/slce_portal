@@ -280,7 +280,7 @@ class Student extends Model
      */
     public function calculateCGPA(): float
     {
-        $results = $this->results->filter(fn ($result) => $result->counts_for_gpa);
+        $results = $this->results;
 
         if ($results->isEmpty()) {
             return 0.0;
@@ -317,7 +317,7 @@ class Student extends Model
             $query->where('academic_year_id', $academicYearId);
         }
         
-        $results = $query->get()->filter(fn ($result) => $result->counts_for_gpa);
+        $results = $query->get();
 
         if ($results->isEmpty()) {
             return 0.0;

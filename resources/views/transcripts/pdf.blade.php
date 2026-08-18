@@ -285,10 +285,8 @@
                             @php
                                 $creditHours = $result->course->credit_hours;
                                 $gradePoint = $result->grade_point;
-                                if ($result->counts_for_gpa) {
-                                    $totalCreditHours += $creditHours;
-                                    $totalGradePoints += ($gradePoint * $creditHours);
-                                }
+                                $totalCreditHours += $creditHours;
+                                $totalGradePoints += ($gradePoint * $creditHours);
                             @endphp
                             <tr>
                                 <td>{{ $result->course->code }}</td>
@@ -313,7 +311,7 @@
             <table>
                 <tr>
                     <th>Total Credit Hours</th>
-                    <td>{{ $student->results->filter(fn($result) => $result->counts_for_gpa)->sum(function($result) { return $result->course->credit_hours; }) }}</td>
+                    <td>{{ $student->results->sum(function($result) { return $result->course->credit_hours; }) }}</td>
                 </tr>
                 <tr>
                     <th>Cumulative GPA (CGPA)</th>

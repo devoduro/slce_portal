@@ -355,10 +355,8 @@
                                                 @php
                                                     $creditHours = $result->course->credit_hours;
                                                     $gradePoint = $result->grade_point;
-                                                    if ($result->counts_for_gpa) {
-                                                        $totalCreditHours += $creditHours;
-                                                        $totalGradePoints += ($gradePoint * $creditHours);
-                                                    }
+                                                    $totalCreditHours += $creditHours;
+                                                    $totalGradePoints += ($gradePoint * $creditHours);
                                                 @endphp
                                                 <tr>
                                                     <td>{{ $result->course->code }}</td>

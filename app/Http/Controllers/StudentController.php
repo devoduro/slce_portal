@@ -538,13 +538,7 @@ class StudentController extends Controller
             $academicYearId = $result->academic_year_id;
             $semesterId = $result->semester_id;
 
-            // Add result to appropriate semester (always shown, even if it doesn't count toward GPA)
             $groupedResults[$academicYearId]['semesters'][$semesterId]['results'][] = $result;
-
-            // A superseded original (one with a resit on record) is shown above but excluded from the totals
-            if (!$result->counts_for_gpa) {
-                continue;
-            }
 
             // Calculate credit points and hours
             $creditHours = $result->course->credit_hours;

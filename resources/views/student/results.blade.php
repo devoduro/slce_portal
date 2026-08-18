@@ -96,7 +96,6 @@
                                 $yearTotalHours = 0;
                                 foreach ($yearData['semesters'] as $semData) {
                                     foreach ($semData['results'] as $result) {
-                                        if (!$result->counts_for_gpa) continue;
                                         $yearTotalPoints += $result->grade_point * $result->course->credit_hours;
                                         $yearTotalHours += $result->course->credit_hours;
                                     }
@@ -147,15 +146,13 @@
 
                                 <!-- Semester Results -->
                                 @php
-                                    $gpaEligible = array_filter($semesterData['results'], fn($result) => $result->counts_for_gpa);
-
                                     $totalCreditHours = array_sum(array_map(function($result) {
                                         return $result->course->credit_hours;
-                                    }, $gpaEligible));
+                                    }, $semesterData['results']));
 
                                     $totalCreditPoints = array_sum(array_map(function($result) {
                                         return $result->course->credit_hours * $result->grade_point;
-                                    }, $gpaEligible));
+                                    }, $semesterData['results']));
                                     
                                     $semesterGPA = $totalCreditHours > 0 ? $totalCreditPoints / $totalCreditHours : 0;
 
@@ -222,7 +219,6 @@
                             $yearCreditPoints = 0;
                             foreach ($yearData['semesters'] as $sem) {
                                 foreach ($sem['results'] as $res) {
-                                    if (!$res->counts_for_gpa) continue;
                                     $yearCreditHours += $res->course->credit_hours;
                                     $yearCreditPoints += $res->grade_point * $res->course->credit_hours;
                                 }
@@ -274,7 +270,6 @@
                             foreach ($groupedResults as $year) {
                                 foreach ($year['semesters'] as $sem) {
                                     foreach ($sem['results'] as $res) {
-                                        if (!$res->counts_for_gpa) continue;
                                         $totalCreditHours += $res->course->credit_hours;
                                         $totalCreditPoints += $res->grade_point * $res->course->credit_hours;
                                     }

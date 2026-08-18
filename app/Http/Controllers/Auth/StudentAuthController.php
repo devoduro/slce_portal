@@ -262,11 +262,6 @@ class StudentAuthController extends Controller
             if (isset($groupedResults[$academicYearId]['semesters'][$semesterId])) {
                 $groupedResults[$academicYearId]['semesters'][$semesterId]['results'][] = $result;
 
-                // A superseded original (one with a resit on record) is shown above but excluded from the totals
-                if (!$result->counts_for_gpa) {
-                    continue;
-                }
-
                 // Calculate credit points and hours
                 $creditHours = $result->course->credit_hours ?? 0;
                 if ($creditHours <= 0) continue; // Skip if invalid credit hours
