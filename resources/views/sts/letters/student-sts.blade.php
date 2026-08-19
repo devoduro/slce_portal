@@ -25,13 +25,17 @@
         </button>
     </div>
 
-    <div class="max-w-3xl mx-auto p-10 bg-white my-6 print:my-0 print:shadow-none shadow-md rounded-lg">
+    <div class="relative overflow-hidden max-w-3xl mx-auto p-10 bg-white my-6 print:my-0 print:shadow-none shadow-md rounded-lg">
+        @php
+            $logoFile = public_path('images/logos/institution_logo.png');
+            $logoBase64 = file_exists($logoFile) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoFile)) : null;
+        @endphp
+        @if($logoBase64)
+            <img src="{{ $logoBase64 }}" alt="" aria-hidden="true" class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 max-w-[70%] opacity-[0.06] pointer-events-none select-none z-0">
+        @endif
+        <div class="relative z-10">
         <!-- Letterhead -->
         <div class="text-center border-b-2 border-gray-800 pb-4 mb-8">
-            @php
-                $logoFile = public_path('images/logos/institution_logo.png');
-                $logoBase64 = file_exists($logoFile) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoFile)) : null;
-            @endphp
             @if($logoBase64)
                 <img src="{{ $logoBase64 }}" alt="Institution Logo" class="mx-auto mb-2" style="max-width: 90px; max-height: 90px;">
             @endif
@@ -52,7 +56,7 @@
 
         <div class="flex gap-6 items-start mb-4">
             <x-student-photo :student="$student" class="w-24 h-28 object-cover rounded border border-gray-300 flex-shrink-0" />
-            <p class="leading-relaxed">
+            <p class="leading-relaxed text-justify">
                 This letter introduces <span class="font-semibold">{{ $student->full_name }}</span>
                 (Index Number: <span class="font-semibold">{{ $student->index_number }}</span>),
                 a Level {{ $placement->level }} student of {{ $student->programme->name ?? '' }} at
@@ -62,7 +66,7 @@
             </p>
         </div>
 
-        <p class="mb-4 leading-relaxed">
+        <p class="mb-4 leading-relaxed text-justify">
             The assigned supervisor{{ $placement->secondLecturer ? 's are' : ' for this placement is' }} <span class="font-semibold">{{ $placement->lecturer->name ?? '' }}</span>{{ $placement->secondLecturer ? ' and ' . $placement->secondLecturer->name : '' }}.
             We would be grateful if you could offer the student every assistance and supervision needed to make this
             placement a success.
@@ -93,6 +97,7 @@
         </div>
 
         <p class="text-xs text-gray-400 text-center mt-10">Printed {{ now()->format('F j, Y \a\t g:i A') }}</p>
+        </div>
     </div>
 </body>
 </html>

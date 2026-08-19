@@ -319,6 +319,10 @@
                     <i class="fas fa-star-half-alt w-5"></i>
                     <span>STS Score Settings</span>
                 </a>
+                <a href="{{ route('settings.sts') }}" class="flex items-center gap-3 px-4 py-3 text-gray-600 transition-all duration-200 hover:bg-primary-50 hover:text-primary-600 rounded-lg {{ request()->routeIs('settings.sts') ? 'bg-primary-50 text-primary-600 font-medium' : '' }}">
+                    <i class="fas fa-signature w-5"></i>
+                    <span>STS Coordinator Signature</span>
+                </a>
                 @endcan
 
                 @can('send-sms')

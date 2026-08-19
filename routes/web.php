@@ -354,6 +354,10 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/sts-placements/{stsPlacement}/assign-supervisor', [\App\Http\Controllers\StsPlacementController::class, 'assignSupervisor'])->name('sts-placements.assign-supervisor');
         Route::put('/sts-placements/{stsPlacement}/undo-school', [\App\Http\Controllers\StsPlacementController::class, 'undoSchool'])->name('sts-placements.undo-school');
         Route::put('/sts-placements/{stsPlacement}/change-school', [\App\Http\Controllers\StsPlacementController::class, 'changeSchool'])->name('sts-placements.change-school');
+
+        // STS Coordinator name + signature (used on placement letters)
+        Route::get('/settings/sts', [SettingController::class, 'sts'])->name('settings.sts');
+        Route::put('/settings/sts', [SettingController::class, 'updateSts'])->name('settings.sts.update');
     });
 
     // Timetable
@@ -520,10 +524,6 @@ Route::middleware(['auth'])->group(function () {
 
             // CA Score Settings
             Route::resource('ca-score-settings', \App\Http\Controllers\CaScoreSettingController::class)->except(['show']);
-
-            // STS Settings
-            Route::get('/settings/sts', [SettingController::class, 'sts'])->name('settings.sts');
-            Route::put('/settings/sts', [SettingController::class, 'updateSts'])->name('settings.sts.update');
         });
 
         // Bulk Results Upload
