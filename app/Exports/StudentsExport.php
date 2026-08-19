@@ -3,11 +3,12 @@
 namespace App\Exports;
 
 use App\Models\Student;
-use Maatwebsite\Excel\Concerns\FromCollection;
+use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
+use Maatwebsite\Excel\Concerns\WithChunkReading;
 
-class StudentsExport implements FromCollection, WithHeadings, WithMapping
+class StudentsExport implements FromQuery, WithHeadings, WithMapping, WithChunkReading
 {
     protected $request;
 
@@ -16,10 +17,10 @@ class StudentsExport implements FromCollection, WithHeadings, WithMapping
         $this->request = $request;
     }
 
-    public function collection()
+    public function query()
     {
-        $query = Student::with('programme');
-        
+        $query = Student::query()->with(['programme', 'results.course']);
+
         // Apply filters if they exist
         if ($this->request->has('search') && $this->request->search) {
             $searchTerm = $this->request->search;
@@ -30,16 +31,25 @@ class StudentsExport implements FromCollection, WithHeadings, WithMapping
                   ->orWhere('phone', 'like', "%{$searchTerm}%");
             });
         }
-        
+
         if ($this->request->has('programme_id') && $this->request->programme_id) {
             $query->where('programme_id', $this->request->programme_id);
         }
-        
+
         if ($this->request->has('gender') && $this->request->gender) {
             $query->where('gender', $this->request->gender);
         }
-        
-        return $query->get();
+
+        if ($this->request->has('level') && $this->request->level) {
+            $query->where('level', $this->request->level);
+        }
+
+        return $query;
+    }
+
+    public function chunkSize(): int
+    {
+        return 200;
     }
 
     public function headings(): array
@@ -52,6 +62,7 @@ class StudentsExport implements FromCollection, WithHeadings, WithMapping
             'Gender',
             'Date of Birth',
             'Programme',
+            'Level',
             'CGPA',
             'Emergency Contact',
             'Emergency Phone',
@@ -69,6 +80,7 @@ class StudentsExport implements FromCollection, WithHeadings, WithMapping
             $student->gender,
             $student->date_of_birth,
             $student->programme->name ?? 'N/A',
+            $student->level,
             number_format($student->calculateCGPA(), 2),
             $student->emergency_contact_name,
             $student->emergency_contact_phone,
