@@ -107,16 +107,37 @@ class StsSelectionController extends Controller
     public function printLetter()
     {
         $student = Auth::user()->student;
-        $term = StsTerm::with('semester.academicYear')->where('is_current', true)->firstOrFail();
+        $term = StsTerm::with('semester.academicYear')->where('is_current', true)->first();
+
+        if (!$term) {
+            return redirect()->route('student.sts.index')
+                ->with('error', 'There is no active STS/Internship term right now.');
+        }
 
         $placement = StsPlacement::with(['partnerSchool', 'lecturer'])
             ->where('student_id', $student->id)
             ->where('sts_term_id', $term->id)
-            ->firstOrFail();
+            ->first();
 
-        abort_unless($placement->partner_school_id && $placement->lecturer_id, 403, 'Your school and supervisor must both be assigned before you can print your letter.');
-        abort_unless($student->hasBiometricVerification($term->semester), 403, 'You must complete biometric check-in before you can print your letter.');
-        abort_unless($student->meetsRegistrationThreshold($term->semester), 403, 'You have not met the fee payment threshold required to print your letter.');
+        if (!$placement) {
+            return redirect()->route('student.sts.index')
+                ->with('error', 'You have not been included in this STS term yet.');
+        }
+
+        if (!$placement->partner_school_id || !$placement->lecturer_id) {
+            return redirect()->route('student.sts.index')
+                ->with('error', 'Your school and supervisor must both be assigned before you can print your letter.');
+        }
+
+        if (!$student->hasBiometricVerification($term->semester)) {
+            return redirect()->route('student.sts.index')
+                ->with('error', 'You must complete biometric check-in before you can print your letter.');
+        }
+
+        if (!$student->meetsRegistrationThreshold($term->semester)) {
+            return redirect()->route('student.sts.index')
+                ->with('error', 'You have not met the fee payment threshold required to print your letter.');
+        }
 
         if (!$placement->letter_printed_at) {
             $placement->update(['letter_printed_at' => now()]);

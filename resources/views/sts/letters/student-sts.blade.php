@@ -6,9 +6,35 @@
     <title>STS Placement Letter — {{ $student->full_name }}</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    },
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
+        @page {
+            size: A4;
+            margin: 12mm;
+        }
         @media print {
             .no-print { display: none !important; }
             body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
@@ -25,7 +51,7 @@
         </button>
     </div>
 
-    <div class="relative overflow-hidden max-w-3xl mx-auto p-10 bg-white my-6 print:my-0 print:shadow-none shadow-md rounded-lg">
+    <div class="relative overflow-hidden max-w-3xl mx-auto p-10 print:p-0 bg-white my-6 print:my-0 print:shadow-none shadow-md rounded-lg">
         @php
             $logoFile = public_path('images/logos/institution_logo.png');
             $logoBase64 = file_exists($logoFile) ? 'data:image/png;base64,' . base64_encode(file_get_contents($logoFile)) : null;
@@ -35,7 +61,7 @@
         @endif
         <div class="relative z-10">
         <!-- Letterhead -->
-        <div class="text-center border-b-2 border-gray-800 pb-4 mb-8">
+        <div class="text-center border-b-2 border-gray-800 pb-4 print:pb-2 mb-8 print:mb-4">
             @if($logoBase64)
                 <img src="{{ $logoBase64 }}" alt="Institution Logo" class="mx-auto mb-2" style="max-width: 90px; max-height: 90px;">
             @endif
@@ -46,17 +72,17 @@
             <h2 class="text-lg font-semibold text-primary-700 mt-3">Supported Teaching in Schools (STS) — Placement Letter</h2>
         </div>
 
-        <p class="text-sm text-gray-500 mb-6">{{ now()->format('F j, Y') }}</p>
+        <p class="text-sm text-gray-500 mb-6 print:mb-3">{{ now()->format('F j, Y') }}</p>
 
-        <p class="mb-4">The Headteacher,</p>
-        <p class="mb-6">{{ $placement->partnerSchool->name ?? '' }}<br>{{ $placement->partnerSchool->location ?? '' }}</p>
+        <p class="mb-4 print:mb-2">The Headteacher,</p>
+        <p class="mb-6 print:mb-3">{{ $placement->partnerSchool->name ?? '' }}<br>{{ $placement->partnerSchool->location ?? '' }}</p>
 
-        <p class="mb-4 font-semibold">Dear Sir/Madam,</p>
-        <p class="mb-4 font-semibold">RE: PLACEMENT OF STUDENT FOR SUPPORTED TEACHING IN SCHOOLS (STS)</p>
+        <p class="mb-4 print:mb-2 font-semibold">Dear Sir/Madam,</p>
+        <p class="mb-4 print:mb-2 font-semibold">RE: PLACEMENT OF STUDENT FOR SUPPORTED TEACHING IN SCHOOLS (STS)</p>
 
-        <div class="flex gap-6 items-start mb-4">
-            <x-student-photo :student="$student" class="w-24 h-28 object-cover rounded border border-gray-300 flex-shrink-0" />
-            <p class="leading-relaxed text-justify">
+        <div class="flex gap-6 print:gap-4 items-start mb-4 print:mb-2">
+            <x-student-photo :student="$student" class="w-24 h-28 print:w-20 print:h-24 object-cover rounded border border-gray-300 flex-shrink-0" />
+            <p class="leading-relaxed print:leading-snug text-justify">
                 This letter introduces <span class="font-semibold">{{ $student->full_name }}</span>
                 (Index Number: <span class="font-semibold">{{ $student->index_number }}</span>),
                 a Level {{ $placement->level }} student of {{ $student->programme->name ?? '' }} at
@@ -66,15 +92,15 @@
             </p>
         </div>
 
-        <p class="mb-4 leading-relaxed text-justify">
+        <p class="mb-4 print:mb-2 leading-relaxed print:leading-snug text-justify">
             The assigned supervisor{{ $placement->secondLecturer ? 's are' : ' for this placement is' }} <span class="font-semibold">{{ $placement->lecturer->name ?? '' }}</span>{{ $placement->secondLecturer ? ' and ' . $placement->secondLecturer->name : '' }}.
             We would be grateful if you could offer the student every assistance and supervision needed to make this
             placement a success.
         </p>
 
-        <p class="mb-10 leading-relaxed">Thank you for your cooperation.</p>
+        <p class="mb-10 print:mb-4 leading-relaxed">Thank you for your cooperation.</p>
 
-        <div class="flex justify-between items-end mb-12">
+        <div class="flex justify-between items-end mb-12 print:mb-6">
             <div>
                 @if(!empty($stsSettings['sts_coordinator_signature']))
                     <img src="{{ asset('storage/' . $stsSettings['sts_coordinator_signature']) }}" alt="Signature" class="max-h-16 mb-1">
@@ -84,19 +110,19 @@
             </div>
         </div>
 
-        <div class="border-t-2 border-dashed border-gray-400 pt-6">
-            <p class="text-sm font-semibold mb-6">To be completed by the Headteacher:</p>
-            <div class="grid grid-cols-2 gap-8 text-sm">
+        <div class="border-t-2 border-dashed border-gray-400 pt-6 print:pt-3 print:break-inside-avoid">
+            <p class="text-sm font-semibold mb-6 print:mb-3">To be completed by the Headteacher:</p>
+            <div class="grid grid-cols-2 gap-8 print:gap-4 text-sm">
                 <div>
-                    <p class="border-t border-gray-800 pt-1 mt-12">Headteacher's Signature</p>
+                    <p class="border-t border-gray-800 pt-1 mt-12 print:mt-6">Headteacher's Signature</p>
                 </div>
                 <div>
-                    <p class="border-t border-gray-800 pt-1 mt-12">School Stamp</p>
+                    <p class="border-t border-gray-800 pt-1 mt-12 print:mt-6">School Stamp</p>
                 </div>
             </div>
         </div>
 
-        <p class="text-xs text-gray-400 text-center mt-10">Printed {{ now()->format('F j, Y \a\t g:i A') }}</p>
+        <p class="text-xs text-gray-400 text-center mt-10 print:mt-4">Printed {{ now()->format('F j, Y \a\t g:i A') }}</p>
         </div>
     </div>
 </body>
