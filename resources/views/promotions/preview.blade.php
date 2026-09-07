@@ -18,6 +18,11 @@
                         <p class="mt-2">Their current class assignment will be cleared so it becomes available for new intake. You'll need to reassign them to a Level {{ $targetLevel ?? $level }} class afterward via <strong>Classes &gt; Assign Students</strong>. Historical results, continuous assessment scores, registrations and arrears are not affected.</p>
                     </div>
 
+                    <div class="mb-6 p-4 bg-blue-50 border-l-4 border-blue-400 text-blue-800 text-sm">
+                        <p>For fee purposes this will record that these students studied <strong>{{ $completedYear->name }}</strong> at <strong>Level {{ $level }}</strong>, so that year's bills and balances stay at the Level {{ $level }} rate{{ $isTerminal ? ' and they are shown as graduating at the end of it' : ' even after they move up' }}.</p>
+                        <p class="mt-2">If {{ $completedYear->name }} is the year they are <em>about to start</em> rather than the one they are finishing, go back and pick the correct year — recording it against the wrong year re-prices their fees at the wrong level.</p>
+                    </div>
+
                     <div class="overflow-x-auto mb-6">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
@@ -47,6 +52,7 @@
                             @csrf
                             <input type="hidden" name="programme_id" value="{{ $programme->id }}">
                             <input type="hidden" name="level" value="{{ $level }}">
+                            <input type="hidden" name="completed_academic_year_id" value="{{ $completedYear->id }}">
                             <button type="submit" class="bg-red-600 text-white rounded-md px-4 py-2 text-sm hover:bg-red-700">
                                 {{ $isTerminal ? 'Confirm Graduation' : 'Confirm Promotion' }}
                             </button>

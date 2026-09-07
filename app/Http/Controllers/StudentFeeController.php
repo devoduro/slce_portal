@@ -26,9 +26,11 @@ class StudentFeeController extends Controller
         // as of the most recent transaction, i.e. arrears + every unpaid year's tuition combined.
         $balanceDue = $ledger[0]['balance'] ?? 0.0;
 
-        // The closing balance of the previous year(s), derived from the same two figures above
-        // rather than a separately-tracked arrears total, so it can never drift from them.
-        $totalArrears = $balanceDue - $currentYearBalance;
+        // The closing balance of the previous year(s), computed the same way as the "Arrears"
+        // column the finance office sees on /fees, so a student is never shown a different
+        // arrears figure from the one the college is working off. Adds back to Total Balance Due
+        // together with the current year's own balance above.
+        $totalArrears = $student->totalArrears();
 
         return view('student.fees.index', compact(
             'student', 'schedule', 'ledger', 'totalArrears', 'currentYearBalance', 'balanceDue'

@@ -564,6 +564,11 @@ class DashboardController extends Controller
         // debt is paid off. See FeeLedgerService::carryForwardFor().
         $arrearSums = FeeLedgerService::carryForwardFor($students, $currentAcademicYear);
 
+        // Resolved per year rather than read off students.level, matching the /fees list - a
+        // student promoted out of this year mid-way through is still billed at the level they
+        // studied it at.
+        $levels = FeeLedgerService::levelsFor($students, $currentAcademicYear);
+
         $programmes = Programme::all()->keyBy('id');
 
         $totalBilled = 0.0;
@@ -576,7 +581,10 @@ class DashboardController extends Controller
         $debtorBalances = [];
 
         foreach ($students as $student) {
-            $structure = $tuitionStructures->first(fn (FeeStructure $s) => (int) $s->programme_id === (int) $student->programme_id && (int) $s->level === (int) $student->level)
+            $level = $levels[$student->id] ?? null;
+
+            $structure = $tuitionStructures->first(fn (FeeStructure $s) => (int) $s->programme_id === (int) $student->programme_id
+                    && $s->level !== null && $level !== null && (int) $s->level === (int) $level)
                 ?? $tuitionStructures->first(fn (FeeStructure $s) => (int) $s->programme_id === (int) $student->programme_id && $s->level === null);
 
             $feeAmount = ($structure ? (float) $structure->amount : 0.0) + (float) ($tuitionChargeSums[$student->id] ?? 0);

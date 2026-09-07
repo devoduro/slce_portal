@@ -141,7 +141,15 @@ class StudentPaymentController extends Controller
             ? FeeLedgerService::carryForwardFor($students, $academicYear)
             : [];
 
-        $rows = $students->map(function (Student $student) use ($academicYear, $feeStructures, $paymentSums, $tuitionChargeSums, $arrearSums) {
+        // The level each student held in the year being listed - NOT students.level, which a
+        // promotion has already moved on. Listing a past year off the current level re-prices
+        // every promoted student's bill at their new level and contradicts the statement of
+        // account on their own fee page.
+        $levels = $academicYear
+            ? FeeLedgerService::levelsFor($students, $academicYear)
+            : [];
+
+        $rows = $students->map(function (Student $student) use ($academicYear, $feeStructures, $paymentSums, $tuitionChargeSums, $arrearSums, $levels) {
             $structure = null;
             $paid = 0.0;
             $balance = 0.0;
@@ -150,7 +158,10 @@ class StudentPaymentController extends Controller
             $arrears = (float) ($arrearSums[$student->id] ?? 0);
 
             if ($academicYear) {
-                $structure = $feeStructures->first(fn (FeeStructure $f) => (int) $f->programme_id === (int) $student->programme_id && (int) $f->level === (int) $student->level)
+                $level = $levels[$student->id] ?? null;
+
+                $structure = $feeStructures->first(fn (FeeStructure $f) => (int) $f->programme_id === (int) $student->programme_id
+                        && $f->level !== null && $level !== null && (int) $f->level === (int) $level)
                     ?? $feeStructures->first(fn (FeeStructure $f) => (int) $f->programme_id === (int) $student->programme_id && $f->level === null);
 
                 $paid = (float) ($paymentSums[$student->id] ?? 0);

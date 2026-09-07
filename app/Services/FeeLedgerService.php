@@ -12,6 +12,164 @@ use Illuminate\Support\Facades\DB;
 class FeeLedgerService
 {
     /**
+     * Resolve, in bulk, the level each student actually held during a given academic year.
+     *
+     * Every fee figure in the system hangs off this: a tuition bill is looked up by
+     * programme + level + year, so asking "what level is this student?" instead of "what level
+     * was this student that year?" silently re-prices every past year the moment a student is
+     * promoted. Resolution order (single-student equivalent: Student::levelForAcademicYear()):
+     *   1. An explicit snapshot for that year, written when the student was promoted out of it.
+     *   2. The current academic year - not promoted out of it yet, so students.level still holds.
+     *   3. The majority level of the courses they registered for that year.
+     *   4. Stepped back from the nearest level we do know (a later snapshot, else where they
+     *      stand today), one level per academic year in between.
+     * Deliberately never falls through to the raw current level for a past year: for anyone
+     * who has been promoted since, that is guaranteed to be the wrong answer.
+     *
+     * @param  Collection<int, Student>  $students
+     * @return array<int, int|null> student_id => level held that year
+     */
+    public static function levelsFor(Collection $students, AcademicYear $year): array
+    {
+        $studentIds = $students->pluck('id')->all();
+
+        if (empty($studentIds)) {
+            return [];
+        }
+
+        $levels = array_fill_keys($studentIds, null);
+
+        $snapshots = StudentLevelHistory::whereIn('student_id', $studentIds)
+            ->where('academic_year_id', $year->id)
+            ->pluck('level', 'student_id');
+
+        $currentYear = AcademicYear::where('is_current', true)->first();
+        $isCurrentYear = !$currentYear || (int) $currentYear->id === (int) $year->id;
+
+        $inferred = [];
+
+        if (!$isCurrentYear) {
+            $courseLevels = DB::table('registrations')
+                ->join('courses', 'courses.id', '=', 'registrations.course_id')
+                ->whereIn('registrations.student_id', $studentIds)
+                ->where('registrations.academic_year_id', $year->id)
+                ->whereNotNull('courses.level')
+                ->selectRaw('registrations.student_id, courses.level, COUNT(*) as cnt')
+                ->groupBy('registrations.student_id', 'courses.level')
+                ->orderByDesc('cnt')
+                ->get();
+
+            foreach ($courseLevels as $row) {
+                // Ordered by count desc, so the first row seen for a student is their majority level.
+                $inferred[$row->student_id] ??= (int) $row->level;
+            }
+        }
+
+        $needsStepBack = collect();
+
+        foreach ($students as $student) {
+            if (isset($snapshots[$student->id])) {
+                $levels[$student->id] = (int) $snapshots[$student->id];
+                continue;
+            }
+
+            if ($isCurrentYear) {
+                $levels[$student->id] = $student->level !== null ? (int) $student->level : null;
+                continue;
+            }
+
+            if (isset($inferred[$student->id])) {
+                $levels[$student->id] = $inferred[$student->id];
+                continue;
+            }
+
+            $needsStepBack->push($student);
+        }
+
+        if ($needsStepBack->isEmpty()) {
+            return $levels;
+        }
+
+        // Only the students with neither a snapshot nor course evidence need their other years
+        // looked up - typically a handful, so this stays off the hot path for a full fee list.
+        $otherSnapshots = StudentLevelHistory::whereIn('student_id', $needsStepBack->pluck('id'))
+            ->get()
+            ->groupBy('student_id');
+
+        // Chronological position of every academic year, so "how many years back" is a
+        // subtraction rather than date arithmetic.
+        $positions = array_flip(AcademicYear::orderBy('start_date')->pluck('id')->all());
+
+        foreach ($needsStepBack as $student) {
+            $levels[$student->id] = self::steppedBackLevel(
+                $student,
+                $year,
+                $positions,
+                $otherSnapshots->get($student->id),
+                $currentYear
+            );
+        }
+
+        return $levels;
+    }
+
+    /**
+     * Best-effort level for a past year we have no snapshot or registration evidence for:
+     * anchor on the nearest level we do know and walk back one level per academic year.
+     *
+     * @param  array<int, int>  $positions  academic_year_id => chronological index
+     * @param  Collection<int, StudentLevelHistory>|null  $snapshots  this student's snapshots
+     */
+    private static function steppedBackLevel(
+        Student $student,
+        AcademicYear $year,
+        array $positions,
+        ?Collection $snapshots,
+        ?AcademicYear $currentYear
+    ): ?int {
+        $target = $positions[$year->id] ?? null;
+
+        if ($target === null) {
+            return null;
+        }
+
+        $anchorLevel = null;
+        $anchorIndex = null;
+
+        foreach ($snapshots ?? collect() as $snapshot) {
+            $index = $positions[$snapshot->academic_year_id] ?? null;
+
+            if ($index === null || $index <= $target) {
+                continue;
+            }
+
+            if ($anchorIndex === null || $index < $anchorIndex) {
+                $anchorIndex = $index;
+                $anchorLevel = (int) $snapshot->level;
+            }
+        }
+
+        if ($anchorIndex === null && $student->level !== null) {
+            // No later snapshot - anchor on where the student stands today instead: a graduate's
+            // level column is frozen at the terminal level they left on, so their graduation year
+            // is the year that level belongs to; everyone else is at their level right now.
+            $anchorYearId = $student->graduated_academic_year_id ?? $currentYear?->id;
+            $anchorIndex = $anchorYearId !== null ? ($positions[$anchorYearId] ?? null) : null;
+            $anchorLevel = (int) $student->level;
+        }
+
+        if ($anchorIndex === null || $anchorLevel === null) {
+            return $student->level !== null ? (int) $student->level : null;
+        }
+
+        $stepped = $anchorLevel - (100 * ($anchorIndex - $target));
+
+        // Never below Level 100, and never above the level we anchored on - a student cannot
+        // have been further along earlier than they are later.
+        return (int) min($anchorLevel, max(100, $stepped));
+    }
+
+    /**
      * Bulk-compute what each student owes coming INTO a given academic year: everything billed
      * in prior years (tuition + arrears + one-off charges) minus everything paid in those years.
      *
@@ -75,31 +233,12 @@ class FeeLedgerService
             ->where('category', 'tuition')
             ->get();
 
-        // The level each student held during each prior year - snapshot first, then inferred
-        // from the courses they registered for, matching Student::levelForAcademicYear().
-        $levelHistory = [];
+        // The level each student held during each prior year, resolved the same way as
+        // everywhere else - never their current level, which a promotion has already moved on.
+        $levelsByYear = [];
 
-        foreach (StudentLevelHistory::whereIn('student_id', $studentIds)->whereIn('academic_year_id', $priorYearIds)->get() as $history) {
-            $levelHistory[$history->student_id][$history->academic_year_id] = (int) $history->level;
-        }
-
-        $inferredLevels = [];
-
-        $courseLevels = DB::table('registrations')
-            ->join('courses', 'courses.id', '=', 'registrations.course_id')
-            ->whereIn('registrations.student_id', $studentIds)
-            ->whereIn('registrations.academic_year_id', $priorYearIds)
-            ->whereNotNull('courses.level')
-            ->selectRaw('registrations.student_id, registrations.academic_year_id, courses.level, COUNT(*) as cnt')
-            ->groupBy('registrations.student_id', 'registrations.academic_year_id', 'courses.level')
-            ->orderByDesc('cnt')
-            ->get();
-
-        foreach ($courseLevels as $row) {
-            // Ordered by count desc, so the first row seen for a student/year is the majority level.
-            if (!isset($inferredLevels[$row->student_id][$row->academic_year_id])) {
-                $inferredLevels[$row->student_id][$row->academic_year_id] = (int) $row->level;
-            }
+        foreach (AcademicYear::whereIn('id', $priorYearIds)->get() as $priorYear) {
+            $levelsByYear[$priorYear->id] = self::levelsFor($students, $priorYear);
         }
 
         foreach ($students as $student) {
@@ -108,9 +247,7 @@ class FeeLedgerService
                 - (float) ($payments[$student->id] ?? 0);
 
             foreach (array_keys($activeYears[$student->id] ?? []) as $yearId) {
-                $level = $levelHistory[$student->id][$yearId]
-                    ?? $inferredLevels[$student->id][$yearId]
-                    ?? $student->level;
+                $level = $levelsByYear[$yearId][$student->id] ?? null;
 
                 $structure = $structures->first(fn (FeeStructure $s) => (int) $s->academic_year_id === (int) $yearId
                         && (int) $s->programme_id === (int) $student->programme_id

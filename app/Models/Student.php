@@ -170,21 +170,25 @@ class Student extends Model
     }
 
     /**
-     * Get the total outstanding arrears carried in from all previous years - i.e. the
-     * ledger's overall running balance minus the current academic year's own balance, so it
-     * reflects the closing balance of the previous year(s) rather than a stale/manually-entered
-     * arrear figure that never gets updated when a year rolls over without a payment shortfall
-     * being converted into a new arrear row.
+     * Get the total outstanding debt carried into the current academic year from previous ones:
+     * everything billed in prior years (tuition at the level held *that* year, arrears, one-off
+     * charges) net of everything paid in them. Not a raw sum over the arrears table, which is an
+     * opening-balance upload that is never reduced when the student later pays the debt off.
+     *
+     * Shares FeeLedgerService::carryForwardFor() with the /fees list and the accountant
+     * dashboard, so the "Arrears" figure a student sees is the same one the office sees, and
+     * arrears + this year's own balance always reconciles to the ledger's Total Balance Due.
      * This is informational only and does not affect the course-registration fee gate.
      */
     public function totalArrears(): float
     {
-        $balanceDue = FeeLedgerService::ledgerFor($this)[0]['balance'] ?? 0.0;
-
         $currentYear = AcademicYear::where('is_current', true)->first();
-        $currentYearBalance = $currentYear ? $this->feeBalance($currentYear) : 0.0;
 
-        return $balanceDue - $currentYearBalance;
+        if (!$currentYear) {
+            return 0.0;
+        }
+
+        return (float) (FeeLedgerService::carryForwardFor(collect([$this]), $currentYear)[$this->id] ?? 0.0);
     }
 
     /**
@@ -207,30 +211,15 @@ class Student extends Model
      *     the student hasn't been promoted out of it yet, so their level column is still correct.
      *  3. Otherwise (a past year predating this tracking, with no snapshot) - best-effort:
      *     infer from the level of the courses they were actually registered for that year.
-     *  4. Falls back to the student's current level if none of the above yield anything.
+     *  4. Failing that, step back from the nearest level we do know, one level per academic
+     *     year - never the raw current level, which is wrong for anyone promoted since.
+     *
+     * Single-student front end for FeeLedgerService::levelsFor(), so the per-student pages and
+     * the bulk fee lists can never disagree about what level a student was billed at.
      */
     public function levelForAcademicYear(AcademicYear $academicYear): ?int
     {
-        $history = $this->levelHistories->firstWhere('academic_year_id', $academicYear->id);
-        if ($history) {
-            return $history->level;
-        }
-
-        $currentAcademicYear = AcademicYear::where('is_current', true)->first();
-        if (!$currentAcademicYear || $currentAcademicYear->id === $academicYear->id) {
-            return $this->level;
-        }
-
-        $inferred = $this->registrations()
-            ->where('academic_year_id', $academicYear->id)
-            ->join('courses', 'courses.id', '=', 'registrations.course_id')
-            ->whereNotNull('courses.level')
-            ->selectRaw('courses.level, COUNT(*) as cnt')
-            ->groupBy('courses.level')
-            ->orderByDesc('cnt')
-            ->value('courses.level');
-
-        return $inferred ?? $this->level;
+        return FeeLedgerService::levelsFor(collect([$this]), $academicYear)[$this->id] ?? null;
     }
 
     /**
@@ -289,24 +278,30 @@ class Student extends Model
     }
 
     /**
-     * Get the student's outstanding fee balance for a given academic year: Bill Amount + All
-     * Arrears - Payments. Arrears are entered as a running carried-forward adjustment (positive
-     * = still-owed debt, negative = credit/overpayment) rather than scoped to a specific year's
-     * own activity, so every arrear row counts here regardless of which academic_year_id it
-     * happens to be tagged with. Not floored at zero - a large enough credit correctly shows as
-     * a negative balance here, same as the other balance figures on the account.
+     * Get the student's outstanding balance *for a given academic year alone*: everything billed
+     * in that year (tuition structure, one-off charges, any arrears row tagged to it) minus what
+     * was paid in that year. Debt carried in from earlier years is deliberately NOT included -
+     * that is totalArrears(), and the two add up to the ledger's Total Balance Due.
+     *
+     * Previously this added every arrears row the student had, from any year, on top of the
+     * current year's bill while only subtracting the current year's payments. Since the arrears
+     * table is an opening-balance upload that is never written down when the debt is settled,
+     * that charged owing students for the same debt twice - once as a raw arrear here and again
+     * as the unpaid prior-year balance the ledger works out for itself.
+     *
+     * Not floored at zero - an overpayment correctly reads as a negative balance, and a year
+     * with no fee structure yet still shows any charges/arrears actually billed against it
+     * rather than reporting a clean zero over the top of real debt.
      */
     public function feeBalance(AcademicYear $academicYear): float
     {
-        $feeAmount = $this->tuitionFeeAmount($academicYear);
+        $structure = $this->applicableFeeStructure($academicYear);
 
-        if ($feeAmount <= 0) {
-            return 0.0;
-        }
+        $billed = ($structure ? (float) $structure->amount : 0.0)
+            + (float) $this->feeCharges()->where('academic_year_id', $academicYear->id)->sum('amount')
+            + (float) $this->arrears()->where('academic_year_id', $academicYear->id)->sum('amount');
 
-        $allArrears = (float) $this->arrears()->sum('amount');
-
-        return $feeAmount + $allArrears - $this->totalPaid($academicYear);
+        return round($billed - $this->totalPaid($academicYear), 2);
     }
 
     /**
