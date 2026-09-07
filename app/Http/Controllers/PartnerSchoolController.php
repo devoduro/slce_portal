@@ -63,20 +63,25 @@ class PartnerSchoolController extends Controller
 
         $stsTerms = StsTerm::orderByDesc('id')->get();
 
+        // Occupancy belongs to the term being looked at, not whichever term happens to be
+        // current - filtering the list to a past term and being shown this term's numbers next
+        // to it invites reading one term's placements as another's. Falls back to the current
+        // term for the "All terms" view, where no single term is in scope.
+        $countedTerm = $termFilter && $termFilter !== 'all'
+            ? $stsTerms->firstWhere('id', (int) $termFilter) ?? $currentTerm
+            : $currentTerm;
+
         // Grouped by school + level in one query rather than per-row lookups, so the
         // "Placed / Open" column below doesn't turn this listing into an N+1.
-        $placedCounts = collect();
+        $placedCounts = $countedTerm
+            ? PartnerSchool::placedCountsFor($schools->getCollection(), $countedTerm)
+            : collect();
 
-        if ($currentTerm) {
-            $placedCounts = StsPlacement::where('sts_term_id', $currentTerm->id)
-                ->whereIn('partner_school_id', $schools->pluck('id'))
-                ->selectRaw('partner_school_id, level, COUNT(*) as total')
-                ->groupBy('partner_school_id', 'level')
-                ->get()
-                ->groupBy('partner_school_id');
-        }
+        // Quotas belong to the term being viewed - each batch has its own allocation, falling
+        // back to the school's original capacities where a term has none of its own.
+        $capacities = PartnerSchool::capacitiesFor($schools->getCollection(), $countedTerm);
 
-        return view('partner-schools.index', compact('schools', 'currentTerm', 'placedCounts', 'stsTerms', 'termFilter'));
+        return view('partner-schools.index', compact('schools', 'currentTerm', 'countedTerm', 'placedCounts', 'capacities', 'stsTerms', 'termFilter'));
     }
 
     /**

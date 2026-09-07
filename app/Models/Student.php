@@ -88,6 +88,41 @@ class Student extends Model
     }
 
     /**
+     * Academic standing as at a particular academic year, for year-scoped screens like the fee
+     * list. A graduate's level column stays frozen at the terminal level they left on, so
+     * reading it raw brands them "Level 400" forever - but for the years they were still
+     * studying, that level is exactly what they were billed at and what should be shown. So:
+     * their level up to and including the year they graduated in, "Graduated" from then on.
+     *
+     * Pass $resolvedLevel when the caller has already resolved the year's level in bulk
+     * (FeeLedgerService::levelsFor()) to avoid re-querying it per row.
+     */
+    public function levelLabelForYear(AcademicYear $academicYear, ?int $resolvedLevel = null): string
+    {
+        $resolvedLevel ??= $this->levelForAcademicYear($academicYear);
+
+        if ($this->status === 'graduated') {
+            $graduatedYear = $this->graduatedAcademicYear;
+
+            if (!$graduatedYear) {
+                return 'Graduated';
+            }
+
+            if ($academicYear->start_date > $graduatedYear->start_date) {
+                return "Graduated ({$graduatedYear->name})";
+            }
+
+            return $resolvedLevel ? "Level {$resolvedLevel}" : 'Graduated';
+        }
+
+        if ($this->status === 'withdrawn') {
+            return 'Withdrawn';
+        }
+
+        return $resolvedLevel ? "Level {$resolvedLevel}" : 'N/A';
+    }
+
+    /**
      * Get the class group the student is assigned to.
      */
     public function classGroup(): BelongsTo

@@ -11,6 +11,9 @@
                 <x-button href="{{ route('partner-schools.print', ['type' => 'internship']) }}" variant="secondary" icon="fas fa-print" target="_blank">
                     {{ __('Print Internship Schools') }}
                 </x-button>
+                <x-button href="{{ route('partner-schools.quotas.index', request()->only(['sts_term_id', 'type'])) }}" variant="secondary" icon="fas fa-layer-group">
+                    {{ __('Term Quotas') }}
+                </x-button>
                 <x-button href="{{ route('partner-schools.import.form') }}" variant="secondary" icon="fas fa-upload">
                     {{ __('Import') }}
                 </x-button>
@@ -103,11 +106,17 @@
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quota (100/200/300/400)</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            Quota (100/200/300/400)
+                                            <div class="normal-case font-normal text-gray-400">
+                                                STS: 100&ndash;{{ $countedTerm->internship_level_cutoff ?? 300 }} &bull;
+                                                Internship: {{ $countedTerm->internship_level_cutoff ?? 300 }}+
+                                            </div>
+                                        </th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             Placed / Open (100/200/300/400)
-                                            @if($currentTerm)
-                                                <div class="normal-case font-normal text-gray-400">{{ $currentTerm->name }}</div>
+                                            @if($countedTerm)
+                                                <div class="normal-case font-normal text-gray-400">{{ $countedTerm->name }}</div>
                                             @endif
                                         </th>
                                         <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -139,28 +148,54 @@
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $school->location ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                {{ $school->capacity_level_100 }} / {{ $school->capacity_level_200 }} / {{ $school->capacity_level_300 }} / {{ $school->capacity_level_400 }}
+                                                {{-- The quota for the term being viewed, which each batch holds separately.
+                                                     Levels this school's type never places at are shown as a dash rather
+                                                     than a zero, so an unusable level isn't read as an empty one. --}}
+                                                @php $accepted = \App\Models\PartnerSchool::levelsForType($school->type, $countedTerm); @endphp
+                                                {{ collect([100, 200, 300, 400])
+                                                    ->map(fn ($l) => in_array($l, $accepted, true) ? ($capacities[$school->id][$l] ?? 0) : '—')
+                                                    ->implode(' / ') }}
                                                 @if($school->total_capacity !== null)
                                                     <div class="text-xs text-gray-400">Total: {{ $school->total_capacity }}</div>
                                                 @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                                @if(!$currentTerm)
+                                                @if(!$countedTerm)
                                                     <span class="text-gray-400">No active term</span>
                                                 @else
                                                     @php
-                                                        $levelCounts = $placedCounts->get($school->id, collect())->pluck('total', 'level');
+                                                        $rows = $placedCounts->get($school->id, collect());
+                                                        $levelCounts = $rows->pluck('total', 'level');
                                                         $placed = [];
                                                         $open = [];
+                                                        $overSubscribed = false;
+
                                                         foreach ([100, 200, 300, 400] as $level) {
+                                                            // Occupancy is charged to the level the slot is drawn from:
+                                                            // a student continuing an internship above the cutoff is
+                                                            // still filling the cutoff-level slot they were allocated.
                                                             $count = (int) ($levelCounts[$level] ?? 0);
-                                                            $capacity = (int) $school->{"capacity_level_{$level}"};
+                                                            $remaining = ($capacities[$school->id][$level] ?? 0) - $count;
+
                                                             $placed[] = $count;
-                                                            $open[] = max(0, $capacity - $count);
+                                                            $open[] = $remaining;
+                                                            $overSubscribed = $overSubscribed || $remaining < 0;
                                                         }
+
+                                                        $continuing = (int) $rows->sum('continuing');
                                                     @endphp
                                                     <div>Placed: {{ implode(' / ', $placed) }}</div>
-                                                    <div class="text-green-600">Open: {{ implode(' / ', $open) }}</div>
+                                                    <div class="{{ $overSubscribed ? 'text-red-600 font-medium' : 'text-green-600' }}">
+                                                        Open: {{ implode(' / ', $open) }}
+                                                    </div>
+                                                    @if($continuing > 0)
+                                                        <div class="text-xs text-gray-400" title="Promoted students carrying on the internship they were allocated at Level {{ $countedTerm->internship_level_cutoff }}">
+                                                            incl. {{ $continuing }} continuing
+                                                        </div>
+                                                    @endif
+                                                    @if($overSubscribed)
+                                                        <div class="text-xs text-red-500">Over quota</div>
+                                                    @endif
                                                 @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

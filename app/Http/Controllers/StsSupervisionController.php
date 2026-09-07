@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\ContinuousAssessment;
 use App\Models\StsPlacement;
-use App\Models\StsScoreSetting;
+use App\Models\StsPlacementScore;
+use App\Models\StsScoreCriterion;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -75,18 +75,14 @@ class StsSupervisionController extends Controller
         $lecturer = $this->authLecturerOrAbort();
         abort_unless(in_array($lecturer->id, [$stsPlacement->lecturer_id, $stsPlacement->second_lecturer_id], true), 403);
 
-        $stsPlacement->load(['student.programme', 'partnerSchool', 'stsTerm.semester']);
+        $stsPlacement->load(['student.programme', 'partnerSchool', 'stsTerm.semester', 'scores']);
 
-        $setting = StsScoreSetting::where('level', $stsPlacement->level)->first();
-        $term = $stsPlacement->stsTerm;
+        // The criteria, labels and maximum marks the STS Coordinator defined for this level -
+        // the score sheet is whatever they set up, not a fixed set of columns.
+        $criteria = StsScoreCriterion::forLevel((int) $stsPlacement->level);
+        $existing = $stsPlacement->scores->keyBy('sts_score_criterion_id');
 
-        $ca = ContinuousAssessment::where('student_id', $stsPlacement->student_id)
-            ->where('course_id', $stsPlacement->course()->id)
-            ->where('semester_id', $term->semester_id)
-            ->where('academic_year_id', $term->semester->academic_year_id)
-            ->first();
-
-        return view('sts-supervision.score', compact('stsPlacement', 'setting', 'ca'));
+        return view('sts-supervision.score', compact('stsPlacement', 'criteria', 'existing'));
     }
 
     /**
@@ -97,42 +93,67 @@ class StsSupervisionController extends Controller
         $lecturer = $this->authLecturerOrAbort();
         abort_unless(in_array($lecturer->id, [$stsPlacement->lecturer_id, $stsPlacement->second_lecturer_id], true), 403);
 
-        $setting = StsScoreSetting::where('level', $stsPlacement->level)->first();
+        $criteria = StsScoreCriterion::forLevel((int) $stsPlacement->level);
 
-        $data = [];
-        $componentMax = [
-            'attendance' => $setting?->attendance_max,
-            'project' => $setting?->project_max,
-            'assignment' => $setting?->assignment_max,
-            'mid_semester' => $setting?->mid_semester_max,
-        ];
+        if ($criteria->isEmpty()) {
+            return back()->with('error', "No score sheet has been set up for Level {$stsPlacement->level} yet. Ask the STS Coordinator to define its criteria first.");
+        }
 
-        foreach (['attendance' => 'attendance_score', 'project' => 'project_score', 'assignment' => 'assignment_score', 'mid_semester' => 'mid_semester_score'] as $key => $column) {
-            if (!$request->filled("scores.{$key}")) {
+        $submitted = (array) $request->input('scores', []);
+        $errors = [];
+        $values = [];
+
+        foreach ($criteria as $criterion) {
+            $raw = $submitted[$criterion->id] ?? null;
+
+            // A blank is "not marked yet", which is different from a zero - a supervisor part-way
+            // through a sheet should be able to save what they have.
+            if ($raw === null || $raw === '') {
+                $values[$criterion->id] = null;
+
                 continue;
             }
 
-            $value = (float) $request->input("scores.{$key}");
-            $max = $componentMax[$key];
+            if (!is_numeric($raw)) {
+                $errors["scores.{$criterion->id}"] = "{$criterion->label} must be a number.";
 
-            if ($value < 0 || ($max !== null && $value > (float) $max)) {
-                return back()->withErrors(["scores.{$key}" => 'Must be between 0 and ' . ($max ?? 'N/A') . '.']);
+                continue;
             }
 
-            $data[$column] = $value;
+            $value = (float) $raw;
+            $max = (float) $criterion->max_mark;
+
+            if ($value < 0 || $value > $max) {
+                $errors["scores.{$criterion->id}"] = "{$criterion->label} must be between 0 and " . rtrim(rtrim(number_format($max, 2), '0'), '.') . '.';
+
+                continue;
+            }
+
+            $values[$criterion->id] = $value;
         }
 
-        $term = $stsPlacement->stsTerm;
+        if (!empty($errors)) {
+            return back()->withErrors($errors)->withInput();
+        }
 
-        ContinuousAssessment::updateOrCreate([
-            'student_id' => $stsPlacement->student_id,
-            'course_id' => $stsPlacement->course()->id,
-            'semester_id' => $term->semester_id,
-            'academic_year_id' => $term->semester->academic_year_id,
-        ], $data);
+        DB::transaction(function () use ($stsPlacement, $values) {
+            foreach ($values as $criterionId => $value) {
+                StsPlacementScore::updateOrCreate([
+                    'sts_placement_id' => $stsPlacement->id,
+                    'sts_score_criterion_id' => $criterionId,
+                ], ['score' => $value]);
+            }
+        });
+
+        $summary = $stsPlacement->fresh('scores')->scoreSummary();
 
         return redirect()->route('sts-supervision.index')
-            ->with('success', 'Scores saved.');
+            ->with('success', sprintf(
+                'Scores saved — %s out of %s across %d criteria.',
+                number_format($summary['awarded'], 2),
+                number_format($summary['total'], 2),
+                $summary['criteria']
+            ));
     }
 
     /**

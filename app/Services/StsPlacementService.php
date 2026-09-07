@@ -95,12 +95,15 @@ class StsPlacementService
                 ]);
             }
 
-            $filled = StsPlacement::where('partner_school_id', $locked->id)
-                ->where('sts_term_id', $term->id)
-                ->where('level', $placement->level)
-                ->count();
+            // Counted the same way the listing counts, so what a student is offered matches what
+            // the office sees: on the level each occupant holds now (not the level stamped on
+            // their placement, which a promotion leaves behind), and with students continuing an
+            // internship above the cutoff still charged to the cutoff-level slot they occupy.
+            // Without that second part, a school full of continuing interns would look empty to
+            // the next intake and be handed out twice over. Runs inside this row lock.
+            $filled = PartnerSchool::placedAtLevel($locked->id, (int) $placement->level, $term);
 
-            if ($filled >= $locked->capacityForLevel($placement->level)) {
+            if ($filled >= $locked->capacityForLevel($placement->level, $term)) {
                 throw ValidationException::withMessages(['school' => "This school's quota for your level is exhausted."]);
             }
 
@@ -132,13 +135,15 @@ class StsPlacementService
                 throw ValidationException::withMessages(['school' => "This school is designated for " . ($locked->type === 'internship' ? 'Internship' : 'STS') . " placements, not " . ($placement->type === 'internship' ? 'Internship' : 'STS') . "."]);
             }
 
-            $filled = StsPlacement::where('partner_school_id', $locked->id)
-                ->where('sts_term_id', $placement->sts_term_id)
-                ->where('level', $placement->level)
-                ->where('id', '!=', $placement->id)
-                ->count();
+            // Same counting rule as the student-facing gate and the /partner-schools listing, so
+            // an admin override is judged against the school's real occupancy. The student's own
+            // placement is discounted - reassigning them within the same school must not count
+            // them against themselves.
+            $term = $placement->stsTerm;
+            $filled = PartnerSchool::placedAtLevel($locked->id, (int) $placement->level, $term)
+                - ($placement->partner_school_id === $locked->id ? 1 : 0);
 
-            if ($filled >= $locked->capacityForLevel($placement->level)) {
+            if ($filled >= $locked->capacityForLevel($placement->level, $term)) {
                 throw ValidationException::withMessages(['school' => "{$locked->name}'s quota for level {$placement->level} is full."]);
             }
 

@@ -31,6 +31,23 @@
                                 <div class="text-sm text-gray-500">{{ $row['course']->title }}</div>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $row['semester']->name ?? 'N/A' }}</td>
+
+                            {{-- STS/Internship is marked on the STS Unit's own criteria, not the
+                                 four standard components, so those columns don't apply to it. --}}
+                            @if($row['sts_summary'] !== null)
+                                <td colspan="4" class="px-6 py-4 text-sm text-gray-500">
+                                    @if($row['sts_summary']['scored'] > 0)
+                                        Marked on {{ $row['sts_summary']['scored'] }} of {{ $row['sts_summary']['criteria'] }} criteria by your supervisor.
+                                    @else
+                                        Your supervisor has not entered any marks yet.
+                                    @endif
+                                    <a href="{{ route('student.sts.index') }}" class="text-primary-600 hover:underline ml-1">See breakdown</a>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                                    {{ number_format($row['total'], 2) }}
+                                    <span class="text-xs text-gray-400 font-normal">/ {{ number_format($row['sts_summary']['total'], 2) }}</span>
+                                </td>
+                            @else
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                                 {{ number_format($row['attendance_score'], 2) }}
                                 @if($row['setting'])
@@ -61,6 +78,7 @@
                                     <span class="text-xs text-gray-400 font-normal">/ {{ number_format($row['setting']->attendance_max + $row['setting']->project_max + $row['setting']->assignment_max + $row['setting']->mid_semester_max, 2) }}</span>
                                 @endif
                             </td>
+                            @endif
                         </tr>
                     @empty
                         <tr>

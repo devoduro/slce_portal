@@ -184,6 +184,32 @@ class FeeLedgerService
      */
     public static function carryForwardFor(Collection $students, AcademicYear $year): array
     {
+        return self::balancesUpTo($students, $year);
+    }
+
+    /**
+     * Every student's whole account in one pass: all years billed, all years paid, nothing
+     * excluded. What a graduate still owes the college, in other words - they have no "current
+     * year" left for a year-scoped balance to sit in. Same arithmetic as carryForwardFor(),
+     * just without the cut-off, so the two can never tell different stories.
+     *
+     * @param  Collection<int, Student>  $students
+     * @return array<int, float> student_id => total outstanding (positive = still owed)
+     */
+    public static function totalOutstandingFor(Collection $students): array
+    {
+        return self::balancesUpTo($students, null);
+    }
+
+    /**
+     * Shared engine for carryForwardFor()/totalOutstandingFor(): sum every bill and payment
+     * across the academic years before $before, or across all of them when $before is null.
+     *
+     * @param  Collection<int, Student>  $students
+     * @return array<int, float>
+     */
+    private static function balancesUpTo(Collection $students, ?AcademicYear $before): array
+    {
         $studentIds = $students->pluck('id')->all();
 
         if (empty($studentIds)) {
@@ -192,7 +218,10 @@ class FeeLedgerService
 
         $balances = array_fill_keys($studentIds, 0.0);
 
-        $priorYearIds = AcademicYear::where('start_date', '<', $year->start_date)->pluck('id')->all();
+        $priorYearIds = AcademicYear::when(
+            $before,
+            fn ($query) => $query->where('start_date', '<', $before->start_date)
+        )->pluck('id')->all();
 
         if (empty($priorYearIds)) {
             return $balances;
@@ -319,7 +348,17 @@ class FeeLedgerService
 
         $rows = collect();
 
+        $graduatedYear = $student->status === 'graduated' ? $student->graduatedAcademicYear : null;
+
         foreach ($academicYears as $year) {
+            // The current academic year is always in scope so an unpaid current-year bill shows -
+            // but a graduate has no current year to be billed for. Without this, every graduate
+            // picks up a fresh tuition debit the moment fee structures are set up for a year
+            // they left before.
+            if ($graduatedYear && $year->start_date > $graduatedYear->start_date) {
+                continue;
+            }
+
             $feeStructure = $student->applicableFeeStructure($year);
 
             if ($feeStructure) {

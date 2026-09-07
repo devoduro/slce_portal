@@ -7,7 +7,7 @@ use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
-class StudentFeesExport implements FromCollection, WithHeadings, WithMapping
+class GraduatesExport implements FromCollection, WithHeadings, WithMapping
 {
     public function __construct(protected Collection $rows)
     {
@@ -20,7 +20,7 @@ class StudentFeesExport implements FromCollection, WithHeadings, WithMapping
 
     public function headings(): array
     {
-        return ['Index Number', 'Full Name', 'Programme', 'Level', 'Arrears', 'Fee Amount', 'Paid', 'Balance', 'Status', '% Paid'];
+        return ['Index Number', 'Full Name', 'Programme', 'Graduated', 'Level At Graduation', 'Phone', 'Balance', 'Status'];
     }
 
     public function map($row): array
@@ -31,13 +31,11 @@ class StudentFeesExport implements FromCollection, WithHeadings, WithMapping
             $student->index_number,
             $student->full_name,
             $student->programme->name ?? 'N/A',
-            $row['level_label'],
-            number_format($row['arrears'], 2),
-            $row['fee_amount'] !== null ? number_format($row['fee_amount'], 2) : 'Not set',
-            number_format($row['paid'], 2),
+            $student->graduatedAcademicYear->name ?? 'N/A',
+            $student->level ?? 'N/A',
+            $student->phone,
             number_format($row['balance'], 2),
             ucfirst($row['status']),
-            $row['percentage'] . '%',
         ];
     }
 }

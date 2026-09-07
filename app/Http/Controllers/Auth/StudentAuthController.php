@@ -9,6 +9,7 @@ use App\Models\ContinuousAssessment;
 use App\Models\Registration;
 use App\Models\Semester;
 use App\Models\Student;
+use App\Models\StsPlacement;
 use App\Models\User;
 use App\Models\AcademicYear;
 use Illuminate\Http\Request;
@@ -432,6 +433,22 @@ class StudentAuthController extends Controller
                 + (float) ($ca->assignment_score ?? 0)
                 + (float) ($ca->mid_semester_score ?? 0);
 
+            // STS and Internship aren't marked on the four standard CA components - they are
+            // marked on whatever criteria the STS Unit defined for the student's level, which
+            // vary in number and name. Their marks live against the placement, so the row shows
+            // that total and points at the STS page for the criterion-by-criterion breakdown.
+            $stsSummary = null;
+
+            if ($course->is_sts_course) {
+                $placement = StsPlacement::with('scores')
+                    ->where('student_id', $student->id)
+                    ->whereHas('stsTerm', fn ($query) => $query->where('semester_id', $semester?->id))
+                    ->first();
+
+                $stsSummary = $placement?->scoreSummary();
+                $total = (float) ($stsSummary['awarded'] ?? 0);
+            }
+
             return [
                 'course' => $course,
                 'semester' => $semester,
@@ -439,6 +456,7 @@ class StudentAuthController extends Controller
                 'setting' => $setting,
                 'attendance_score' => $attendanceScore,
                 'total' => $total,
+                'sts_summary' => $stsSummary,
             ];
         });
 

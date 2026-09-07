@@ -83,7 +83,7 @@ class StudentPaymentController extends Controller
             ? AcademicYear::find($request->academic_year_id)
             : AcademicYear::where('is_current', true)->first();
 
-        $query = Student::with('programme');
+        $query = Student::with(['programme', 'graduatedAcademicYear']);
 
         if ($request->filled('search')) {
             $searchTerm = $request->search;
@@ -186,6 +186,11 @@ class StudentPaymentController extends Controller
 
             return [
                 'student' => $student,
+                // Academic standing in the year being listed, so a graduate reads "Graduated
+                // (2025/2026)" rather than the Level 400 their level column is frozen at.
+                'level_label' => $academicYear
+                    ? $student->levelLabelForYear($academicYear, $levels[$student->id] ?? null)
+                    : $student->levelLabel(),
                 'fee_amount' => $feeAmount,
                 'paid' => $paid,
                 'balance' => $balance,

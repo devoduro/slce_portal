@@ -150,6 +150,13 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/student-halls/print', [\App\Http\Controllers\StudentHallController::class, 'print'])->name('student-halls.print');
     });
 
+    // Graduates - the completed-programme register, and who among them still owes
+    Route::middleware('permission:view-graduates')->group(function () {
+        Route::get('/graduates', [\App\Http\Controllers\GraduateController::class, 'index'])->name('graduates.index');
+        Route::get('/graduates/export/excel', [\App\Http\Controllers\GraduateController::class, 'exportExcel'])->name('graduates.export.excel');
+        Route::get('/graduates/export/pdf', [\App\Http\Controllers\GraduateController::class, 'exportPdf'])->name('graduates.export.pdf');
+    });
+
     // Student Directory - read-only, no grades (e.g. for Accountant)
     Route::middleware('permission:view-student-directory')->group(function () {
         Route::get('/student-directory', [\App\Http\Controllers\StudentDirectoryController::class, 'index'])->name('student-directory.index');
@@ -340,9 +347,19 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/partner-schools/import/template', [\App\Http\Controllers\PartnerSchoolController::class, 'downloadTemplate'])->name('partner-schools.import.template');
         Route::get('/partner-schools/print', [\App\Http\Controllers\PartnerSchoolController::class, 'printRoster'])->name('partner-schools.print');
         Route::post('/partner-schools/bulk-destroy', [\App\Http\Controllers\PartnerSchoolController::class, 'bulkDestroy'])->name('partner-schools.bulk-destroy');
+        // Per-term quotas: each batch's allocation, and carrying it forward with the cohort.
+        Route::get('/partner-schools/quotas', [\App\Http\Controllers\PartnerSchoolQuotaController::class, 'index'])->name('partner-schools.quotas.index');
+        Route::post('/partner-schools/quotas', [\App\Http\Controllers\PartnerSchoolQuotaController::class, 'store'])->name('partner-schools.quotas.store');
+        Route::post('/partner-schools/quotas/carry-forward', [\App\Http\Controllers\PartnerSchoolQuotaController::class, 'carryForward'])->name('partner-schools.quotas.carry-forward');
         Route::resource('partner-schools', \App\Http\Controllers\PartnerSchoolController::class)->except(['show']);
 
-        Route::resource('sts-score-settings', \App\Http\Controllers\StsScoreSettingController::class)->except(['show']);
+        // Keyed by level rather than a criterion id - a score sheet is edited as a whole level.
+        Route::get('/sts-score-settings', [\App\Http\Controllers\StsScoreSettingController::class, 'index'])->name('sts-score-settings.index');
+        Route::get('/sts-score-settings/create', [\App\Http\Controllers\StsScoreSettingController::class, 'create'])->name('sts-score-settings.create');
+        Route::post('/sts-score-settings', [\App\Http\Controllers\StsScoreSettingController::class, 'store'])->name('sts-score-settings.store');
+        Route::get('/sts-score-settings/{level}/edit', [\App\Http\Controllers\StsScoreSettingController::class, 'edit'])->whereNumber('level')->name('sts-score-settings.edit');
+        Route::put('/sts-score-settings/{level}', [\App\Http\Controllers\StsScoreSettingController::class, 'update'])->whereNumber('level')->name('sts-score-settings.update');
+        Route::delete('/sts-score-settings/{level}', [\App\Http\Controllers\StsScoreSettingController::class, 'destroy'])->whereNumber('level')->name('sts-score-settings.destroy');
 
         Route::get('/sts-placements', [\App\Http\Controllers\StsPlacementController::class, 'index'])->name('sts-placements.index');
         Route::get('/sts-placements/export/excel', [\App\Http\Controllers\StsPlacementController::class, 'exportExcel'])->name('sts-placements.export.excel');

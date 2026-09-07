@@ -80,6 +80,44 @@ class StsPlacement extends Model
     }
 
     /**
+     * The supervisor's marks against each criterion of this level's score sheet.
+     */
+    public function scores(): HasMany
+    {
+        return $this->hasMany(StsPlacementScore::class, 'sts_placement_id');
+    }
+
+    /**
+     * Total marks awarded so far and what the sheet is out of, for this placement's level.
+     *
+     * @return array{awarded: float, total: float, scored: int, criteria: int}
+     */
+    public function scoreSummary(): array
+    {
+        $criteria = StsScoreCriterion::forLevel((int) $this->level);
+        $scores = $this->scores->keyBy('sts_score_criterion_id');
+
+        $awarded = 0.0;
+        $scored = 0;
+
+        foreach ($criteria as $criterion) {
+            $score = $scores->get($criterion->id)?->score;
+
+            if ($score !== null) {
+                $awarded += (float) $score;
+                $scored++;
+            }
+        }
+
+        return [
+            'awarded' => round($awarded, 2),
+            'total' => round((float) $criteria->sum('max_mark'), 2),
+            'scored' => $scored,
+            'criteria' => $criteria->count(),
+        ];
+    }
+
+    /**
      * Determine whether a level/semester combination falls under "STS" or "Internship", given
      * a term's configured cutoff, or null if the combination is outside the placement system
      * entirely.

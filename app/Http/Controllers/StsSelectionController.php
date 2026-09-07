@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PartnerSchool;
 use App\Models\StsPlacement;
+use App\Models\StsScoreCriterion;
 use App\Models\StsTerm;
 use App\Services\FeeLedgerService;
 use App\Services\StsPlacementService;
@@ -28,7 +29,7 @@ class StsSelectionController extends Controller
         $isBiometricVerified = false;
 
         if ($term) {
-            $placement = StsPlacement::with(['partnerSchool', 'lecturer'])
+            $placement = StsPlacement::with(['partnerSchool', 'lecturer', 'scores'])
                 ->where('student_id', $student->id)
                 ->where('sts_term_id', $term->id)
                 ->first();
@@ -47,7 +48,7 @@ class StsSelectionController extends Controller
 
         // Every term the student has been placed in, so they can see where they've already been -
         // and understand why those schools are no longer offered to them.
-        $placementHistory = StsPlacement::with(['partnerSchool', 'lecturer', 'stsTerm.semester.academicYear'])
+        $placementHistory = StsPlacement::with(['partnerSchool', 'lecturer', 'stsTerm.semester.academicYear', 'scores'])
             ->where('student_id', $student->id)
             ->when($term, fn ($q) => $q->where('sts_term_id', '!=', $term->id))
             ->whereNotNull('partner_school_id')
@@ -55,13 +56,23 @@ class StsSelectionController extends Controller
             ->sortByDesc(fn ($p) => $p->stsTerm->proposed_start_date ?? $p->created_at)
             ->values();
 
+        // The criteria this placement is marked against, so the student sees the supervisor's
+        // marks line by line under the same labels the STS Coordinator set up - and which of
+        // them have not been marked yet.
+        $scoreCriteria = $placement ? StsScoreCriterion::forLevel((int) $placement->level) : collect();
+        $scoresByCriterion = $placement ? $placement->scores->keyBy('sts_score_criterion_id') : collect();
+        $scoreSummary = $placement ? $placement->scoreSummary() : null;
+
         // Drives whether the "Select a Partner School" button is offered at all - STS is First
         // Semester, Level 100-300 only (see StsPlacementService::stsSelectionAllowed()).
         $canSelectSchool = $term && $placement
             ? StsPlacementService::stsSelectionAllowed($student, $term, $placement)
             : true;
 
-        return view('student.sts.index', compact('student', 'term', 'placement', 'eligible', 'percentage', 'isBiometricVerified', 'placementHistory', 'canSelectSchool'));
+        return view('student.sts.index', compact(
+            'student', 'term', 'placement', 'eligible', 'percentage', 'isBiometricVerified',
+            'placementHistory', 'canSelectSchool', 'scoreCriteria', 'scoresByCriterion', 'scoreSummary'
+        ));
     }
 
     /**
@@ -100,10 +111,17 @@ class StsSelectionController extends Controller
             ->usableInTerm($term->id)
             ->orderBy('name')
             ->get()
-            ->reject(fn ($school) => $previousSchoolNames->contains(mb_strtolower(trim($school->name))))
+            ->reject(fn ($school) => $previousSchoolNames->contains(mb_strtolower(trim($school->name))));
+
+        // Occupancy for every school on offer in one query - asking each school for its own
+        // remaining quota walks the placements table once per school.
+        $placedCounts = PartnerSchool::placedCountsFor($schools, $term);
+
+        $schools = $schools
             ->map(fn ($school) => [
                 'school' => $school,
-                'available' => $school->availableQuota($placement->level, $term->id),
+                'available' => $school->capacityForLevel($placement->level, $term)
+                    - (int) ($placedCounts->get($school->id, collect())->firstWhere('level', $placement->level)->total ?? 0),
             ])
             ->values();
 

@@ -103,6 +103,72 @@
                 </a>
             @endif
         </div>
+
+        <!-- Assessment: the supervisor's marks, under the labels the STS Unit set up -->
+        @if($scoreCriteria->isNotEmpty())
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                <div class="flex flex-wrap justify-between items-start gap-3 mb-4">
+                    <div>
+                        <h3 class="text-lg font-semibold text-gray-800">Your Assessment</h3>
+                        <p class="text-sm text-gray-500">
+                            How your supervisor is marking this placement, out of
+                            {{ number_format($scoreSummary['total'], 2) }}.
+                        </p>
+                    </div>
+
+                    @if($scoreSummary['scored'] > 0)
+                        <div class="text-right">
+                            <p class="text-2xl font-bold text-gray-900">{{ number_format($scoreSummary['awarded'], 2) }}</p>
+                            <p class="text-xs text-gray-500">of {{ number_format($scoreSummary['total'], 2) }} so far</p>
+                        </div>
+                    @endif
+                </div>
+
+                @if($scoreSummary['scored'] === 0)
+                    <div class="bg-gray-50 border-l-4 border-gray-300 p-4 text-sm text-gray-600">
+                        Your supervisor has not entered any marks yet. They will appear here as they are recorded.
+                    </div>
+                @else
+                    @if($scoreSummary['scored'] < $scoreSummary['criteria'])
+                        <div class="bg-blue-50 border-l-4 border-blue-400 p-3 mb-4 text-sm text-blue-800">
+                            {{ $scoreSummary['scored'] }} of {{ $scoreSummary['criteria'] }} criteria have been marked so far —
+                            your total will change as your supervisor completes the rest.
+                        </div>
+                    @endif
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Criterion</th>
+                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Mark</th>
+                                    <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-24">Out Of</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @foreach($scoreCriteria as $criterion)
+                                    @php $mark = optional($scoresByCriterion->get($criterion->id))->score; @endphp
+                                    <tr>
+                                        <td class="px-4 py-3 text-gray-900">{{ $criterion->label }}</td>
+                                        <td class="px-4 py-3 text-right {{ $mark === null ? 'text-gray-400' : 'font-medium text-gray-900' }}">
+                                            {{ $mark === null ? 'Not yet marked' : number_format((float) $mark, 2) }}
+                                        </td>
+                                        <td class="px-4 py-3 text-right text-gray-500">{{ number_format((float) $criterion->max_mark, 2) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot class="bg-gray-50">
+                                <tr>
+                                    <td class="px-4 py-3 font-medium text-gray-700">Total</td>
+                                    <td class="px-4 py-3 text-right font-bold text-gray-900">{{ number_format($scoreSummary['awarded'], 2) }}</td>
+                                    <td class="px-4 py-3 text-right font-medium text-gray-700">{{ number_format($scoreSummary['total'], 2) }}</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                @endif
+            </div>
+        @endif
     @endif
 
     @if($placementHistory->isNotEmpty())
@@ -120,6 +186,7 @@
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner School</th>
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supervisor</th>
                             <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selected On</th>
+                            <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-200">
@@ -133,6 +200,15 @@
                                 <td class="px-4 py-3 font-medium text-gray-900">{{ $past->partnerSchool->name ?? '-' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $past->lecturer->name ?? 'Not assigned' }}</td>
                                 <td class="px-4 py-3 text-gray-500">{{ $past->selected_at?->format('M d, Y') ?? '-' }}</td>
+                                <td class="px-4 py-3 text-right">
+                                    @php $pastScore = $past->scoreSummary(); @endphp
+                                    @if($pastScore['scored'] > 0)
+                                        <span class="font-medium text-gray-900">{{ number_format($pastScore['awarded'], 2) }}</span>
+                                        <span class="text-gray-400">/ {{ number_format($pastScore['total'], 2) }}</span>
+                                    @else
+                                        <span class="text-gray-400">Not marked</span>
+                                    @endif
+                                </td>
                             </tr>
                         @endforeach
                     </tbody>
