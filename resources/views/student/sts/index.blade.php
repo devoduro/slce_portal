@@ -84,7 +84,11 @@
             </div>
 
             @if(!$placement->partner_school_id)
-                @if($eligible)
+                @if(!$canSelectSchool)
+                    <p class="text-sm text-gray-500">
+                        STS placement is only available to Level 100&ndash;{{ $term->internship_level_cutoff }} students during the First Semester.
+                    </p>
+                @elseif($eligible)
                     <a href="{{ route('student.sts.schools') }}" class="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
                         <i class="fas fa-school"></i> Select a Partner School
                     </a>
@@ -98,6 +102,42 @@
                     <i class="fas fa-print"></i> Print Placement Letter
                 </a>
             @endif
+        </div>
+    @endif
+
+    @if($placementHistory->isNotEmpty())
+        <!-- Past Placements -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h3 class="text-lg font-semibold text-gray-800 mb-1">Your Previous Placements</h3>
+            <p class="text-sm text-gray-500 mb-4">You cannot be placed at the same school twice, so these schools are no longer offered to you.</p>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner School</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supervisor</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selected On</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        @foreach($placementHistory as $past)
+                            <tr>
+                                <td class="px-4 py-3 text-gray-900">
+                                    {{ $past->stsTerm->name ?? '-' }}
+                                    <div class="text-xs text-gray-500">{{ $past->stsTerm->semester->academicYear->name ?? '' }}</div>
+                                </td>
+                                <td class="px-4 py-3 text-gray-500">{{ $past->type === 'internship' ? 'Internship' : 'STS' }}</td>
+                                <td class="px-4 py-3 font-medium text-gray-900">{{ $past->partnerSchool->name ?? '-' }}</td>
+                                <td class="px-4 py-3 text-gray-500">{{ $past->lecturer->name ?? 'Not assigned' }}</td>
+                                <td class="px-4 py-3 text-gray-500">{{ $past->selected_at?->format('M d, Y') ?? '-' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
         </div>
     @endif
 </div>

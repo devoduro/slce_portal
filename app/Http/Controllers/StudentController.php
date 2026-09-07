@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademicYear;
 use App\Models\ClassGroup;
 use App\Models\Programme;
 use App\Models\Student;
@@ -38,7 +39,7 @@ class StudentController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Student::with('programme');
+        $query = Student::with(['programme', 'graduatedAcademicYear']);
         
         // Search functionality
         if ($request->has('search') && $request->search) {
@@ -61,15 +62,31 @@ class StudentController extends Controller
             $query->where('gender', $request->gender);
         }
 
-        // Filter by level
-        if ($request->has('level') && $request->level) {
-            $query->where('level', $request->level);
+        // Filter by graduation year takes priority over the level filter below - selecting a
+        // specific year implies "graduated", regardless of what the level dropdown says.
+        if ($request->filled('graduated_academic_year_id')) {
+            $query->where('status', 'graduated')->where('graduated_academic_year_id', $request->graduated_academic_year_id);
+        } elseif ($request->has('level') && $request->level) {
+            // "graduated" is a separate pseudo-level covering students who have completed their
+            // programme, since their level column still holds their last studied level (e.g.
+            // 400) rather than being cleared out.
+            if ($request->level === 'graduated') {
+                $query->where('status', 'graduated');
+            } else {
+                $query->where('level', $request->level)->where('status', '!=', 'graduated');
+            }
         }
 
         $students = $query->paginate(10)->withQueryString();
         $programmes = Programme::all();
-        
-        return view('students.index', compact('students', 'programmes'));
+
+        // Only years that actually have a graduated student, so the dropdown never offers a
+        // year that would just return an empty list.
+        $graduationYears = AcademicYear::whereIn('id', Student::where('status', 'graduated')->whereNotNull('graduated_academic_year_id')->distinct()->pluck('graduated_academic_year_id'))
+            ->orderByDesc('start_date')
+            ->get();
+
+        return view('students.index', compact('students', 'programmes', 'graduationYears'));
     }
 
     /**
@@ -187,8 +204,17 @@ class StudentController extends Controller
         
         $cgpa = $student->calculateCGPA();
         $classification = $student->getClassification();
-        
-        return view('students.show', compact('student', 'groupedResults', 'cgpa', 'classification'));
+
+        // Every STS/Internship placement this student has held, so the office has a record of
+        // which partner schools they've already attended (a student is never placed at the same
+        // school twice - see StsPlacementService::selectSchool()).
+        $stsPlacements = $student->stsPlacements()
+            ->with(['partnerSchool', 'lecturer', 'secondLecturer', 'stsTerm.semester.academicYear'])
+            ->get()
+            ->sortByDesc(fn ($placement) => $placement->stsTerm->proposed_start_date ?? $placement->created_at)
+            ->values();
+
+        return view('students.show', compact('student', 'groupedResults', 'cgpa', 'classification', 'stsPlacements'));
     }
 
     /**

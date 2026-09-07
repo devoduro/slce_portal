@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\StsPlacementsExport;
 use App\Exports\StsSchoolTemplateExport;
 use App\Exports\StsSupervisorTemplateExport;
 use App\Imports\StsSchoolImport;
@@ -36,23 +37,8 @@ class StsPlacementController extends Controller
         // full placement count (1000+ per term) an unpaginated page balloons to tens of MB -
         // paginate rather than ->get() the whole term's placements.
         if ($term) {
-            $placements = StsPlacement::with(['student.programme', 'partnerSchool', 'lecturer', 'secondLecturer'])
-                ->where('sts_term_id', $term->id)
-                ->when($request->filled('category'), function ($q) use ($request) {
-                    $q->whereHas('student.programme', fn ($q2) => $q2->where('sts_category', $request->category));
-                })
-                ->when($request->filled('type'), fn ($q) => $q->where('type', $request->type))
-                ->when($request->filled('search'), function ($q) use ($request) {
-                    $search = $request->search;
-                    $q->where(function ($q2) use ($search) {
-                        $q2->where('students.index_number', 'like', "%{$search}%")
-                            ->orWhere('students.full_name', 'like', "%{$search}%")
-                            ->orWhere('students.reference_number', 'like', "%{$search}%");
-                    });
-                })
-                ->join('students', 'students.id', '=', 'sts_placements.student_id')
-                ->orderBy('students.full_name')
-                ->select('sts_placements.*')
+            $placements = $this->filteredPlacements($request, $term)
+                ->with(['student.programme', 'partnerSchool', 'lecturer', 'secondLecturer'])
                 ->paginate($perPage)
                 ->withQueryString();
         }
@@ -61,6 +47,51 @@ class StsPlacementController extends Controller
         $partnerSchools = PartnerSchool::orderBy('name')->get();
 
         return view('sts-placements.index', compact('term', 'placements', 'lecturers', 'partnerSchools'));
+    }
+
+    /**
+     * Export the current (filtered) placement list to Excel. Shares filteredPlacements() with
+     * index() so the spreadsheet always matches what the page is showing.
+     */
+    public function exportExcel(Request $request)
+    {
+        $term = StsTerm::where('is_current', true)->first();
+
+        if (!$term) {
+            return redirect()->route('sts-placements.index')
+                ->with('error', 'No STS term is currently active, so there are no placements to export.');
+        }
+
+        $filename = 'sts-placements-' . str_replace(['/', ' '], ['-', '-'], $term->name) . '.xlsx';
+
+        return Excel::download(new StsPlacementsExport($this->filteredPlacements($request, $term)), $filename);
+    }
+
+    /**
+     * The term's placements with the page's category/type/search filters applied. Ordered by
+     * student name, with the primary key as a tiebreaker so chunked exports can't skip or
+     * repeat rows where two students share a name.
+     */
+    protected function filteredPlacements(Request $request, StsTerm $term)
+    {
+        return StsPlacement::query()
+            ->where('sts_term_id', $term->id)
+            ->when($request->filled('category'), function ($q) use ($request) {
+                $q->whereHas('student.programme', fn ($q2) => $q2->where('sts_category', $request->category));
+            })
+            ->when($request->filled('type'), fn ($q) => $q->where('type', $request->type))
+            ->when($request->filled('search'), function ($q) use ($request) {
+                $search = $request->search;
+                $q->where(function ($q2) use ($search) {
+                    $q2->where('students.index_number', 'like', "%{$search}%")
+                        ->orWhere('students.full_name', 'like', "%{$search}%")
+                        ->orWhere('students.reference_number', 'like', "%{$search}%");
+                });
+            })
+            ->join('students', 'students.id', '=', 'sts_placements.student_id')
+            ->orderBy('students.full_name')
+            ->orderBy('sts_placements.id')
+            ->select('sts_placements.*');
     }
 
     /**

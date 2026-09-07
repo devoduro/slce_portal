@@ -109,7 +109,7 @@
                                     </div>
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-500">Level</p>
-                                        <p class="font-medium">{{ $student->level ?? 'Not Specified' }}</p>
+                                        <p class="font-medium">{{ $student->levelLabel() }}</p>
                                     </div>
                                     <div class="bg-gray-50 p-4 rounded-lg">
                                         <p class="text-sm text-gray-500">Class</p>
@@ -199,6 +199,54 @@
                 </div>
             </div>
             
+            <!-- STS / Internship Placement History -->
+            @if($stsPlacements->isNotEmpty())
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                    <h3 class="text-lg font-semibold text-gray-800 mb-1">STS / Internship Placements</h3>
+                    <p class="text-sm text-gray-500 mb-4">Partner schools this student has been placed at. A student is never placed at the same school twice.</p>
+
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 text-sm">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Partner School</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Supervisor(s)</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Selected On</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                @foreach($stsPlacements as $placement)
+                                    <tr>
+                                        <td class="px-4 py-3 text-gray-900">
+                                            {{ $placement->stsTerm->name ?? '-' }}
+                                            <div class="text-xs text-gray-500">{{ $placement->stsTerm->semester->academicYear->name ?? '' }}</div>
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-500">{{ $placement->type === 'internship' ? 'Internship' : 'STS' }}</td>
+                                        <td class="px-4 py-3 font-medium text-gray-900">{{ $placement->partnerSchool->name ?? 'Not selected' }}</td>
+                                        <td class="px-4 py-3 text-gray-500">
+                                            {{ $placement->lecturer->name ?? 'Not assigned' }}
+                                            @if($placement->secondLecturer)
+                                                <div class="text-xs text-gray-500">{{ $placement->secondLecturer->name }}</div>
+                                            @endif
+                                        </td>
+                                        <td class="px-4 py-3">
+                                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                                {{ $placement->statusLabel() === 'Ready' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800' }}">
+                                                {{ $placement->statusLabel() }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-gray-500">{{ $placement->selected_at?->format('M d, Y') ?? '-' }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            @endif
+
             <!-- Action Buttons -->
             <div class="flex flex-wrap gap-3 justify-end">
                 <x-button href="{{ route('results.create', ['student_id' => $student->id]) }}" variant="secondary" icon="fas fa-plus-circle">

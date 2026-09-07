@@ -26,7 +26,7 @@
                         <h4 class="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Academic Placement</h4>
                         <dl class="space-y-2 text-sm">
                             <div><dt class="text-gray-500 inline">Programme:</dt> <dd class="inline font-medium text-gray-900">{{ $student->programme->name ?? 'N/A' }}</dd></div>
-                            <div><dt class="text-gray-500 inline">Level:</dt> <dd class="inline font-medium text-gray-900">{{ $student->level ?? '-' }}</dd></div>
+                            <div><dt class="text-gray-500 inline">Level:</dt> <dd class="inline font-medium text-gray-900">{{ $student->levelLabel() }}</dd></div>
                             <div><dt class="text-gray-500 inline">Class:</dt> <dd class="inline font-medium text-gray-900">{{ $student->classGroup->name ?? '-' }}</dd></div>
                             <div><dt class="text-gray-500 inline">Hall:</dt> <dd class="inline font-medium text-gray-900">{{ $student->hall ?? '-' }}</dd></div>
                             <div><dt class="text-gray-500 inline">Status:</dt> <dd class="inline font-medium text-gray-900">{{ ucfirst($student->status ?? '-') }}</dd></div>

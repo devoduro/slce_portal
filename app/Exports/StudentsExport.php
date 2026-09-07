@@ -19,7 +19,7 @@ class StudentsExport implements FromQuery, WithHeadings, WithMapping, WithChunkR
 
     public function query()
     {
-        $query = Student::query()->with(['programme', 'results.course']);
+        $query = Student::query()->with(['programme', 'results.course', 'graduatedAcademicYear']);
 
         // Apply filters if they exist
         if ($this->request->has('search') && $this->request->search) {
@@ -40,8 +40,14 @@ class StudentsExport implements FromQuery, WithHeadings, WithMapping, WithChunkR
             $query->where('gender', $this->request->gender);
         }
 
-        if ($this->request->has('level') && $this->request->level) {
-            $query->where('level', $this->request->level);
+        if ($this->request->filled('graduated_academic_year_id')) {
+            $query->where('status', 'graduated')->where('graduated_academic_year_id', $this->request->graduated_academic_year_id);
+        } elseif ($this->request->has('level') && $this->request->level) {
+            if ($this->request->level === 'graduated') {
+                $query->where('status', 'graduated');
+            } else {
+                $query->where('level', $this->request->level)->where('status', '!=', 'graduated');
+            }
         }
 
         return $query;
@@ -80,7 +86,7 @@ class StudentsExport implements FromQuery, WithHeadings, WithMapping, WithChunkR
             $student->gender,
             $student->date_of_birth,
             $student->programme->name ?? 'N/A',
-            $student->level,
+            $student->levelLabel(),
             number_format($student->calculateCGPA(), 2),
             $student->emergency_contact_name,
             $student->emergency_contact_phone,

@@ -49,13 +49,21 @@
                                 <option value="{{ $value }}" {{ request('type') === $value ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
+                        <select name="sts_term_id" class="rounded-md border-gray-300 shadow-sm text-sm">
+                            @foreach($stsTerms as $stsTerm)
+                                <option value="{{ $stsTerm->id }}" {{ (string) $termFilter === (string) $stsTerm->id ? 'selected' : '' }}>
+                                    {{ $stsTerm->name }}{{ $stsTerm->is_current ? ' (current)' : '' }}
+                                </option>
+                            @endforeach
+                            <option value="all" {{ $termFilter === 'all' ? 'selected' : '' }}>All Terms</option>
+                        </select>
                         <select name="per_page" onchange="this.form.submit()" class="rounded-md border-gray-300 shadow-sm text-sm">
                             @foreach([100, 200, 300, 'all'] as $option)
                                 <option value="{{ $option }}" {{ request('per_page', 100) == $option ? 'selected' : '' }}>{{ $option === 'all' ? 'All' : $option . ' per page' }}</option>
                             @endforeach
                         </select>
                         <button type="submit" class="px-4 py-2 bg-gray-100 rounded-md text-sm text-gray-700 hover:bg-gray-200">Filter</button>
-                        @if(request()->hasAny(['search', 'category', 'type', 'per_page']))
+                        @if(request()->hasAny(['search', 'category', 'type', 'per_page', 'sts_term_id']))
                             <a href="{{ route('partner-schools.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600">Clear</a>
                         @endif
                     </form>
@@ -92,6 +100,7 @@
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-10"></th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Term</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
                                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quota (100/200/300/400)</th>
@@ -113,6 +122,13 @@
                                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $school->name }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">{{ $school->categoryLabel() }}</span>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                @if($school->stsTerm)
+                                                    {{ $school->stsTerm->name }}
+                                                @else
+                                                    <span class="text-gray-400" title="Available every term">Every term</span>
+                                                @endif
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap">
                                                 @if($school->type)

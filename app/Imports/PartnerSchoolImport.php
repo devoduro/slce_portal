@@ -21,6 +21,14 @@ class PartnerSchoolImport implements ToCollection, WithHeadingRow, WithValidatio
     protected const TYPES = ['sts', 'internship'];
 
     /**
+     * The STS term uploaded STS schools belong to (the current term). Internship rows ignore
+     * this and stay global.
+     */
+    public function __construct(protected ?int $stsTermId = null)
+    {
+    }
+
+    /**
      * Handle rows that fail the rules() validation instead of aborting the whole import.
      *
      * @param Failure[] $failures
@@ -72,11 +80,17 @@ class PartnerSchoolImport implements ToCollection, WithHeadingRow, WithValidatio
                 ? (int) $totalCapacityRaw
                 : ($level100 + $level200 + $level300);
 
+            // STS schools are scoped to the term they're uploaded for, so each academic year
+            // starts from an empty STS list. Internship schools stay global (null term) and
+            // carry over year to year.
+            $stsTermId = $type === 'sts' ? $this->stsTermId : null;
+
             $attributes = [
                 'name' => $name,
                 'location' => $location,
                 'category' => $category,
                 'type' => $type,
+                'sts_term_id' => $stsTermId,
                 'capacity_level_100' => $level100,
                 'capacity_level_200' => $level200,
                 'capacity_level_300' => $level300,
@@ -91,9 +105,17 @@ class PartnerSchoolImport implements ToCollection, WithHeadingRow, WithValidatio
             // instead of silently overwriting the existing one's category/type.
             // capacity_level_400 (Internship's level) isn't part of this "for STS schools"
             // upload, so it's left untouched on existing rows and defaults to 0 for new ones.
+            // Also matched on the term, so re-uploading an STS list for a new academic year adds
+            // that year's own rows instead of overwriting last year's - which would silently
+            // move a school (and its capacities) out from under the previous term's records.
             $existing = PartnerSchool::where('name', $name)
                 ->where('category', $category)
                 ->where('type', $type)
+                ->when(
+                    $stsTermId === null,
+                    fn ($q) => $q->whereNull('sts_term_id'),
+                    fn ($q) => $q->where('sts_term_id', $stsTermId)
+                )
                 ->first();
 
             if ($existing) {

@@ -29,6 +29,15 @@
                                 @foreach($levels as $level)
                                     <option value="{{ $level }}" {{ (string) request('level') === (string) $level ? 'selected' : '' }}>Level {{ $level }}</option>
                                 @endforeach
+                                <option value="graduated" {{ request('level') === 'graduated' ? 'selected' : '' }}>Graduated</option>
+                            </select>
+                        </div>
+                        <div>
+                            <select name="graduated_academic_year_id" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                <option value="">Any Graduation Year</option>
+                                @foreach($graduationYears as $year)
+                                    <option value="{{ $year->id }}" {{ (string) request('graduated_academic_year_id') === (string) $year->id ? 'selected' : '' }}>Graduated {{ $year->name }}</option>
+                                @endforeach
                             </select>
                         </div>
                         <div>
@@ -50,7 +59,7 @@
                             <button type="submit" class="bg-primary-600 text-white rounded-md px-4 py-2 text-sm hover:bg-primary-700">
                                 <i class="fas fa-filter mr-1"></i> Filter
                             </button>
-                            @if(request()->hasAny(['search', 'programme_id', 'level', 'hall', 'per_page']))
+                            @if(request()->hasAny(['search', 'programme_id', 'level', 'graduated_academic_year_id', 'hall', 'per_page']))
                                 <a href="{{ route('student-directory.index') }}" class="inline-flex items-center px-3 py-2 text-sm text-gray-600 hover:text-primary-600">
                                     Clear
                                 </a>
@@ -82,7 +91,7 @@
                                                 <div class="text-sm text-gray-500">{{ $student->index_number }}</div>
                                             </td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $student->programme->name ?? 'N/A' }}</td>
-                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $student->level ?? '-' }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $student->levelLabel() }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $student->classGroup->name ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $student->hall ?? '-' }}</td>
                                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ $student->phone ?? '-' }}</td>

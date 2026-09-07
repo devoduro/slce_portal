@@ -6,7 +6,7 @@
             <h2 class="text-3xl font-bold mb-2">Welcome back, {{ $student->full_name }}!</h2>
             <p class="text-blue-100 flex items-center">
                 <i class="fas fa-graduation-cap mr-2"></i>
-                {{ $student->programme->name }} • Level {{ $student->level }}
+                {{ $student->programme->name }} • {{ $student->levelLabel() }}
             </p>
             <div class="mt-3 flex flex-wrap gap-2">
                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-sm bg-white/10 text-blue-50">

@@ -5,6 +5,9 @@
                 {{ __('STS/Internship Placements') }}
             </h2>
             <div class="flex flex-wrap gap-2 justify-end">
+                <x-button href="{{ route('sts-placements.export.excel', request()->query()) }}" variant="success" icon="fas fa-file-excel">
+                    {{ __('Export to Excel') }}
+                </x-button>
                 <x-button href="{{ route('sts-placements.schools.upload', ['type' => 'sts']) }}" variant="secondary" icon="fas fa-upload">
                     {{ __('Upload STS Schools') }}
                 </x-button>

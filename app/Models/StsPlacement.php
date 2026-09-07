@@ -90,6 +90,10 @@ class StsPlacement extends Model
      * continues as Internship - scored against the same placement/school/supervisor carried
      * over from the student's Level 300 internship term (see StsTermController::activate()) -
      * every semester after that is beyond this placement system (null).
+     *
+     * STS itself only ever runs in a First Semester term, and only up to $levelCutoff. A level
+     * at or below the cutoff in any later semester falls outside the placement system rather
+     * than repeating STS, and no student above the cutoff is given STS at all.
      */
     public static function determineType(int $level, int $termSemesterNumber, int $levelCutoff = 300, int $semesterCutoff = 2): ?string
     {
@@ -101,7 +105,7 @@ class StsPlacement extends Model
             return self::TYPE_INTERNSHIP;
         }
 
-        return self::TYPE_STS;
+        return $termSemesterNumber === 1 ? self::TYPE_STS : null;
     }
 
     /**

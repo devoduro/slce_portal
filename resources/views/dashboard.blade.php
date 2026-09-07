@@ -47,6 +47,77 @@
         </div>
     </div>
 
+    <div class="bg-gradient-to-br from-teal-400 to-teal-500 rounded-lg shadow-lg p-6 transform transition-all duration-200 hover:scale-105">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-white bg-opacity-20">
+                <i class="fas fa-fingerprint text-2xl text-white"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-sm font-medium text-white text-opacity-90">Registered This Year</h3>
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold text-white">{{ number_format($biometricRegistered ?? 0) }}</span>
+                    <span class="ml-2 text-sm font-medium text-white bg-white bg-opacity-20 px-2 py-0.5 rounded-full">
+                        {{ $biometricPercentage ?? 0 }}% verified
+                    </span>
+                </div>
+                <p class="text-xs text-white text-opacity-80 mt-0.5">
+                    {{ $currentAcademicYear->name ?? 'no current academic year' }}
+                    @if($currentSemester)
+                        &bull; {{ $currentSemester->name }}
+                    @endif
+                </p>
+            </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-2 gap-2">
+            <a href="{{ route('biometric-verifications.index', ['status' => 'verified', 'registered' => 1]) }}"
+               class="bg-white bg-opacity-20 hover:bg-opacity-30 transition-colors rounded-lg px-3 py-2">
+                <div class="flex items-center text-white text-opacity-90 text-xs">
+                    <i class="fas fa-check-circle mr-1"></i> Verified
+                </div>
+                <div class="text-lg font-bold text-white">{{ number_format($biometricVerified ?? 0) }}</div>
+            </a>
+            <a href="{{ route('biometric-verifications.index', ['status' => 'not_verified', 'registered' => 1]) }}"
+               class="bg-white bg-opacity-20 hover:bg-opacity-30 transition-colors rounded-lg px-3 py-2">
+                <div class="flex items-center text-white text-opacity-90 text-xs">
+                    <i class="fas fa-exclamation-circle mr-1"></i> Unverified
+                </div>
+                <div class="text-lg font-bold text-white">{{ number_format($biometricUnverified ?? 0) }}</div>
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-gradient-to-br from-indigo-400 to-indigo-500 rounded-lg shadow-lg p-6 transform transition-all duration-200 hover:scale-105">
+        <div class="flex items-center">
+            <div class="p-3 rounded-full bg-white bg-opacity-20">
+                <i class="fas fa-user-graduate text-2xl text-white"></i>
+            </div>
+            <div class="ml-4">
+                <h3 class="text-sm font-medium text-white text-opacity-90">Graduated Students</h3>
+                <div class="flex items-center">
+                    <span class="text-2xl font-bold text-white">{{ number_format($graduatedStudents ?? 0) }}</span>
+                    @if(!empty($latestGraduatedCount))
+                        <span class="ml-2 text-sm font-medium text-white bg-white bg-opacity-20 px-2 py-0.5 rounded-full">
+                            +{{ number_format($latestGraduatedCount) }}
+                        </span>
+                    @endif
+                </div>
+                <p class="text-xs text-white text-opacity-80 mt-0.5">
+                    @if($latestGraduationYear)
+                        latest cohort {{ $latestGraduationYear->name }}
+                    @else
+                        no graduation year recorded
+                    @endif
+                </p>
+            </div>
+        </div>
+        <div class="mt-4">
+            <a href="{{ route('students.index', ['level' => 'graduated']) }}" class="text-sm text-white hover:text-opacity-75 font-medium inline-flex items-center">
+                View graduates <i class="fas fa-arrow-right ml-2 transition-transform group-hover:translate-x-1"></i>
+            </a>
+        </div>
+    </div>
+
     <div class="bg-gradient-to-br from-orange-300 to-orange-400 rounded-lg shadow-lg p-6 transform transition-all duration-200 hover:scale-105">
         <div class="flex items-center">
             <div class="p-3 rounded-full bg-white bg-opacity-20">

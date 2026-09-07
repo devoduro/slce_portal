@@ -28,6 +28,7 @@ class Student extends Model
         'level',
         'class_group_id',
         'status',
+        'graduated_academic_year_id',
         'profile_photo',
         'emergency_contact_name',
         'emergency_contact_phone',
@@ -57,11 +58,50 @@ class Student extends Model
     }
 
     /**
+     * Get the academic year the student graduated in (set when Promotions marks them graduated
+     * at their programme's terminal level).
+     */
+    public function graduatedAcademicYear(): BelongsTo
+    {
+        return $this->belongsTo(AcademicYear::class, 'graduated_academic_year_id');
+    }
+
+    /**
+     * Human-friendly label for the student's academic standing. A graduated student no longer
+     * belongs to a level - showing the last level they studied at ("Level 400") is misleading
+     * once they've left, so this shows "Graduated" with the academic year they graduated in
+     * instead (e.g. "Graduated (2025/2026)").
+     */
+    public function levelLabel(): string
+    {
+        if ($this->status === 'graduated') {
+            return $this->graduatedAcademicYear
+                ? "Graduated ({$this->graduatedAcademicYear->name})"
+                : 'Graduated';
+        }
+
+        if ($this->status === 'withdrawn') {
+            return 'Withdrawn';
+        }
+
+        return $this->level ? "Level {$this->level}" : 'N/A';
+    }
+
+    /**
      * Get the class group the student is assigned to.
      */
     public function classGroup(): BelongsTo
     {
         return $this->belongsTo(ClassGroup::class);
+    }
+
+    /**
+     * Get the snapshots of what level this student held during past academic years - taken at
+     * the moment they're promoted out of each one. See levelForAcademicYear().
+     */
+    public function levelHistories(): HasMany
+    {
+        return $this->hasMany(StudentLevelHistory::class);
     }
 
     /**
@@ -158,10 +198,47 @@ class Student extends Model
     }
 
     /**
+     * Get the level this student actually held during a given academic year - not necessarily
+     * their current level, since a promotion bumps the level column for good, forgetting what
+     * it used to be. Resolution order:
+     *  1. An explicit snapshot for that year (taken when the student was later promoted out
+     *     of it - see PromotionController) - authoritative when present.
+     *  2. If this is the current academic year (or there's no "current" year concept at all),
+     *     the student hasn't been promoted out of it yet, so their level column is still correct.
+     *  3. Otherwise (a past year predating this tracking, with no snapshot) - best-effort:
+     *     infer from the level of the courses they were actually registered for that year.
+     *  4. Falls back to the student's current level if none of the above yield anything.
+     */
+    public function levelForAcademicYear(AcademicYear $academicYear): ?int
+    {
+        $history = $this->levelHistories->firstWhere('academic_year_id', $academicYear->id);
+        if ($history) {
+            return $history->level;
+        }
+
+        $currentAcademicYear = AcademicYear::where('is_current', true)->first();
+        if (!$currentAcademicYear || $currentAcademicYear->id === $academicYear->id) {
+            return $this->level;
+        }
+
+        $inferred = $this->registrations()
+            ->where('academic_year_id', $academicYear->id)
+            ->join('courses', 'courses.id', '=', 'registrations.course_id')
+            ->whereNotNull('courses.level')
+            ->selectRaw('courses.level, COUNT(*) as cnt')
+            ->groupBy('courses.level')
+            ->orderByDesc('cnt')
+            ->value('courses.level');
+
+        return $inferred ?? $this->level;
+    }
+
+    /**
      * Get the fee structure that applies to this student for a given academic year and
      * category (defaults to the base tuition/school fee - the one that gates course
-     * registration). Matches on programme + level first, falling back to a
-     * programme-wide (null level) entry.
+     * registration). Matches on programme + the level the student held *during that academic
+     * year* (see levelForAcademicYear()) first, falling back to a programme-wide (null level)
+     * entry.
      */
     public function applicableFeeStructure(AcademicYear $academicYear, string $category = 'tuition'): ?FeeStructure
     {
@@ -169,8 +246,10 @@ class Student extends Model
             ->where('programme_id', $this->programme_id)
             ->where('category', $category);
 
-        if ($this->level !== null) {
-            $structure = (clone $query)->where('level', $this->level)->first();
+        $level = $this->levelForAcademicYear($academicYear);
+
+        if ($level !== null) {
+            $structure = (clone $query)->where('level', $level)->first();
             if ($structure) {
                 return $structure;
             }

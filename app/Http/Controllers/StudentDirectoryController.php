@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademicYear;
 use App\Models\Programme;
 use App\Models\Student;
 use Illuminate\Http\Request;
@@ -18,7 +19,7 @@ class StudentDirectoryController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Student::with(['programme', 'classGroup']);
+        $query = Student::with(['programme', 'classGroup', 'graduatedAcademicYear']);
 
         if ($request->filled('search')) {
             $search = $request->search;
@@ -34,8 +35,14 @@ class StudentDirectoryController extends Controller
             $query->where('programme_id', $request->programme_id);
         }
 
-        if ($request->filled('level')) {
-            $query->where('level', $request->level);
+        if ($request->filled('graduated_academic_year_id')) {
+            $query->where('status', 'graduated')->where('graduated_academic_year_id', $request->graduated_academic_year_id);
+        } elseif ($request->filled('level')) {
+            if ($request->level === 'graduated') {
+                $query->where('status', 'graduated');
+            } else {
+                $query->where('level', $request->level)->where('status', '!=', 'graduated');
+            }
         }
 
         if ($request->filled('hall')) {
@@ -52,8 +59,11 @@ class StudentDirectoryController extends Controller
         $programmes = Programme::orderBy('name')->get();
         $levels = Student::whereNotNull('level')->distinct()->orderBy('level')->pluck('level');
         $halls = Student::whereNotNull('hall')->where('hall', '!=', '')->distinct()->orderBy('hall')->pluck('hall');
+        $graduationYears = AcademicYear::whereIn('id', Student::where('status', 'graduated')->whereNotNull('graduated_academic_year_id')->distinct()->pluck('graduated_academic_year_id'))
+            ->orderByDesc('start_date')
+            ->get();
 
-        return view('student-directory.index', compact('students', 'programmes', 'levels', 'halls'));
+        return view('student-directory.index', compact('students', 'programmes', 'levels', 'halls', 'graduationYears'));
     }
 
     /**
@@ -62,7 +72,7 @@ class StudentDirectoryController extends Controller
      */
     public function show(Student $student)
     {
-        $student->load(['programme', 'classGroup']);
+        $student->load(['programme', 'classGroup', 'graduatedAcademicYear']);
 
         return view('student-directory.show', compact('student'));
     }

@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\AcademicYear;
 use App\Models\Programme;
 use App\Models\Student;
+use App\Models\StudentLevelHistory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -89,7 +91,8 @@ class PromotionController extends Controller
      * Only ever touches students.level/class_group_id/status - results, registrations,
      * continuous assessment and arrears are keyed by academic_year_id (not level or class
      * group) and are never read or written here, so continuing students' historical
-     * records are left untouched.
+     * records are left untouched. It does, however, snapshot the level students are being
+     * promoted out of (see below) - that's what keeps their *fees* untouched too.
      */
     public function store(Request $request)
     {
@@ -111,16 +114,49 @@ class PromotionController extends Controller
         $count = 0;
 
         DB::transaction(function () use ($programme, $level, $isTerminal, &$count) {
-            $scope = Student::where('programme_id', $programme->id)
+            $studentIds = Student::where('programme_id', $programme->id)
                 ->where('level', $level)
-                ->where('status', 'active');
+                ->where('status', 'active')
+                ->pluck('id');
 
-            $count = $scope->count();
+            $count = $studentIds->count();
 
-            if ($count > 0) {
-                $isTerminal
-                    ? $scope->update(['class_group_id' => null, 'status' => 'graduated'])
-                    : $scope->update(['level' => $level + 100, 'class_group_id' => null]);
+            if ($count === 0) {
+                return;
+            }
+
+            $currentAcademicYear = AcademicYear::where('is_current', true)->first();
+
+            // Snapshot the level these students are being promoted OUT of, for the academic
+            // year that's ending, before their level column moves on to the next one. Without
+            // this, a fee lookup for this year would later use their new (post-promotion)
+            // level instead of the one they actually studied - and were billed - at.
+            if ($currentAcademicYear) {
+                $now = now();
+
+                StudentLevelHistory::upsert(
+                    $studentIds->map(fn ($id) => [
+                        'student_id' => $id,
+                        'academic_year_id' => $currentAcademicYear->id,
+                        'level' => $level,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ])->all(),
+                    ['student_id', 'academic_year_id'],
+                    ['level', 'updated_at']
+                );
+            }
+
+            $scope = Student::whereIn('id', $studentIds);
+
+            if ($isTerminal) {
+                $scope->update([
+                    'class_group_id' => null,
+                    'status' => 'graduated',
+                    'graduated_academic_year_id' => $currentAcademicYear?->id,
+                ]);
+            } else {
+                $scope->update(['level' => $level + 100, 'class_group_id' => null]);
             }
         });
 

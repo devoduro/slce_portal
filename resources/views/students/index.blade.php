@@ -88,15 +88,15 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     <!-- Search and Filters -->
                     <form action="{{ route('students.index') }}" method="GET" class="mb-6">
-                        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                            <div class="relative flex-1">
+                        <div class="flex flex-col md:flex-row md:flex-wrap md:items-center gap-4">
+                            <div class="relative flex-1 min-w-full md:min-w-[18rem]">
                                 <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                     <i class="fas fa-search text-gray-400"></i>
                                 </div>
                                 <input type="text" id="search" name="search" placeholder="Search by name, ID, email..." value="{{ request('search') }}" class="pl-10 pr-4 py-2 w-full border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
                             </div>
-                            <div class="flex flex-col md:flex-row gap-4">
-                                <select name="programme_id" class="border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-4 py-2">
+                            <div class="flex flex-col md:flex-row md:flex-wrap md:items-center gap-3">
+                                <select name="programme_id" class="border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-4 py-2 w-full md:w-auto md:max-w-[14rem]">
                                     <option value="">All Programmes</option>
                                     @foreach($programmes as $programme)
                                         <option value="{{ $programme->id }}" {{ request('programme_id') == $programme->id ? 'selected' : '' }}>
@@ -115,11 +115,18 @@
                                     @foreach([100, 200, 300, 400] as $levelOption)
                                         <option value="{{ $levelOption }}" {{ (string) request('level') === (string) $levelOption ? 'selected' : '' }}>Level {{ $levelOption }}</option>
                                     @endforeach
+                                    <option value="graduated" {{ request('level') === 'graduated' ? 'selected' : '' }}>Graduated</option>
+                                </select>
+                                <select name="graduated_academic_year_id" class="border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 px-4 py-2">
+                                    <option value="">Any Graduation Year</option>
+                                    @foreach($graduationYears as $year)
+                                        <option value="{{ $year->id }}" {{ (string) request('graduated_academic_year_id') === (string) $year->id ? 'selected' : '' }}>Graduated {{ $year->name }}</option>
+                                    @endforeach
                                 </select>
                                 <button type="submit" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
                                     <i class="fas fa-filter mr-2"></i>Apply Filters
                                 </button>
-                                @if(request('search') || request('programme_id') || request('gender') || request('level'))
+                                @if(request('search') || request('programme_id') || request('gender') || request('level') || request('graduated_academic_year_id'))
                                     <a href="{{ route('students.index') }}" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
                                         <i class="fas fa-times mr-2"></i>Clear
                                     </a>
@@ -147,6 +154,9 @@
                                     </th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Programme
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                        Level
                                     </th>
                                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                         Date of Birth
@@ -187,6 +197,15 @@
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {{ $student->programme->name ?? 'N/A' }}
                                         </td>
+                                        <td class="px-6 py-4 whitespace-nowrap">
+                                            @if($student->status === 'graduated')
+                                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                                                    {{ $student->levelLabel() }}
+                                                </span>
+                                            @else
+                                                <span class="text-sm text-gray-500">{{ $student->levelLabel() }}</span>
+                                            @endif
+                                        </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                             {{ $student->date_of_birth ? date('Y-m-d', strtotime($student->date_of_birth)) : 'N/A' }}
                                         </td>
@@ -222,7 +241,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
+                                        <td colspan="10" class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                                             <div class="flex flex-col items-center justify-center py-12">
                                                 <svg class="w-16 h-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>

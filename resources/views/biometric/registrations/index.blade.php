@@ -38,6 +38,12 @@
                             </select>
                         </div>
                         <div>
+                            <select name="registered" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
+                                <option value="">All Students</option>
+                                <option value="1" {{ request('registered') ? 'selected' : '' }}>Registered This Year</option>
+                            </select>
+                        </div>
+                        <div>
                             <select name="per_page" onchange="this.form.submit()" class="block w-full pl-3 pr-10 py-2 text-sm border-gray-300 rounded-md focus:outline-none focus:ring-primary-500 focus:border-primary-500">
                                 @foreach([20, 50, 100, 200, 300, 500, 5000] as $option)
                                     <option value="{{ $option }}" {{ (int) request('per_page', 20) === $option ? 'selected' : '' }}>{{ $option }} per page</option>

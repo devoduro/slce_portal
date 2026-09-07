@@ -12,9 +12,56 @@ use Illuminate\Validation\ValidationException;
 class StsPlacementService
 {
     /**
+     * Names of the schools a student has already been placed at in previous terms, lower-cased
+     * and trimmed for comparison.
+     *
+     * Matched on NAME rather than partner_school_id on purpose: the school list is re-uploaded
+     * each term, so the same physical school comes back as a brand new row with a new id. Only
+     * the name is stable across those uploads.
+     *
+     * @return \Illuminate\Support\Collection<int, string>
+     */
+    public static function previousSchoolNames(Student $student, ?StsTerm $excludingTerm = null)
+    {
+        return StsPlacement::query()
+            ->where('student_id', $student->id)
+            ->when($excludingTerm, fn ($q) => $q->where('sts_term_id', '!=', $excludingTerm->id))
+            ->whereNotNull('partner_school_id')
+            ->with('partnerSchool:id,name')
+            ->get()
+            ->pluck('partnerSchool.name')
+            ->filter()
+            ->map(fn (string $name) => mb_strtolower(trim($name)))
+            ->unique()
+            ->values();
+    }
+
+    /**
+     * Whether a placement is still within STS policy: STS runs in a First Semester term only,
+     * and only up to the term's internship level cutoff (Level 100-300 by default). A student
+     * above that does Internship instead and is never offered an STS school.
+     *
+     * Checked against the student's *current* level, not the level snapshotted on the placement,
+     * so someone promoted after the term was generated can't act on a now-stale STS placement.
+     */
+    public static function stsSelectionAllowed(Student $student, StsTerm $term, StsPlacement $placement): bool
+    {
+        if ($placement->type !== StsPlacement::TYPE_STS) {
+            return true;
+        }
+
+        if ((int) ($term->semester->semester_number ?? 1) !== 1) {
+            return false;
+        }
+
+        return (int) ($student->level ?? 0) <= (int) $term->internship_level_cutoff;
+    }
+
+    /**
      * Attempt to place a student at a partner school, enforcing category match, STS/Internship
-     * type match, and first-come-first-serve quota under row locks so two concurrent requests
-     * for the last open slot at a school cannot both succeed.
+     * type match, no repeat of a school the student has already attended, and first-come-first-serve
+     * quota under row locks so two concurrent requests for the last open slot at a school cannot
+     * both succeed.
      */
     public static function selectSchool(Student $student, StsTerm $term, PartnerSchool $school): StsPlacement
     {
@@ -38,6 +85,14 @@ class StsPlacementService
             // feature are left unrestricted until an admin classifies them.
             if ($locked->type && $locked->type !== $placement->type) {
                 throw ValidationException::withMessages(['school' => 'This school is designated for ' . ($locked->type === 'internship' ? 'Internship' : 'STS') . ' placements, not ' . ($placement->type === 'internship' ? 'Internship' : 'STS') . '.']);
+            }
+
+            // A student may not return to a school they have already been placed at. Compared by
+            // name, since re-uploading the school list each term gives the same school a new id.
+            if (self::previousSchoolNames($student, $term)->contains(mb_strtolower(trim($locked->name)))) {
+                throw ValidationException::withMessages([
+                    'school' => "You were previously placed at {$locked->name}. Please choose a school you have not attended before.",
+                ]);
             }
 
             $filled = StsPlacement::where('partner_school_id', $locked->id)

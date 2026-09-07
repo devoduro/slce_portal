@@ -3,11 +3,133 @@
 namespace App\Services;
 
 use App\Models\AcademicYear;
+use App\Models\FeeStructure;
 use App\Models\Student;
+use App\Models\StudentLevelHistory;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class FeeLedgerService
 {
+    /**
+     * Bulk-compute what each student owes coming INTO a given academic year: everything billed
+     * in prior years (tuition + arrears + one-off charges) minus everything paid in those years.
+     *
+     * This is what the "Arrears" figure on a year-scoped fee list should be. The raw
+     * student_arrears table is only ever an opening-balance upload - it is never reduced when
+     * the student later pays that debt off, so summing it raw reports debt that has already
+     * been settled. Mirrors the arithmetic of ledgerFor() so both agree, but resolved set-based
+     * (a fixed handful of queries) rather than per student, since fee lists run over thousands.
+     *
+     * @param  Collection<int, Student>  $students
+     * @return array<int, float> student_id => carried-forward balance (positive = still owed)
+     */
+    public static function carryForwardFor(Collection $students, AcademicYear $year): array
+    {
+        $studentIds = $students->pluck('id')->all();
+
+        if (empty($studentIds)) {
+            return [];
+        }
+
+        $balances = array_fill_keys($studentIds, 0.0);
+
+        $priorYearIds = AcademicYear::where('start_date', '<', $year->start_date)->pluck('id')->all();
+
+        if (empty($priorYearIds)) {
+            return $balances;
+        }
+
+        $sumPerStudent = fn (string $table) => DB::table($table)
+            ->whereIn('student_id', $studentIds)
+            ->whereIn('academic_year_id', $priorYearIds)
+            ->selectRaw('student_id, SUM(amount) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
+
+        $payments = $sumPerStudent('student_payments');
+        $arrears = $sumPerStudent('student_arrears');
+        $charges = $sumPerStudent('student_fee_charges');
+
+        // Which prior years each student was actually billed for. Enrolment (a course
+        // registration) is what raises a tuition charge - NOT whether the student happened to
+        // transact that year. Keying off transactions alone would let a student who registered
+        // and simply never paid appear debt-free, while still not billing anyone for a year
+        // they weren't enrolled in. Mirrored in ledgerFor() so both agree.
+        $activeYears = [];
+
+        foreach (['student_payments', 'student_arrears', 'student_fee_charges', 'registrations'] as $table) {
+            $pairs = DB::table($table)
+                ->whereIn('student_id', $studentIds)
+                ->whereIn('academic_year_id', $priorYearIds)
+                ->select('student_id', 'academic_year_id')
+                ->distinct()
+                ->get();
+
+            foreach ($pairs as $pair) {
+                $activeYears[$pair->student_id][$pair->academic_year_id] = true;
+            }
+        }
+
+        $structures = FeeStructure::whereIn('academic_year_id', $priorYearIds)
+            ->where('category', 'tuition')
+            ->get();
+
+        // The level each student held during each prior year - snapshot first, then inferred
+        // from the courses they registered for, matching Student::levelForAcademicYear().
+        $levelHistory = [];
+
+        foreach (StudentLevelHistory::whereIn('student_id', $studentIds)->whereIn('academic_year_id', $priorYearIds)->get() as $history) {
+            $levelHistory[$history->student_id][$history->academic_year_id] = (int) $history->level;
+        }
+
+        $inferredLevels = [];
+
+        $courseLevels = DB::table('registrations')
+            ->join('courses', 'courses.id', '=', 'registrations.course_id')
+            ->whereIn('registrations.student_id', $studentIds)
+            ->whereIn('registrations.academic_year_id', $priorYearIds)
+            ->whereNotNull('courses.level')
+            ->selectRaw('registrations.student_id, registrations.academic_year_id, courses.level, COUNT(*) as cnt')
+            ->groupBy('registrations.student_id', 'registrations.academic_year_id', 'courses.level')
+            ->orderByDesc('cnt')
+            ->get();
+
+        foreach ($courseLevels as $row) {
+            // Ordered by count desc, so the first row seen for a student/year is the majority level.
+            if (!isset($inferredLevels[$row->student_id][$row->academic_year_id])) {
+                $inferredLevels[$row->student_id][$row->academic_year_id] = (int) $row->level;
+            }
+        }
+
+        foreach ($students as $student) {
+            $balance = (float) ($arrears[$student->id] ?? 0)
+                + (float) ($charges[$student->id] ?? 0)
+                - (float) ($payments[$student->id] ?? 0);
+
+            foreach (array_keys($activeYears[$student->id] ?? []) as $yearId) {
+                $level = $levelHistory[$student->id][$yearId]
+                    ?? $inferredLevels[$student->id][$yearId]
+                    ?? $student->level;
+
+                $structure = $structures->first(fn (FeeStructure $s) => (int) $s->academic_year_id === (int) $yearId
+                        && (int) $s->programme_id === (int) $student->programme_id
+                        && $s->level !== null && $level !== null && (int) $s->level === (int) $level)
+                    ?? $structures->first(fn (FeeStructure $s) => (int) $s->academic_year_id === (int) $yearId
+                        && (int) $s->programme_id === (int) $student->programme_id
+                        && $s->level === null);
+
+                if ($structure) {
+                    $balance += (float) $structure->amount;
+                }
+            }
+
+            $balances[$student->id] = round($balance, 2);
+        }
+
+        return $balances;
+    }
+
     /**
      * The fee that applies to a student right now: their current level, for the
      * current academic year. Delegates to Student::applicableFeeStructure() so this
@@ -42,9 +164,16 @@ class FeeLedgerService
         $arrears = $student->arrears()->with('academicYear')->get();
         $feeCharges = $student->feeCharges()->with('academicYear')->get();
 
+        // Years the student was enrolled in count too, not just years they transacted in -
+        // otherwise a year they registered for but never paid a cedi towards produces no
+        // tuition row at all, and the statement understates what they owe. Matches the same
+        // rule in carryForwardFor().
+        $enrolledYearIds = $student->registrations()->distinct()->pluck('academic_year_id');
+
         $relevantYearIds = $payments->pluck('academic_year_id')
             ->merge($arrears->pluck('academic_year_id'))
             ->merge($feeCharges->pluck('academic_year_id'))
+            ->merge($enrolledYearIds)
             ->when($currentAcademicYear, fn (Collection $ids) => $ids->push($currentAcademicYear->id))
             ->unique()
             ->filter();

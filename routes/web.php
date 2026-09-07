@@ -345,6 +345,7 @@ Route::middleware(['auth'])->group(function () {
         Route::resource('sts-score-settings', \App\Http\Controllers\StsScoreSettingController::class)->except(['show']);
 
         Route::get('/sts-placements', [\App\Http\Controllers\StsPlacementController::class, 'index'])->name('sts-placements.index');
+        Route::get('/sts-placements/export/excel', [\App\Http\Controllers\StsPlacementController::class, 'exportExcel'])->name('sts-placements.export.excel');
         Route::get('/sts-placements/supervisors/upload', [\App\Http\Controllers\StsPlacementController::class, 'supervisorsUploadForm'])->name('sts-placements.supervisors.upload');
         Route::post('/sts-placements/supervisors/import', [\App\Http\Controllers\StsPlacementController::class, 'supervisorsImport'])->name('sts-placements.supervisors.import');
         Route::get('/sts-placements/supervisors/template', [\App\Http\Controllers\StsPlacementController::class, 'supervisorsTemplate'])->name('sts-placements.supervisors.template');

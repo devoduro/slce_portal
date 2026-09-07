@@ -7,7 +7,6 @@ use App\Models\AcademicYear;
 use App\Models\FeeStructure;
 use App\Models\Programme;
 use App\Models\Student;
-use App\Models\StudentArrear;
 use App\Models\StudentFeeCharge;
 use App\Models\StudentPayment;
 use App\Services\FeeLedgerService;
@@ -132,10 +131,15 @@ class StudentPaymentController extends Controller
                 ->pluck('total', 'student_id')
             : collect();
 
-        $arrearSums = StudentArrear::whereIn('student_id', $studentIds)
-            ->selectRaw('student_id, SUM(amount) as total')
-            ->groupBy('student_id')
-            ->pluck('total', 'student_id');
+        // What each student is carrying INTO this academic year - prior years' bills, arrears
+        // and one-off charges, net of what they paid in those years. Deliberately not a raw
+        // SUM over student_arrears: that table is an opening-balance upload that is never
+        // reduced when the debt is later paid, so summing it raw brands students as debtors
+        // for money they have already settled. Also keeps this list agreeing with the
+        // statement of account on the student's own fee page.
+        $arrearSums = $academicYear
+            ? FeeLedgerService::carryForwardFor($students, $academicYear)
+            : [];
 
         $rows = $students->map(function (Student $student) use ($academicYear, $feeStructures, $paymentSums, $tuitionChargeSums, $arrearSums) {
             $structure = null;
@@ -497,10 +501,9 @@ class StudentPaymentController extends Controller
             ->groupBy('student_id')
             ->pluck('total', 'student_id');
 
-        $arrearSums = StudentArrear::whereIn('student_id', $studentIds)
-            ->selectRaw('student_id, SUM(amount) as total')
-            ->groupBy('student_id')
-            ->pluck('total', 'student_id');
+        // Carried-forward balance from prior years, net of prior payments - see the note in
+        // buildFeeRows(). Summing student_arrears raw would count already-settled debt.
+        $arrearSums = FeeLedgerService::carryForwardFor($students, $academicYear);
 
         $debtorCount = 0;
         $creditorCount = 0;

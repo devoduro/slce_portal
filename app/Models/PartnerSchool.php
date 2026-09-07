@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PartnerSchool extends Model
@@ -20,6 +21,7 @@ class PartnerSchool extends Model
         'location',
         'category',
         'type',
+        'sts_term_id',
         'capacity_level_100',
         'capacity_level_200',
         'capacity_level_300',
@@ -76,5 +78,23 @@ class PartnerSchool extends Model
     public function typeLabel(): ?string
     {
         return self::TYPE_LABELS[$this->type] ?? null;
+    }
+
+    /**
+     * The STS term this school was uploaded for. Null for internship schools, which are kept
+     * global and carry over from year to year.
+     */
+    public function stsTerm(): BelongsTo
+    {
+        return $this->belongsTo(StsTerm::class, 'sts_term_id');
+    }
+
+    /**
+     * Limit to schools usable in a given term: STS schools uploaded for that term, plus every
+     * school that isn't term-scoped (internship, and any legacy row predating this scoping).
+     */
+    public function scopeUsableInTerm($query, ?int $stsTermId)
+    {
+        return $query->where(fn ($q) => $q->whereNull('sts_term_id')->orWhere('sts_term_id', $stsTermId));
     }
 }

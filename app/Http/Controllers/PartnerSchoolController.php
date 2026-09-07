@@ -19,7 +19,19 @@ class PartnerSchoolController extends Controller
      */
     public function index(Request $request)
     {
-        $query = PartnerSchool::query();
+        $currentTerm = StsTerm::where('is_current', true)->first();
+
+        // STS schools are scoped to the term they were uploaded for, so a new academic year
+        // starts with an empty STS list until this year's is uploaded. Internship schools are
+        // global and always listed. Past terms remain reachable via the term filter, so the
+        // records behind previous placements are never hidden for good.
+        $termFilter = $request->input('sts_term_id', $currentTerm?->id);
+
+        $query = PartnerSchool::query()->with('stsTerm');
+
+        if ($termFilter !== 'all') {
+            $query->usableInTerm($termFilter ? (int) $termFilter : null);
+        }
 
         if ($request->filled('category')) {
             $query->where('category', $request->category);
@@ -49,7 +61,7 @@ class PartnerSchoolController extends Controller
 
         $schools = $query->orderBy('name')->paginate($perPage)->withQueryString();
 
-        $currentTerm = StsTerm::where('is_current', true)->first();
+        $stsTerms = StsTerm::orderByDesc('id')->get();
 
         // Grouped by school + level in one query rather than per-row lookups, so the
         // "Placed / Open" column below doesn't turn this listing into an N+1.
@@ -64,7 +76,7 @@ class PartnerSchoolController extends Controller
                 ->groupBy('partner_school_id');
         }
 
-        return view('partner-schools.index', compact('schools', 'currentTerm', 'placedCounts'));
+        return view('partner-schools.index', compact('schools', 'currentTerm', 'placedCounts', 'stsTerms', 'termFilter'));
     }
 
     /**
@@ -93,6 +105,11 @@ class PartnerSchoolController extends Controller
             'capacity_level_100', 'capacity_level_200', 'capacity_level_300', 'capacity_level_400', 'total_capacity',
         ]);
         $data['total_capacity'] = $data['total_capacity'] ?: $this->defaultTotalCapacity($data);
+        // STS schools belong to the term they're added for, so they don't carry into next year.
+        // Internship schools stay global.
+        $data['sts_term_id'] = ($data['type'] ?? null) === 'sts'
+            ? StsTerm::where('is_current', true)->value('id')
+            : null;
 
         PartnerSchool::create($data);
 
@@ -202,7 +219,7 @@ class PartnerSchoolController extends Controller
         }
 
         try {
-            $import = new PartnerSchoolImport();
+            $import = new PartnerSchoolImport(StsTerm::where('is_current', true)->value('id'));
             Excel::import($import, $request->file('excel_file'));
 
             $stats = $import->getStats();

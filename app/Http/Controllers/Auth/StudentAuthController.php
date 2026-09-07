@@ -396,15 +396,27 @@ class StudentAuthController extends Controller
     {
         $student = Auth::user()->student;
 
+        // Scoped to the semester the student is actually in right now. Without this, every
+        // registration the student has ever made comes back, so anyone who has been promoted
+        // sees last year's courses (taken at their previous level) instead of their current
+        // ones - and the CaScoreSetting lookup below, which keys off the student's *current*
+        // level, would be showing the wrong maximum scores against those older rows.
+        $currentSemester = Semester::where('is_current', true)->first();
+        $currentAcademicYear = AcademicYear::where('is_current', true)->first();
+
         $registrations = Registration::where('student_id', $student->id)
             ->where('status', 'registered')
-            ->with(['course.semester.academicYear'])
+            ->when($currentAcademicYear, fn ($query) => $query->where('academic_year_id', $currentAcademicYear->id))
+            ->when($currentSemester, fn ($query) => $query->where('semester_id', $currentSemester->id))
+            ->with(['course', 'semester'])
             ->get()
             ->filter(fn ($registration) => $registration->course !== null);
 
         $rows = $registrations->map(function ($registration) use ($student) {
             $course = $registration->course;
-            $semester = $course->semester;
+            // The registration's own semester is what the CA record is keyed by - the course's
+            // semester can differ (a course row belongs to the semester it was defined for).
+            $semester = $registration->semester ?? $course->semester;
 
             $ca = ContinuousAssessment::where('student_id', $student->id)
                 ->where('course_id', $course->id)

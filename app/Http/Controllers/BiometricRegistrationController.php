@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Programme;
+use App\Models\Registration;
 use App\Models\Semester;
 use App\Models\Student;
 use App\Models\BiometricRegistration;
@@ -37,6 +38,18 @@ class BiometricRegistrationController extends Controller
 
         if ($request->filled('programme_id')) {
             $query->where('programme_id', $request->programme_id);
+        }
+
+        // Narrow to continuing students (Level 100-400) who actually registered for the selected
+        // semester's academic year - they're the ones expected to check in, so this matches what
+        // the dashboard's verified / unverified counts are measured against. Graduates are left
+        // out even though they still carry registration rows from their final year.
+        if ($request->boolean('registered') && $semester) {
+            $query->where('status', 'active')
+                ->whereIn('level', [100, 200, 300, 400])
+                ->whereIn('id', Registration::where('academic_year_id', $semester->academic_year_id)
+                    ->distinct()
+                    ->pluck('student_id'));
         }
 
         if ($request->filled('status') && $semester) {
