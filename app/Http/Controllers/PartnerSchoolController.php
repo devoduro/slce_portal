@@ -151,6 +151,11 @@ class PartnerSchoolController extends Controller
 
         $partnerSchool->update($data);
 
+        // Carry the edited capacities through to the per-term quota that actually gates
+        // placement - otherwise the quota rows, once written by a carry-forward, silently ignore
+        // every later capacity change made here.
+        $partnerSchool->refresh()->syncQuotaToCapacities();
+
         return redirect()->route('partner-schools.index')
             ->with('success', 'Partner school updated successfully.');
     }

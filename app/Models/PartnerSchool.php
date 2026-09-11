@@ -85,6 +85,80 @@ class PartnerSchool extends Model
     }
 
     /**
+     * The levels a term will actually place a school of this type's students at, from the same
+     * rule that assigns placement types (StsPlacement::determineType). Narrower than
+     * levelsForType() because it accounts for the term's semester - a First Semester term has no
+     * Level 300 internships, a Second Semester term has no STS. Used when (re)writing a term's
+     * quota rows so they only cover levels that can genuinely be filled.
+     *
+     * @return array<int, int>
+     */
+    public static function activeLevelsForTerm(?string $type, StsTerm $term): array
+    {
+        if ($type !== 'sts' && $type !== 'internship') {
+            return self::QUOTA_LEVELS;
+        }
+
+        $semesterNumber = (int) ($term->semester->semester_number ?? 1);
+        $cutoff = (int) $term->internship_level_cutoff;
+        $semesterCutoff = (int) $term->internship_semester_cutoff;
+
+        return array_values(array_filter(
+            self::QUOTA_LEVELS,
+            fn (int $level) => StsPlacement::determineType($level, $semesterNumber, $cutoff, $semesterCutoff) === $type
+        ));
+    }
+
+    /**
+     * Rewrite a school's per-term quota rows from its own capacity_level_* columns, for the term
+     * that governs it right now (an STS school's own term; the current term for a global /
+     * internship school). Called whenever those columns are edited so the figure that actually
+     * gates placement follows the edit - without it the quota rows, once written, ignore every
+     * later capacity change.
+     *
+     * A continuing internship cohort holds the capacity it was allocated a level below (this
+     * term's Level 400 interns fill the school's Level 300 places), so that one level is mapped
+     * through the same shift the carry-forward uses. Every other active level is taken straight,
+     * and any level this term never fills is written as zero.
+     */
+    public function syncQuotaToCapacities(): void
+    {
+        $term = $this->type === 'sts'
+            ? ($this->sts_term_id ? StsTerm::find($this->sts_term_id) : null)
+            : StsTerm::where('is_current', true)->first();
+
+        // No governing term, or a term still falling back to the legacy columns anyway - the
+        // edit already reaches placement, nothing to write.
+        if (!$term) {
+            return;
+        }
+
+        $hasRows = $this->quotas()->where('sts_term_id', $term->id)->exists();
+
+        if (!$hasRows) {
+            return;
+        }
+
+        $active = self::activeLevelsForTerm($this->type, $term);
+        $cutoff = (int) $term->internship_level_cutoff;
+
+        foreach (self::QUOTA_LEVELS as $level) {
+            if (!in_array($level, $active, true)) {
+                $capacity = 0;
+            } else {
+                $continuing = $this->type === 'internship' && $level > $cutoff;
+                $sourceLevel = $continuing ? $level - 100 : $level;
+                $capacity = (int) ($this->{"capacity_level_{$sourceLevel}"} ?? 0);
+            }
+
+            PartnerSchoolQuota::updateOrCreate(
+                ['partner_school_id' => $this->id, 'sts_term_id' => $term->id, 'level' => $level],
+                ['capacity' => $capacity]
+            );
+        }
+    }
+
+    /**
      * Which placement types draw on a given level, for labelling a quota column.
      *
      * @return array<int, string>

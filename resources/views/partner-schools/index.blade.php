@@ -175,6 +175,19 @@
                                                             // a student continuing an internship above the cutoff is
                                                             // still filling the cutoff-level slot they were allocated.
                                                             $count = (int) ($levelCounts[$level] ?? 0);
+
+                                                            // A level this school's type never places at is shown as a
+                                                            // dash in all three rows, matching the Quota column - so
+                                                            // "quota − placed = open" reads straight down each column.
+                                                            // The one exception is a level that unexpectedly has
+                                                            // students on it: that's a real problem, so it's kept
+                                                            // visible (and flagged over quota) rather than dashed away.
+                                                            if (!in_array($level, $accepted, true) && $count === 0) {
+                                                                $placed[] = '—';
+                                                                $open[] = '—';
+                                                                continue;
+                                                            }
+
                                                             $remaining = ($capacities[$school->id][$level] ?? 0) - $count;
 
                                                             $placed[] = $count;
