@@ -113,8 +113,10 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $query = User::query()->with('roles')->orderBy('name');
-        
+        // Applicant-linked accounts are managed entirely through the Admission module,
+        // not this generic Users screen (its role validation only knows admin/student).
+        $query = User::query()->with('roles')->where('role', '!=', 'applicant')->orderBy('name');
+
         // Apply search filter
         if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;

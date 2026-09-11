@@ -293,6 +293,37 @@
                     </x-nav-group>
                 @endcan
 
+                {{-- ── Admissions ─────────────────────────────────────────────────────────── --}}
+                @canany(['manage-admissions', 'manage-admission-payments'])
+                    <x-nav-heading>Admissions</x-nav-heading>
+                @endcanany
+
+                @can('manage-admissions')
+                    <x-nav-group label="Admissions" icon="fa-user-plus" :active="request()->routeIs('admissions.*') || request()->routeIs('settings.admission') || request()->routeIs('admission-letter-templates.*')">
+                        <x-nav-sublink href="{{ route('admissions.index') }}" :active="request()->routeIs('admissions.index') || request()->routeIs('admissions.show') || request()->routeIs('admissions.create')">
+                            Admissions
+                        </x-nav-sublink>
+                        <x-nav-sublink href="{{ route('admissions.import.form') }}" :active="request()->routeIs('admissions.import*')">
+                            Import Admissions
+                        </x-nav-sublink>
+                        <x-nav-sublink href="{{ route('admissions.halls') }}" :active="request()->routeIs('admissions.halls*')">
+                            Halls
+                        </x-nav-sublink>
+                        <x-nav-sublink href="{{ route('admission-letter-templates.index') }}" :active="request()->routeIs('admission-letter-templates.*')">
+                            Admission Letter
+                        </x-nav-sublink>
+                        <x-nav-sublink href="{{ route('settings.admission') }}" :active="request()->routeIs('settings.admission')">
+                            Principal Signature
+                        </x-nav-sublink>
+                    </x-nav-group>
+                @endcan
+
+                @can('manage-admission-payments')
+                    <x-nav-link href="{{ route('admission-billing.index') }}" icon="fa-file-invoice-dollar" :active="request()->routeIs('admission-billing.*')">
+                        Admission Billing
+                    </x-nav-link>
+                @endcan
+
                 {{-- ── Timetable & Attendance ─────────────────────────────────────────────── --}}
                 @canany(['manage-timetable', 'manage-biometric'])
                     <x-nav-heading>Timetable &amp; Attendance</x-nav-heading>
@@ -366,7 +397,7 @@
                 @endcanany
 
                 @can('manage-settings')
-                    <x-nav-link href="{{ route('settings.index') }}" icon="fa-cog" :active="request()->routeIs('settings.index') || (request()->routeIs('settings.*') && !request()->routeIs('settings.sts'))">
+                    <x-nav-link href="{{ route('settings.index') }}" icon="fa-cog" :active="request()->routeIs('settings.index') || (request()->routeIs('settings.*') && !request()->routeIs('settings.sts') && !request()->routeIs('settings.admission'))">
                         Settings
                     </x-nav-link>
                 @endcan

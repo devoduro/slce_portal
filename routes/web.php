@@ -45,10 +45,15 @@ Route::middleware('guest')->group(function () {
     Route::post('password/email', [\App\Http\Controllers\Auth\ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
     Route::get('password/reset/{token}', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'showResetForm'])->name('password.reset');
     Route::post('password/reset', [\App\Http\Controllers\Auth\ResetPasswordController::class, 'reset'])->name('password.update');
+
+    // Applicant Login
+    Route::get('applicant/login', [\App\Http\Controllers\Auth\ApplicantAuthController::class, 'showLoginForm'])->name('applicant.login');
+    Route::post('applicant/login', [\App\Http\Controllers\Auth\ApplicantAuthController::class, 'login']);
 });
 
 Route::post('logout', [\App\Http\Controllers\Auth\LoginController::class, 'logout'])->name('logout');
 Route::post('student/logout', [\App\Http\Controllers\Auth\StudentAuthController::class, 'logout'])->name('student.logout');
+Route::post('applicant/logout', [\App\Http\Controllers\Auth\ApplicantAuthController::class, 'logout'])->name('applicant.logout');
 
 // ZKTeco Biometric Device Push (ADMS protocol) - unauthenticated, device-facing
 Route::get('iclock/cdata', [BiometricAdmsController::class, 'handshake'])->name('iclock.handshake');
@@ -378,6 +383,56 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/settings/sts', [SettingController::class, 'updateSts'])->name('settings.sts.update');
     });
 
+    // Admissions (import, passport photo, processing, approval, migration to Student)
+    Route::middleware('permission:manage-admissions')->group(function () {
+        Route::get('/admissions', [\App\Http\Controllers\AdmissionController::class, 'index'])->name('admissions.index');
+        Route::post('/admissions/bulk-destroy', [\App\Http\Controllers\AdmissionController::class, 'bulkDestroy'])->name('admissions.bulk-destroy');
+        Route::get('/admissions/import', [\App\Http\Controllers\AdmissionController::class, 'uploadForm'])->name('admissions.import.form');
+        Route::post('/admissions/import', [\App\Http\Controllers\AdmissionController::class, 'import'])->name('admissions.import');
+        Route::get('/admissions/import/template', [\App\Http\Controllers\AdmissionController::class, 'downloadTemplate'])->name('admissions.import.template');
+        Route::get('/admissions/export/excel', [\App\Http\Controllers\AdmissionController::class, 'exportExcel'])->name('admissions.export.excel');
+        Route::get('/admissions/export/pdf', [\App\Http\Controllers\AdmissionController::class, 'exportPdf'])->name('admissions.export.pdf');
+        Route::get('/admissions/halls', [\App\Http\Controllers\AdmissionController::class, 'halls'])->name('admissions.halls');
+        Route::get('/admissions/halls/export', [\App\Http\Controllers\AdmissionController::class, 'hallsExport'])->name('admissions.halls.export');
+        Route::get('/admissions/create', [\App\Http\Controllers\AdmissionController::class, 'create'])->name('admissions.create');
+        Route::post('/admissions', [\App\Http\Controllers\AdmissionController::class, 'store'])->name('admissions.store');
+        Route::get('/admissions/{admission}', [\App\Http\Controllers\AdmissionController::class, 'show'])->name('admissions.show');
+        Route::get('/admissions/{admission}/photo/edit', [\App\Http\Controllers\AdmissionController::class, 'editPhoto'])->name('admissions.photo.edit');
+        Route::post('/admissions/{admission}/photo', [\App\Http\Controllers\AdmissionController::class, 'updatePhoto'])->name('admissions.photo.update');
+        Route::get('/admissions/{admission}/photo/view', [\App\Http\Controllers\AdmissionController::class, 'photo'])->name('admissions.photo.view');
+        Route::get('/admissions/{admission}/letter', [\App\Http\Controllers\AdmissionController::class, 'letter'])->name('admissions.letter');
+        Route::get('/admissions/{admission}/acceptance-form', [\App\Http\Controllers\AdmissionController::class, 'acceptanceForm'])->name('admissions.acceptance-form');
+        Route::put('/admissions/{admission}/reference-number', [\App\Http\Controllers\AdmissionController::class, 'updateReferenceNumber'])->name('admissions.reference-number');
+        Route::post('/admissions/{admission}/withdraw', [\App\Http\Controllers\AdmissionController::class, 'withdraw'])->name('admissions.withdraw');
+        Route::post('/admissions/{admission}/documents-verified', [\App\Http\Controllers\AdmissionController::class, 'markDocumentsVerified'])->name('admissions.documents-verified');
+        Route::post('/admissions/{admission}/hall', [\App\Http\Controllers\AdmissionController::class, 'assignHall'])->name('admissions.hall');
+        Route::post('/admissions/{admission}/approve', [\App\Http\Controllers\AdmissionController::class, 'approve'])->name('admissions.approve');
+        Route::post('/admissions/{admission}/migrate', [\App\Http\Controllers\AdmissionController::class, 'migrate'])->name('admissions.migrate');
+
+        // Principal name + signature (used on the final, approved admission letter)
+        Route::get('/settings/admission', [SettingController::class, 'admission'])->name('settings.admission');
+        Route::put('/settings/admission', [SettingController::class, 'updateAdmission'])->name('settings.admission.update');
+
+        // Admission letter body text, editable per academic year (add/edit/preview/save)
+        Route::get('/admission-letter-templates', [\App\Http\Controllers\AdmissionLetterTemplateController::class, 'index'])->name('admission-letter-templates.index');
+        Route::get('/admission-letter-templates/{academicYear}/edit', [\App\Http\Controllers\AdmissionLetterTemplateController::class, 'edit'])->name('admission-letter-templates.edit');
+        Route::put('/admission-letter-templates/{academicYear}', [\App\Http\Controllers\AdmissionLetterTemplateController::class, 'update'])->name('admission-letter-templates.update');
+        Route::post('/admission-letter-templates/{academicYear}/preview', [\App\Http\Controllers\AdmissionLetterTemplateController::class, 'preview'])->name('admission-letter-templates.preview');
+    });
+
+    // Admission Billing (Accounts: bill, record/verify/confirm payment)
+    Route::middleware('permission:manage-admission-payments')->group(function () {
+        Route::get('/admission-billing', [\App\Http\Controllers\AdmissionBillingController::class, 'index'])->name('admission-billing.index');
+        Route::get('/admission-billing/{admission}', [\App\Http\Controllers\AdmissionBillingController::class, 'show'])->name('admission-billing.show');
+        Route::post('/admission-billing/{admission}/items', [\App\Http\Controllers\AdmissionBillingController::class, 'storeBillItem'])->name('admission-billing.items.store');
+        Route::delete('/admission-billing/items/{billItem}', [\App\Http\Controllers\AdmissionBillingController::class, 'destroyBillItem'])->name('admission-billing.items.destroy');
+        Route::post('/admission-billing/{admission}/payments', [\App\Http\Controllers\AdmissionBillingController::class, 'recordPayment'])->name('admission-billing.payments.store');
+        Route::put('/admission-billing/payments/{payment}/verify', [\App\Http\Controllers\AdmissionBillingController::class, 'verifyPayment'])->name('admission-billing.payments.verify');
+        Route::put('/admission-billing/payments/{payment}/confirm', [\App\Http\Controllers\AdmissionBillingController::class, 'confirmPayment'])->name('admission-billing.payments.confirm');
+        Route::put('/admission-billing/payments/{payment}/reject', [\App\Http\Controllers\AdmissionBillingController::class, 'rejectPayment'])->name('admission-billing.payments.reject');
+        Route::put('/admission-billing/payments/{payment}/reverse', [\App\Http\Controllers\AdmissionBillingController::class, 'reversePayment'])->name('admission-billing.payments.reverse');
+    });
+
     // Timetable
     Route::middleware('permission:manage-timetable')->group(function () {
         Route::get('/timetable/print', [\App\Http\Controllers\TimetableController::class, 'print'])->name('timetable.print');
@@ -475,7 +530,26 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/profile/update', [\App\Http\Controllers\Auth\StudentAuthController::class, 'updateProfile'])->name('profile.update');
         });
     });
-    
+
+    // Applicant Portal Routes
+    Route::middleware(['auth'])->group(function () {
+        // 'applicant' alias (ApplicantMiddleware, registered in AdminServiceProvider) -
+        // same reasoning as the 'student' group above re: route caching.
+        Route::group(['middleware' => 'applicant', 'prefix' => 'applicant', 'as' => 'applicant.'], function () {
+            // Password change routes (accessible even with first_login)
+            Route::get('/change-password', [\App\Http\Controllers\Auth\ApplicantAuthController::class, 'showChangePasswordForm'])->name('change-password');
+            Route::post('/update-password', [\App\Http\Controllers\Auth\ApplicantAuthController::class, 'updatePassword'])->name('update-password');
+
+            Route::get('/dashboard', [\App\Http\Controllers\ApplicantController::class, 'dashboard'])->name('dashboard');
+            Route::get('/profile/edit', [\App\Http\Controllers\ApplicantController::class, 'editProfile'])->name('profile.edit');
+            Route::post('/profile/update', [\App\Http\Controllers\ApplicantController::class, 'updateProfile'])->name('profile.update');
+            Route::post('/profile/confirm', [\App\Http\Controllers\ApplicantController::class, 'confirmProfile'])->name('profile.confirm');
+            Route::post('/report', [\App\Http\Controllers\ApplicantController::class, 'markReported'])->name('report');
+            Route::get('/letter', [\App\Http\Controllers\ApplicantController::class, 'letter'])->name('letter');
+            Route::get('/acceptance-form', [\App\Http\Controllers\ApplicantController::class, 'acceptanceForm'])->name('acceptance-form');
+        });
+    });
+
     // Admin Only Routes
     Route::middleware(['auth', 'admin'])->group(function () {
         // User Management

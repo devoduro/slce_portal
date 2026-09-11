@@ -37,6 +37,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'manage-timetable',
         'manage-continuous-assessment',
         'manage-sts',
+        'manage-admissions',
+        'manage-admission-payments',
     ];
 
     /**
@@ -47,11 +49,12 @@ class RolesAndPermissionsSeeder extends Seeder
      */
     public const DEFAULT_ROLES = [
         'Super Admin' => [],
-        'Accountant' => ['manage-fees', 'view-reports', 'view-student-directory', 'view-graduates'],
+        'Accountant' => ['manage-fees', 'manage-admission-payments', 'view-reports', 'view-student-directory', 'view-graduates'],
         'Principal' => ['view-reports', 'view-graduates'],
         'Exams Officer' => ['manage-results', 'manage-courses', 'manage-transcripts', 'manage-classes', 'manage-timetable', 'manage-continuous-assessment', 'view-graduates'],
         'Lecturer' => ['view-results', 'manage-continuous-assessment'],
         'STS Coordinator' => ['manage-sts', 'view-reports'],
+        'Admissions Officer' => ['manage-admissions', 'view-reports'],
     ];
 
     /**

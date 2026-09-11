@@ -883,6 +883,50 @@ public function updateInstitution(Request $request)
     }
 
     /**
+     * Display Principal settings (name + signature used on final, approved admission letters).
+     */
+    public function admission()
+    {
+        $settings = DB::table('settings')->where('category', 'admission')->get();
+
+        return view('settings.admission', compact('settings'));
+    }
+
+    /**
+     * Update Principal settings.
+     */
+    public function updateAdmission(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'principal_name' => 'required|string|max:255',
+            'principal_signature' => 'nullable|image|mimes:jpeg,png|max:2048',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('settings.admission')
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        DB::table('settings')->updateOrInsert(
+            ['key' => 'principal_name', 'category' => 'admission'],
+            ['value' => $request->input('principal_name'), 'type' => 'text']
+        );
+
+        if ($request->hasFile('principal_signature')) {
+            $path = $request->file('principal_signature')->storeAs('signatures', $request->file('principal_signature')->hashName(), 'public');
+
+            DB::table('settings')->updateOrInsert(
+                ['key' => 'principal_signature', 'category' => 'admission'],
+                ['value' => $path, 'type' => 'image']
+            );
+        }
+
+        return redirect()->route('settings.admission')
+            ->with('success', 'Admission settings updated successfully.');
+    }
+
+    /**
      * Set an academic year as current.
      */
     public function setCurrentAcademicYear(AcademicYear $academicYear)

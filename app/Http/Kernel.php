@@ -67,5 +67,6 @@ class Kernel extends HttpKernel
         'first.login' => \App\Http\Middleware\FirstLoginPasswordChange::class,
         'student' => \App\Http\Middleware\StudentMiddleware::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
+        'applicant' => \App\Http\Middleware\ApplicantMiddleware::class,
     ];
 }

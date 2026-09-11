@@ -15,19 +15,20 @@ class User extends Authenticatable
 
     public const ROLE_ADMIN = 'admin';
     public const ROLE_STUDENT = 'student';
-    
+    public const ROLE_APPLICANT = 'applicant';
+
     protected static function boot()
     {
         parent::boot();
-        
+
         static::creating(function ($user) {
-            if (!in_array($user->role, [self::ROLE_ADMIN, self::ROLE_STUDENT])) {
+            if (!in_array($user->role, [self::ROLE_ADMIN, self::ROLE_STUDENT, self::ROLE_APPLICANT])) {
                 throw new \InvalidArgumentException('Invalid user role');
             }
         });
-        
+
         static::updating(function ($user) {
-            if (!in_array($user->role, [self::ROLE_ADMIN, self::ROLE_STUDENT])) {
+            if (!in_array($user->role, [self::ROLE_ADMIN, self::ROLE_STUDENT, self::ROLE_APPLICANT])) {
                 throw new \InvalidArgumentException('Invalid user role');
             }
             // Prevent changing role from student to admin
@@ -49,6 +50,7 @@ class User extends Authenticatable
         'role',
         'student_id',
         'lecturer_id',
+        'admission_id',
         'first_login',
         'index_number',
     ];
@@ -90,5 +92,14 @@ class User extends Authenticatable
     public function lecturer()
     {
         return $this->belongsTo(Lecturer::class);
+    }
+
+    /**
+     * Get the admission (applicant) record associated with the user. Kept even after
+     * migration to a Student, so an account's admission history is never lost.
+     */
+    public function admission()
+    {
+        return $this->belongsTo(Admission::class);
     }
 }
