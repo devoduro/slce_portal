@@ -161,19 +161,21 @@ class AdmissionService
     }
 
     /**
-     * Bill the same item (e.g. "School Fees, GH¢3,000") onto every admission in a
-     * programme/academic year (optionally narrowed to one level) in a single action -
-     * for a blanket per-programme fee, as opposed to addBillItem()'s one-admission-at-a-
-     * time entry or AdmissionBillImport's per-applicant spreadsheet (different amounts
-     * per row). Skips withdrawn and already-migrated admissions - a migrated applicant
-     * is a Student now and belongs in the Fees module instead.
+     * Bill the same set of items (e.g. "School Fees GH¢3,000" + "Admission Fee
+     * GH¢300" + "Mattress Fee GH¢200") onto every admission in a programme/academic
+     * year (optionally narrowed to one level) in a single action - for a blanket
+     * per-programme bill covering several fee categories at once, as opposed to
+     * addBillItem()'s one-admission-at-a-time entry or AdmissionBillImport's
+     * per-applicant spreadsheet (different amounts per row). Skips withdrawn and
+     * already-migrated admissions - a migrated applicant is a Student now and belongs
+     * in the Fees module instead.
      *
-     * @param array{category: string, description: ?string, amount: float, payment_deadline: ?string} $itemData
-     * @return int number of admissions billed
+     * @param  array<int, array{category: string, description: ?string, amount: float, payment_deadline: ?string}>  $items
+     * @return int number of admissions billed (each gets every item in $items)
      */
-    public static function bulkBillByProgramme(int $academicYearId, int $programmeId, ?int $level, array $itemData, User $staff): int
+    public static function bulkBillByProgramme(int $academicYearId, int $programmeId, ?int $level, array $items, User $staff): int
     {
-        return DB::transaction(function () use ($academicYearId, $programmeId, $level, $itemData, $staff) {
+        return DB::transaction(function () use ($academicYearId, $programmeId, $level, $items, $staff) {
             $admissions = Admission::where('academic_year_id', $academicYearId)
                 ->where('programme_id', $programmeId)
                 ->when($level, fn ($query) => $query->where('level', $level))
@@ -181,7 +183,9 @@ class AdmissionService
                 ->get();
 
             foreach ($admissions as $admission) {
-                self::addBillItem($admission, $itemData, $staff);
+                foreach ($items as $itemData) {
+                    self::addBillItem($admission, $itemData, $staff);
+                }
             }
 
             return $admissions->count();

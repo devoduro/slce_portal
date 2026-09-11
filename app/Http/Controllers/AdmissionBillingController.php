@@ -152,10 +152,11 @@ class AdmissionBillingController extends Controller
             'academic_year_id' => 'required|exists:academic_years,id',
             'programme_id' => 'required|exists:programmes,id',
             'level' => 'nullable|integer|min:100',
-            'category' => 'required|string|max:255',
-            'description' => 'nullable|string|max:255',
-            'amount' => 'required|numeric|min:0.01',
-            'payment_deadline' => 'nullable|date',
+            'items' => 'required|array|min:1',
+            'items.*.category' => 'required|string|max:255',
+            'items.*.description' => 'nullable|string|max:255',
+            'items.*.amount' => 'required|numeric|min:0.01',
+            'items.*.payment_deadline' => 'nullable|date',
         ]);
     }
 
@@ -173,29 +174,32 @@ class AdmissionBillingController extends Controller
 
         $academicYear = AcademicYear::findOrFail($data['academic_year_id']);
         $programme = Programme::findOrFail($data['programme_id']);
+        $totalPerAdmission = array_sum(array_column($data['items'], 'amount'));
 
-        return view('admission-billing.bulk-bill-preview', compact('admissions', 'academicYear', 'programme', 'data'));
+        return view('admission-billing.bulk-bill-preview', compact('admissions', 'academicYear', 'programme', 'data', 'totalPerAdmission'));
     }
 
     public function bulkBillStore(Request $request)
     {
         $data = $this->validateBulkBill($request);
 
+        $items = array_map(fn (array $item) => [
+            'category' => $item['category'],
+            'description' => $item['description'] ?? null,
+            'amount' => (float) $item['amount'],
+            'payment_deadline' => $item['payment_deadline'] ?? null,
+            'notes' => 'Bulk billed by programme',
+        ], $data['items']);
+
         $count = AdmissionService::bulkBillByProgramme(
             (int) $data['academic_year_id'],
             (int) $data['programme_id'],
             $data['level'] ? (int) $data['level'] : null,
-            [
-                'category' => $data['category'],
-                'description' => $data['description'] ?? null,
-                'amount' => (float) $data['amount'],
-                'payment_deadline' => $data['payment_deadline'] ?? null,
-                'notes' => 'Bulk billed by programme',
-            ],
+            $items,
             Auth::user()
         );
 
-        return redirect()->route('admission-billing.index')->with('success', "Billed {$count} admission(s).");
+        return redirect()->route('admission-billing.index')->with('success', "Billed {$count} admission(s) with " . count($items) . ' fee item(s) each.');
     }
 
     public function billUploadForm()
