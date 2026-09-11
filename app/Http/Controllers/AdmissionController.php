@@ -197,7 +197,28 @@ class AdmissionController extends Controller
             });
         }
 
-        $admissions = $query->with('programme')->orderBy('hall')->orderBy('full_name')->paginate(50)->withQueryString();
+        if ($request->filled('admission_status')) {
+            $query->where('admission_status', $request->admission_status);
+        }
+
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+
+        if ($request->filled('programme_id')) {
+            $query->where('programme_id', $request->programme_id);
+        }
+
+        if ($request->filled('academic_year_id')) {
+            $query->where('academic_year_id', $request->academic_year_id);
+        }
+
+        $perPage = (int) $request->input('per_page', 50);
+        if (!in_array($perPage, self::PER_PAGE_OPTIONS, true)) {
+            $perPage = 50;
+        }
+
+        $admissions = $query->with('programme')->orderBy('hall')->orderBy('full_name')->paginate($perPage)->withQueryString();
 
         $hallCounts = Admission::whereNotNull('hall')->where('hall', '!=', '')
             ->whereNotIn('admission_status', [Admission::STATUS_WITHDRAWN])
@@ -211,7 +232,10 @@ class AdmissionController extends Controller
                 $q->whereNull('hall')->orWhere('hall', '');
             })->count();
 
-        return view('admissions.halls', compact('admissions', 'hallCounts', 'unassignedCount'));
+        $programmes = Programme::orderBy('name')->get();
+        $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
+
+        return view('admissions.halls', compact('admissions', 'hallCounts', 'unassignedCount', 'programmes', 'academicYears', 'perPage'));
     }
 
     public function hallsExport(Request $request)

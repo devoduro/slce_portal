@@ -5,17 +5,31 @@
 
 @section('content')
 <div class="py-4 space-y-4">
-    <form method="GET" class="flex gap-2">
-        <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name or applicant no."
-               class="rounded-md border-gray-300 text-sm w-72">
-        <select name="payment_status" class="rounded-md border-gray-300 text-sm">
-            <option value="">All payment statuses</option>
-            @foreach(['not_billed' => 'Not Billed', 'billed' => 'Billed', 'partially_paid' => 'Partially Paid', 'paid_pending_verification' => 'Pending Verification', 'confirmed' => 'Confirmed', 'rejected' => 'Rejected', 'reversed' => 'Reversed'] as $value => $label)
-                <option value="{{ $value }}" @selected(request('payment_status') === $value)>{{ $label }}</option>
-            @endforeach
-        </select>
-        <button type="submit" class="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200">Filter</button>
-    </form>
+    <div class="flex flex-wrap justify-between items-center gap-2">
+        <form method="GET" class="flex gap-2">
+            <input type="text" name="search" value="{{ request('search') }}" placeholder="Search name or applicant no."
+                   class="rounded-md border-gray-300 text-sm w-72">
+            <select name="payment_status" class="rounded-md border-gray-300 text-sm">
+                <option value="">All payment statuses</option>
+                @foreach(['not_billed' => 'Not Billed', 'billed' => 'Billed', 'partially_paid' => 'Partially Paid', 'paid_pending_verification' => 'Pending Verification', 'confirmed' => 'Confirmed', 'rejected' => 'Rejected', 'reversed' => 'Reversed'] as $value => $label)
+                    <option value="{{ $value }}" @selected(request('payment_status') === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+            <button type="submit" class="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200">Filter</button>
+        </form>
+
+        <div class="flex gap-2">
+            <a href="{{ route('admission-billing.bulk-bill.form') }}" class="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200">
+                <i class="fas fa-layer-group mr-1"></i> Bulk Bill by Programme
+            </a>
+            <a href="{{ route('admission-billing.bill-upload.form') }}" class="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200">
+                <i class="fas fa-upload mr-1"></i> Bulk Bill (Spreadsheet)
+            </a>
+            <a href="{{ route('admission-billing.payment-upload.form') }}" class="px-3 py-2 bg-gray-100 rounded-md text-sm hover:bg-gray-200">
+                <i class="fas fa-upload mr-1"></i> Bulk Upload Payments
+            </a>
+        </div>
+    </div>
 
     <div class="bg-white rounded-lg shadow-sm overflow-hidden">
         <table class="min-w-full text-sm">

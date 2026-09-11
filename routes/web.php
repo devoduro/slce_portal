@@ -423,6 +423,15 @@ Route::middleware(['auth'])->group(function () {
     // Admission Billing (Accounts: bill, record/verify/confirm payment)
     Route::middleware('permission:manage-admission-payments')->group(function () {
         Route::get('/admission-billing', [\App\Http\Controllers\AdmissionBillingController::class, 'index'])->name('admission-billing.index');
+        Route::get('/admission-billing/bulk-bill', [\App\Http\Controllers\AdmissionBillingController::class, 'bulkBillForm'])->name('admission-billing.bulk-bill.form');
+        Route::post('/admission-billing/bulk-bill/preview', [\App\Http\Controllers\AdmissionBillingController::class, 'bulkBillPreview'])->name('admission-billing.bulk-bill.preview');
+        Route::post('/admission-billing/bulk-bill', [\App\Http\Controllers\AdmissionBillingController::class, 'bulkBillStore'])->name('admission-billing.bulk-bill.store');
+        Route::get('/admission-billing/bill/upload', [\App\Http\Controllers\AdmissionBillingController::class, 'billUploadForm'])->name('admission-billing.bill-upload.form');
+        Route::post('/admission-billing/bill/upload', [\App\Http\Controllers\AdmissionBillingController::class, 'billImport'])->name('admission-billing.bill-upload');
+        Route::get('/admission-billing/bill/template', [\App\Http\Controllers\AdmissionBillingController::class, 'billTemplate'])->name('admission-billing.bill-upload.template');
+        Route::get('/admission-billing/payments/upload', [\App\Http\Controllers\AdmissionBillingController::class, 'paymentUploadForm'])->name('admission-billing.payment-upload.form');
+        Route::post('/admission-billing/payments/upload', [\App\Http\Controllers\AdmissionBillingController::class, 'paymentImport'])->name('admission-billing.payment-upload');
+        Route::get('/admission-billing/payments/template', [\App\Http\Controllers\AdmissionBillingController::class, 'paymentTemplate'])->name('admission-billing.payment-upload.template');
         Route::get('/admission-billing/{admission}', [\App\Http\Controllers\AdmissionBillingController::class, 'show'])->name('admission-billing.show');
         Route::post('/admission-billing/{admission}/items', [\App\Http\Controllers\AdmissionBillingController::class, 'storeBillItem'])->name('admission-billing.items.store');
         Route::delete('/admission-billing/items/{billItem}', [\App\Http\Controllers\AdmissionBillingController::class, 'destroyBillItem'])->name('admission-billing.items.destroy');

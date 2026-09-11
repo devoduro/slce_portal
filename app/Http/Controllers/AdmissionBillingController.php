@@ -2,13 +2,21 @@
 
 namespace App\Http\Controllers;
 
+use App\Exports\AdmissionBillTemplateExport;
+use App\Exports\AdmissionPaymentTemplateExport;
+use App\Imports\AdmissionBillImport;
+use App\Imports\AdmissionPaymentImport;
+use App\Models\AcademicYear;
 use App\Models\Admission;
 use App\Models\AdmissionBillItem;
 use App\Models\AdmissionPayment;
 use App\Models\FeeCategory;
+use App\Models\Programme;
 use App\Services\AdmissionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Maatwebsite\Excel\Facades\Excel;
 
 class AdmissionBillingController extends Controller
 {
@@ -122,5 +130,147 @@ class AdmissionBillingController extends Controller
         AdmissionService::reversePayment($payment, Auth::user(), $request->reason);
 
         return redirect()->route('admission-billing.show', $payment->admission)->with('success', 'Payment reversed.');
+    }
+
+    /**
+     * One bill applied to every admission in a programme/academic year at once (a
+     * blanket per-programme fee) - as opposed to billUploadForm()'s per-applicant
+     * spreadsheet, where each row can carry a different amount.
+     */
+    public function bulkBillForm()
+    {
+        $programmes = Programme::orderBy('name')->get();
+        $academicYears = AcademicYear::orderBy('start_date', 'desc')->get();
+        $feeCategories = FeeCategory::options();
+
+        return view('admission-billing.bulk-bill', compact('programmes', 'academicYears', 'feeCategories'));
+    }
+
+    protected function validateBulkBill(Request $request)
+    {
+        return $request->validate([
+            'academic_year_id' => 'required|exists:academic_years,id',
+            'programme_id' => 'required|exists:programmes,id',
+            'level' => 'nullable|integer|min:100',
+            'category' => 'required|string|max:255',
+            'description' => 'nullable|string|max:255',
+            'amount' => 'required|numeric|min:0.01',
+            'payment_deadline' => 'nullable|date',
+        ]);
+    }
+
+    public function bulkBillPreview(Request $request)
+    {
+        $data = $this->validateBulkBill($request);
+
+        $admissions = Admission::with('programme')
+            ->where('academic_year_id', $data['academic_year_id'])
+            ->where('programme_id', $data['programme_id'])
+            ->when($data['level'] ?? null, fn ($query) => $query->where('level', $data['level']))
+            ->whereNotIn('admission_status', [Admission::STATUS_WITHDRAWN, Admission::STATUS_MIGRATED])
+            ->orderBy('full_name')
+            ->get();
+
+        $academicYear = AcademicYear::findOrFail($data['academic_year_id']);
+        $programme = Programme::findOrFail($data['programme_id']);
+
+        return view('admission-billing.bulk-bill-preview', compact('admissions', 'academicYear', 'programme', 'data'));
+    }
+
+    public function bulkBillStore(Request $request)
+    {
+        $data = $this->validateBulkBill($request);
+
+        $count = AdmissionService::bulkBillByProgramme(
+            (int) $data['academic_year_id'],
+            (int) $data['programme_id'],
+            $data['level'] ? (int) $data['level'] : null,
+            [
+                'category' => $data['category'],
+                'description' => $data['description'] ?? null,
+                'amount' => (float) $data['amount'],
+                'payment_deadline' => $data['payment_deadline'] ?? null,
+                'notes' => 'Bulk billed by programme',
+            ],
+            Auth::user()
+        );
+
+        return redirect()->route('admission-billing.index')->with('success', "Billed {$count} admission(s).");
+    }
+
+    public function billUploadForm()
+    {
+        return view('admission-billing.bill-upload');
+    }
+
+    public function billImport(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('admission-billing.bill-upload.form')->withErrors($validator)->withInput();
+        }
+
+        $import = new AdmissionBillImport(Auth::user());
+        Excel::import($import, $request->file('excel_file'));
+
+        $stats = $import->getStats();
+        $message = "Billed {$stats['processed']} item(s), skipped {$stats['skipped']}.";
+
+        if (!empty($stats['errors'])) {
+            $message .= ' Issues: ' . implode(' | ', array_slice($stats['errors'], 0, 8));
+            if (count($stats['errors']) > 8) {
+                $message .= ' (+' . (count($stats['errors']) - 8) . ' more)';
+            }
+
+            return redirect()->route('admission-billing.index')->with('warning', $message);
+        }
+
+        return redirect()->route('admission-billing.index')->with('success', $message);
+    }
+
+    public function billTemplate()
+    {
+        return Excel::download(new AdmissionBillTemplateExport, 'admission_bill_template.xlsx');
+    }
+
+    public function paymentUploadForm()
+    {
+        return view('admission-billing.payment-upload');
+    }
+
+    public function paymentImport(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'excel_file' => 'required|file|mimes:xlsx,xls,csv|max:10240',
+        ]);
+
+        if ($validator->fails()) {
+            return redirect()->route('admission-billing.payment-upload.form')->withErrors($validator)->withInput();
+        }
+
+        $import = new AdmissionPaymentImport(Auth::user());
+        Excel::import($import, $request->file('excel_file'));
+
+        $stats = $import->getStats();
+        $message = "Recorded {$stats['processed']} payment(s), skipped {$stats['skipped']}. Each still needs to be Verified and Confirmed individually.";
+
+        if (!empty($stats['errors'])) {
+            $message .= ' Issues: ' . implode(' | ', array_slice($stats['errors'], 0, 8));
+            if (count($stats['errors']) > 8) {
+                $message .= ' (+' . (count($stats['errors']) - 8) . ' more)';
+            }
+
+            return redirect()->route('admission-billing.index')->with('warning', $message);
+        }
+
+        return redirect()->route('admission-billing.index')->with('success', $message);
+    }
+
+    public function paymentTemplate()
+    {
+        return Excel::download(new AdmissionPaymentTemplateExport, 'admission_payment_template.xlsx');
     }
 }

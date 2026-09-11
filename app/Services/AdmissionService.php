@@ -160,6 +160,34 @@ class AdmissionService
         });
     }
 
+    /**
+     * Bill the same item (e.g. "School Fees, GH¢3,000") onto every admission in a
+     * programme/academic year (optionally narrowed to one level) in a single action -
+     * for a blanket per-programme fee, as opposed to addBillItem()'s one-admission-at-a-
+     * time entry or AdmissionBillImport's per-applicant spreadsheet (different amounts
+     * per row). Skips withdrawn and already-migrated admissions - a migrated applicant
+     * is a Student now and belongs in the Fees module instead.
+     *
+     * @param array{category: string, description: ?string, amount: float, payment_deadline: ?string} $itemData
+     * @return int number of admissions billed
+     */
+    public static function bulkBillByProgramme(int $academicYearId, int $programmeId, ?int $level, array $itemData, User $staff): int
+    {
+        return DB::transaction(function () use ($academicYearId, $programmeId, $level, $itemData, $staff) {
+            $admissions = Admission::where('academic_year_id', $academicYearId)
+                ->where('programme_id', $programmeId)
+                ->when($level, fn ($query) => $query->where('level', $level))
+                ->whereNotIn('admission_status', [Admission::STATUS_WITHDRAWN, Admission::STATUS_MIGRATED])
+                ->get();
+
+            foreach ($admissions as $admission) {
+                self::addBillItem($admission, $itemData, $staff);
+            }
+
+            return $admissions->count();
+        });
+    }
+
     public static function removeBillItem(AdmissionBillItem $item, User $staff): void
     {
         DB::transaction(function () use ($item, $staff) {

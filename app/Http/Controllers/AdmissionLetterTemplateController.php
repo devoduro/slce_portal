@@ -103,6 +103,7 @@ class AdmissionLetterTemplateController extends Controller
                 'amount_paid' => number_format($admission->totalPaid(), 2),
                 'outstanding_balance' => number_format($admission->outstandingBalance(), 2),
                 'bill_items' => AdmissionLetterTemplate::billItemsSummary($admission),
+                'hall_clause' => AdmissionLetterTemplate::hallClause($admission),
             ]);
         } else {
             // No real applicant picked - a throwaway sample Admission (so the blade
@@ -113,6 +114,7 @@ class AdmissionLetterTemplateController extends Controller
                 'full_name' => 'Sample Applicant',
                 'applicant_number' => 'APP' . $academicYear->name[0] . '0001',
                 'level' => 100,
+                'hall' => 'Sample Hall',
                 'admission_status' => $isFinal ? Admission::STATUS_APPROVED : Admission::STATUS_OFFERED,
                 'payment_status' => $isFinal ? Admission::PAYMENT_CONFIRMED : Admission::PAYMENT_NOT_BILLED,
             ]);
@@ -132,6 +134,7 @@ class AdmissionLetterTemplateController extends Controller
                 'amount_paid' => '0.00',
                 'outstanding_balance' => '4,194.42',
                 'bill_items' => 'School Fees (GH¢3,000.00), Examination Fee (GH¢1,000.00), Mattress Fee (GH¢194.42)',
+                'hall_clause' => AdmissionLetterTemplate::hallClause($admission),
             ]);
         }
 

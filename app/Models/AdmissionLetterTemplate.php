@@ -50,6 +50,7 @@ class AdmissionLetterTemplate extends Model
             '{{amount_paid}}' => 'Total confirmed payments so far',
             '{{outstanding_balance}}' => 'Total billed minus total paid',
             '{{bill_items}}' => 'A plain-language list of the billed line items, e.g. "School Fees (GH¢3,000.00), Examination Fee (GH¢1,000.00)"',
+            '{{hall_clause}}' => 'A full numbered sentence naming the applicant\'s assigned hall of residence, or nothing at all if no hall has been assigned yet - place it on its own line inside the <ol>, not inside an <li> of your own',
         ];
     }
 
@@ -76,6 +77,7 @@ class AdmissionLetterTemplate extends Model
                 . '<li>You will be on probation for the full duration of your programme. Satisfactory academic work and good conduct are required for your continued stay, and you must adhere to all College policies, rules and regulations, including the Students\' Handbook.</li>'
                 . '<li>All fresh students are matriculated soon after re-opening. <u><strong>Your admission will be withdrawn if you fail to take part in the matriculation.</strong></u></li>'
                 . '<li>Kindly note that you are required to register for your courses at the beginning of each semester for the entire duration of your programme.</li>'
+                . '{{hall_clause}}'
                 . '<li>Log in to the applicant portal using your applicant number (<strong>{{applicant_number}}</strong>) to view your admission documents and payment history.</li>'
                 . '</ol>';
         }
@@ -88,6 +90,7 @@ class AdmissionLetterTemplate extends Model
             . '<li><em>You will be required to undergo compulsory medical examination soon after reopening to ascertain if you are medically fit to pursue the programme of study.</em></li>'
             . '<li>It should be noted that the College does not award scholarships to students.</li>'
             . '<li>Be informed that the College re-opens tentatively on <u><strong>the date to be communicated</strong></u>, and you are expected to report on that date. Any change in the re-opening date shall be communicated to you via SMS.</li>'
+            . '{{hall_clause}}'
             . '<li><em>In order to confirm the acceptance of this offer, you must make full payment of the outstanding balance of <strong>GH&cent;{{outstanding_balance}}</strong> via <u><strong>the applicant portal</strong></u>. Your total fees for the {{academic_year}} academic year, as billed to you, sum up to <strong>GH&cent;{{total_billed}}</strong>, comprising: <strong>{{bill_items}}</strong>, which must be paid before the deadline.</em></li>'
             . '<li>Log in to the applicant portal using your applicant number (<strong>{{applicant_number}}</strong>) as your reference, <u><strong>make the required payment before the deadline shown on your bill there</strong></u>, and enter/upload proof of payment for Accounts to verify and confirm.</li>'
             . '<li>After payment is confirmed, complete and confirm your personal information on the portal. On reporting, immediately submit A) this admission letter, B) the Acceptance Form duly signed by you and endorsed by your parent/guardian, and C) a copy of your results slip(s) or certificate, Birth Certificate and one passport-size photograph to the Registrar. <strong>You shall forfeit your admission if you fail to submit these documents by the deadline given.</strong></li>'
@@ -113,6 +116,21 @@ class AdmissionLetterTemplate extends Model
         // GH¢ (cent sign, U+00A2) not GH₵ (cedi sign, U+20B5) - dompdf's default font has
         // no glyph for the real cedi sign and silently renders it as "?".
         return $items->map(fn ($item) => $item->categoryLabel() . ' (GH¢' . number_format($item->amount, 2) . ')')->implode(', ');
+    }
+
+    /**
+     * A full numbered clause naming the applicant's assigned hall, or an empty string if
+     * none has been assigned yet - fills {{hall_clause}}. Built as a complete <li>...</li>
+     * (not just the hall name) so a not-yet-assigned applicant's letter simply has one
+     * fewer numbered clause instead of an awkward blank one.
+     */
+    public static function hallClause(Admission $admission): string
+    {
+        if (!$admission->hall) {
+            return '';
+        }
+
+        return '<li>You have been assigned to <strong>' . e($admission->hall) . '</strong> as your hall of residence.</li>';
     }
 
     /**
@@ -153,6 +171,7 @@ class AdmissionLetterTemplate extends Model
             'amount_paid' => number_format($admission->totalPaid(), 2),
             'outstanding_balance' => number_format($admission->outstandingBalance(), 2),
             'bill_items' => static::billItemsSummary($admission),
+            'hall_clause' => static::hallClause($admission),
         ]);
     }
 }

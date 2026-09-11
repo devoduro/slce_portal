@@ -32,8 +32,12 @@ class AdmissionsExport implements FromQuery, WithHeadings, WithMapping, WithChun
             });
         }
 
+        // 'status' on the main admissions list, 'admission_status' on the halls page
+        // (which reserves 'status' for its own "unassigned" hall toggle).
         if ($this->request->filled('status')) {
             $query->where('admission_status', $this->request->status);
+        } elseif ($this->request->filled('admission_status')) {
+            $query->where('admission_status', $this->request->admission_status);
         }
 
         if ($this->request->filled('payment_status')) {

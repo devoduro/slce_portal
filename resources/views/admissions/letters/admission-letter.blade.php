@@ -77,7 +77,6 @@
 
         /* ---- Body ---- */
         .date-line { text-align: right; margin-bottom: 8px; }
-        .hall-line { text-align: center; margin: 0 0 8px; }
         .subject {
             text-align: center;
             font-weight: bold;
@@ -177,10 +176,6 @@
         OFFER OF ADMISSION FOR THE {{ $admission->academicYear->name ?? '' }} ACADEMIC YEAR<br>
         {{ strtoupper($admission->programme->name ?? '') }} PROGRAMME
     </div>
-
-    @if($admission->hall)
-        <p class="hall-line">Hall of Residence: <strong>{{ $admission->hall }}</strong></p>
-    @endif
 
     <div class="body-text">
         {!! $bodyHtml !!}
